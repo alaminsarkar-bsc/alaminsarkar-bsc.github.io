@@ -2001,7 +2001,21 @@ async function handleActionButtonClick(actionBtn) {
     else if (actionBtn.classList.contains('love-btn')) handleReaction(prayerId, 'love', actionBtn); 
 }
 
-async function handleGoogleSignIn() { try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (error) { alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); } }
+async function handleGoogleSignIn() { 
+    try { 
+        const { error } = await supabaseClient.auth.signInWithOAuth({ 
+            provider: 'google', 
+            options: { 
+                redirectTo: 'https://alaminsarkar-bsc.github.io/ipray/' // <--- আপনার সঠিক লিংক
+            } 
+        }); 
+        if (error) throw error; 
+    } catch (error) { 
+        alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); 
+    } 
+}
+
+
 async function handleFacebookSignIn() { try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (error) { alert('ফেসবুক সাইনইনে সমস্যা হয়েছে: ' + error.message); } }
 
 async function handleSendOtp() {
