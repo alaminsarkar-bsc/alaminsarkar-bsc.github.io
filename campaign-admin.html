@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ক্যাম্পেইন ম্যানেজমেন্ট - iPray</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body id="admin-page">
+    <div id="appContainer">
+        <!-- Admin Header -->
+        <div class="admin-header">
+            <div class="admin-header-content">
+                <a href="/admin.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    মূল এডমিন প্যানেল
+                </a>
+                <h1 class="admin-title">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    ক্যাম্পেইন ম্যানেজমেন্ট
+                </h1>
+                <div class="admin-user">
+                    <span id="adminUserName">লোড হচ্ছে...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Content -->
+        <div class="admin-content">
+            <div class="tab-header">
+                <h2>সকল ফান্ডরাইজিং ক্যাম্পেইন</h2>
+                <div class="header-actions">
+                    <a href="/post.html?type=fundraising" class="btn btn-success">
+                        <i class="fas fa-plus"></i> নতুন ক্যাম্পেইন তৈরি করুন
+                    </a>
+                    <button id="refreshCampaigns" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> রিফ্রেশ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campaign List Container -->
+            <div id="campaignsContainer" class="content-list">
+                <!-- ক্যাম্পেইনগুলো এখানে লোড হবে -->
+                <div class="loading-spinner-container" style="text-align: center; padding: 40px;">
+                    <div class="loading-spinner"></div>
+                    <p>ক্যাম্পেইন লোড হচ্ছে...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Edit Modal -->
+    <div id="campaignEditModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">ক্যাম্পেইন এডিট করুন</h2>
+                <span class="close-btn" onclick="document.getElementById('campaignEditModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="campaignEditForm">
+                    <input type="hidden" id="editCampaignId">
+                    <div class="setting-group">
+                        <label for="editCampaignTitle">শিরোনাম</label>
+                        <input type="text" id="editCampaignTitle" required>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignOrgName">প্রতিষ্ঠানের নাম</label>
+                        <input type="text" id="editCampaignOrgName" required>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignDescription">বিস্তারিত বিবরণ</label>
+                        <textarea id="editCampaignDescription" rows="5" required></textarea>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignGoal">লক্ষ্য (টাকা)</label>
+                        <input type="number" id="editCampaignGoal" required>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignCurrent">সংগৃহীত (টাকা)</label>
+                        <input type="number" id="editCampaignCurrent" required>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignPayment">পেমেন্ট বিবরণ</label>
+                        <textarea id="editCampaignPayment" rows="4" required></textarea>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignExpiresAt">মেয়াদ শেষ হবে (খালি রাখলে মেয়াদ থাকবে না)</label>
+                        <input type="datetime-local" id="editCampaignExpiresAt">
+                    </div>
+                    <div class="setting-group">
+                        <label for="editCampaignStatus">স্ট্যাটাস</label>
+                        <select id="editCampaignStatus">
+                            <option value="active">Active</option>
+                            <option value="hidden">Hidden</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveCampaignBtn" class="btn btn-primary">
+                    <i class="fas fa-save"></i> সেভ করুন
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="adminLoading" class="loading-overlay" style="display: flex;">
+        <div class="loading-spinner"></div>
+        <p>লোড হচ্ছে...</p>
+    </div>
+
+    <!-- Script Files -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="campaign-admin.js"></script>
+</body>
+</html>

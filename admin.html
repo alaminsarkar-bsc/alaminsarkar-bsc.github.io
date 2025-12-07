@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>এডমিন প্যানেল - iPray</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        /* ডোনেশন সাব-ট্যাব স্টাইল */
+        .donation-sub-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--admin-border);
+            overflow-x: auto;
+        }
+        .sub-tab-btn {
+            padding: 8px 15px;
+            border: 1px solid var(--admin-border);
+            background: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .sub-tab-btn:hover {
+            background: #e9ecef;
+        }
+        .sub-tab-btn.active {
+            background: var(--admin-primary);
+            color: white;
+            border-color: var(--admin-primary);
+        }
+        .donation-view {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .donation-view.active {
+            display: block;
+        }
+        /* সার্চ বক্স এবং টাইটেল একসাথে রাখার জন্য */
+        .donation-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .donation-header-actions h3 {
+            margin: 0;
+        }
+    </style>
+</head>
+<body id="admin-page">
+    <div id="appContainer">
+        <!-- Admin Header -->
+        <div class="admin-header">
+            <div class="admin-header-content">
+                <a href="/index.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    মূল সাইট
+                </a>
+                <h1 class="admin-title">
+                    <i class="fas fa-shield-alt"></i>
+                    এডমিন প্যানেল
+                </h1>
+                <div class="admin-user">
+                    <span id="adminUserName">লোড হচ্ছে...</span>
+                    <button id="adminLogoutBtn" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        লগআউট
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Navigation -->
+        <div class="admin-nav">
+            <button class="admin-tab active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                ড্যাশবোর্ড
+            </button>
+            <!-- ডোনেশন ট্যাব -->
+            <button class="admin-tab" data-tab="donations">
+                <i class="fas fa-hand-holding-usd"></i>
+                ডোনেশন
+            </button>
+            <button class="admin-tab" data-tab="analytics">
+                <i class="fas fa-chart-line"></i>
+                অ্যানালিটিক্স
+            </button>
+            <button class="admin-tab" data-tab="reports">
+                <i class="fas fa-flag"></i>
+                রিপোর্টস
+                <span id="reportsBadge" class="badge">0</span>
+            </button>
+            <button class="admin-tab" data-tab="users">
+                <i class="fas fa-users"></i>
+                ব্যবহারকারী
+            </button>
+            <button class="admin-tab" data-tab="warned-users">
+                <i class="fas fa-user-clock"></i>
+                সতর্কতালিকা
+            </button>
+            <button class="admin-tab" data-tab="banned-users">
+                <i class="fas fa-user-slash"></i>
+                নিষিদ্ধ তালিকা
+            </button>
+            <button class="admin-tab" data-tab="content">
+                <i class="fas fa-file-alt"></i>
+                কন্টেন্ট
+            </button>
+            <button class="admin-tab" data-tab="hidden-posts">
+                <i class="fas fa-eye-slash"></i>
+                লুকানো পোস্ট
+            </button>
+            <button class="admin-tab" data-tab="admin-logs">
+                <i class="fas fa-history"></i>
+                অ্যাক্টিভিটি লগ
+            </button>
+            <button class="admin-tab" data-tab="moderation">
+                <i class="fas fa-filter"></i>
+                মডারেশন
+            </button>
+            <button class="admin-tab" data-tab="settings">
+                <i class="fas fa-cog"></i>
+                সেটিংস
+            </button>
+        </div>
+
+        <!-- Admin Content -->
+        <div class="admin-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboardContent" class="tab-content active">
+                <div class="tab-header">
+                    <h2>ড্যাশবোর্ড</h2>
+                    <button id="refreshStats" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        রিফ্রেশ
+                    </button>
+                </div>
+                
+                <div id="adminStats" class="stats-grid">
+                    <!-- Stats will be loaded dynamically -->
+                </div>
+
+                <div class="dashboard-cards">
+                    <div class="card">
+                        <h3>দ্রুত কাজ</h3>
+                        <div class="quick-actions">
+                            <button class="quick-btn" data-action="view-analytics">
+                                <i class="fas fa-chart-line"></i>
+                                অ্যানালিটিক্স দেখুন
+                            </button>
+                            <button class="quick-btn" data-action="view-reports">
+                                <i class="fas fa-flag"></i>
+                                রিপোর্টস দেখুন
+                            </button>
+                            <button class="quick-btn" data-action="view-donations">
+                                <i class="fas fa-hand-holding-usd"></i>
+                                ডোনেশন রিকোয়েস্ট
+                            </button>
+                            <button class="quick-btn" data-action="view-users">
+                                <i class="fas fa-users"></i>
+                                ব্যবহারকারী
+                            </button>
+                            <button class="quick-btn" data-action="system-health">
+                                <i class="fas fa-heartbeat"></i>
+                                সিস্টেম হেলথ
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>সিস্টেম তথ্য</h3>
+                        <div class="system-info">
+                            <div class="info-item">
+                                <span class="info-label">সাইট ভার্সন:</span>
+                                <span class="info-value">v1.0.0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">সর্বশেষ আপডেট:</span>
+                                <span id="lastUpdate" class="info-value">লোড হচ্ছে...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">সিস্টেম স্ট্যাটাস:</span>
+                                <span class="info-value status-active">সক্রিয়</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Donations Tab (4 Sub-Tabs) -->
+            <div id="donationsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>ডোনেশন ম্যানেজমেন্ট</h2>
+                    <button id="refreshDonations" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> রিফ্রেশ
+                    </button>
+                </div>
+
+                <!-- Sub Navigation -->
+                <div class="donation-sub-nav">
+                    <button class="sub-tab-btn active" onclick="adminPanel.switchDonationSubTab('settings')" id="subtab-settings">
+                        <i class="fas fa-cog"></i> পেমেন্ট সেটিংস
+                    </button>
+                    <button class="sub-tab-btn" onclick="adminPanel.switchDonationSubTab('pending')" id="subtab-pending">
+                        <i class="fas fa-clock" style="color: #f39c12;"></i> পেন্ডিং রিকোয়েস্ট
+                    </button>
+                    <button class="sub-tab-btn" onclick="adminPanel.switchDonationSubTab('approved')" id="subtab-approved">
+                        <i class="fas fa-check-circle" style="color: #27ae60;"></i> অ্যাপ্রুভড হিস্ট্রি
+                    </button>
+                    <button class="sub-tab-btn" onclick="adminPanel.switchDonationSubTab('rejected')" id="subtab-rejected">
+                        <i class="fas fa-times-circle" style="color: #c0392b;"></i> রিজেক্টেড হিস্ট্রি
+                    </button>
+                </div>
+
+                <!-- View 1: Settings -->
+                <div id="donation-settings-view" class="donation-view active">
+                    <div class="card">
+                        <h3>পেমেন্ট নাম্বার সেটআপ (Personal)</h3>
+                        <p class="setting-description">চেকবক্সে টিক দিলে সেই মেথডটি অ্যাপে দেখাবে।</p>
+                        
+                        <div class="setting-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                            <!-- Bkash -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeBkash" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeBkash" style="margin: 0; font-weight: bold; cursor: pointer;">Bkash Active</label>
+                                </div>
+                                <input type="text" id="adminBkash" placeholder="Bkash Number" style="width: 100%;">
+                            </div>
+                            <!-- Nagad -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeNagad" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeNagad" style="margin: 0; font-weight: bold; cursor: pointer;">Nagad Active</label>
+                                </div>
+                                <input type="text" id="adminNagad" placeholder="Nagad Number" style="width: 100%;">
+                            </div>
+                            <!-- Rocket -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeRocket" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeRocket" style="margin: 0; font-weight: bold; cursor: pointer;">Rocket Active</label>
+                                </div>
+                                <input type="text" id="adminRocket" placeholder="Rocket Number" style="width: 100%;">
+                            </div>
+                            <!-- SureCash -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeSureCash" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeSureCash" style="margin: 0; font-weight: bold; cursor: pointer;">SureCash Active</label>
+                                </div>
+                                <input type="text" id="adminSureCash" placeholder="SureCash Number" style="width: 100%;">
+                            </div>
+                            <!-- TapTap -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeTapTap" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeTapTap" style="margin: 0; font-weight: bold; cursor: pointer;">TapTap Active</label>
+                                </div>
+                                <input type="text" id="adminTapTap" placeholder="TapTap Number" style="width: 100%;">
+                            </div>
+                            <!-- Upay -->
+                            <div style="border: 1px solid var(--admin-border); padding: 10px; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 5px; gap: 10px;">
+                                    <input type="checkbox" id="activeUpay" style="width: 20px; height: 20px; cursor: pointer;">
+                                    <label for="activeUpay" style="margin: 0; font-weight: bold; cursor: pointer;">Upay Active</label>
+                                </div>
+                                <input type="text" id="adminUpay" placeholder="Upay Number" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button id="savePaymentNumbersBtn" class="btn btn-success">
+                                <i class="fas fa-save"></i> সেভ করুন
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 2: Pending List (New Search Added) -->
+                <div id="donation-pending-view" class="donation-view">
+                    <div class="card">
+                        <div class="donation-header-actions">
+                            <h3>পেমেন্ট রিকোয়েস্ট (যাচাই প্রয়োজন)</h3>
+                            <div class="search-box">
+                                <input type="text" id="searchDonationPending" placeholder="TrxID দিয়ে খুঁজুন...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div id="adminDonationRequests-PENDING" class="logs-container">
+                            <p class="no-data">লোড হচ্ছে...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 3: Approved List (New Search Added) -->
+                <div id="donation-approved-view" class="donation-view">
+                    <div class="card">
+                        <div class="donation-header-actions">
+                            <h3>অ্যাপ্রুভ করা হিস্ট্রি</h3>
+                            <div class="search-box">
+                                <input type="text" id="searchDonationApproved" placeholder="TrxID দিয়ে খুঁজুন...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div id="adminDonationRequests-APPROVED" class="logs-container">
+                            <p class="no-data">লোড হচ্ছে...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View 4: Rejected List (New Search Added) -->
+                <div id="donation-rejected-view" class="donation-view">
+                    <div class="card">
+                        <div class="donation-header-actions">
+                            <h3>বাতিল করা হিস্ট্রি</h3>
+                            <div class="search-box">
+                                <input type="text" id="searchDonationRejected" placeholder="TrxID দিয়ে খুঁজুন...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        <div id="adminDonationRequests-REJECTED" class="logs-container">
+                            <p class="no-data">লোড হচ্ছে...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analyticsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>অ্যাডভান্সড অ্যানালিটিক্স</h2>
+                    <button id="refreshAnalytics" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        রিফ্রেশ
+                    </button>
+                </div>
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <h3>ব্যবহারকারী সম্পৃক্ততা (Engagement)</h3>
+                    <div id="kpiStats" class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                        <!-- KPI stats will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <h3>সাপ্তাহিক বিশ্লেষণ (শেষ ৭ দিন)</h3>
+                    <div style="height: 300px;">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="dashboard-cards">
+                    <div class="card">
+                        <h3>কন্টেন্ট ট্রেন্ডস</h3>
+                        <div style="height: 300px;">
+                            <canvas id="contentTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>মডারেশন পরিসংখ্যান</h3>
+                        <div class="system-info" id="moderationAnalyticsContainer">
+                           <!-- Moderation analytics will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reportsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>রিপোর্টেড কন্টেন্ট</h2>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <input type="text" id="adminSearch" placeholder="রিপোর্ট সার্চ করুন...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button id="refreshReports" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i>
+                            রিফ্রেশ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <select id="reportFilter">
+                        <option value="all">সকল রিপোর্ট</option>
+                        <option value="PENDING">পেন্ডিং</option>
+                        <option value="RESOLVED">রিজল্ভড</option>
+                        <option value="HIGH">হাই প্রায়োরিটি</option>
+                        <option value="MEDIUM">মিডিয়াম প্রায়োরিটি</option>
+                        <option value="LOW">লো প্রায়োরিটি</option>
+                    </select>
+                    
+                    <select id="categoryFilter">
+                        <option value="all">সকল ক্যাটেগরি</option>
+                        <option value="SPAM">স্প্যাম</option>
+                        <option value="HARASSMENT">উৎপীড়ন</option>
+                        <option value="HATE_SPEECH">ঘৃণামূলক বক্তব্য</option>
+                        <option value="INAPPROPRIATE">অনুপযুক্ত</option>
+                        <option value="FALSE_INFORMATION">ভুল তথ্য</option>
+                    </select>
+                </div>
+
+                <div id="reportsContainer" class="reports-container">
+                    <!-- Reports will be loaded dynamically -->
+                </div>
+
+                <div class="load-more-section">
+                    <button id="loadMoreReports" class="btn btn-outline">
+                        <i class="fas fa-plus"></i>
+                        আরো রিপোর্ট লোড করুন
+                    </button>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="usersContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>ব্যবহারকারী ব্যবস্থাপনা</h2>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <input type="text" id="userSearch" placeholder="ব্যবহারকারী খুঁজুন...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="users-container">
+                    <div class="card">
+                        <h3>ব্যবহারকারী স্ট্যাটিস্টিক্স</h3>
+                        <div class="user-stats">
+                            <div class="user-stat">
+                                <span class="stat-number" id="totalUsers">0</span>
+                                <span class="stat-label">মোট ব্যবহারকারী</span>
+                            </div>
+                            <div class="user-stat">
+                                <span class="stat-number" id="activeUsers">0</span>
+                                <span class="stat-label">সক্রিয় ব্যবহারকারী</span>
+                            </div>
+                            <div class="user-stat">
+                                <span class="stat-number" id="suspendedUsers">0</span>
+                                <span class="stat-label">নিষিদ্ধ ব্যবহারকারী</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>ব্যবহারকারী তালিকা</h3>
+                        <div id="usersList" class="users-list">
+                            <!-- Users will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="warned-usersContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>সতর্ক করা ব্যবহারকারীদের তালিকা</h2>
+                    <button id="refreshWarnedUsersBtn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        রিফ্রেশ
+                    </button>
+                </div>
+                <div class="card">
+                     <p>এখানে সতর্ক করা ব্যবহারকারীদের তালিকা এবং তাদের সতর্কতার কারণ দেখানো হচ্ছে।</p>
+                    <div id="warnedUsersContainer" class="logs-container">
+                        <!-- Warned users will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="banned-usersContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>নিষিদ্ধ ব্যবহারকারী তালিকা</h2>
+                    <div class="header-actions">
+                        <button id="refreshBannedUsers" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i>
+                            রিফ্রেশ
+                        </button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>নিষিদ্ধ ব্যবহারকারীদের তালিকা</h3>
+                    <p>এখান থেকে ব্যবহারকারীদের পুনরায় সক্রিয় (আনব্যান) করা যাবে।</p>
+                    <div id="bannedUsersList" class="users-list" style="margin-top: 1rem;">
+                        <!-- Banned users will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Tab -->
+            <div id="contentContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>কন্টেন্ট ব্যবস্থাপনা</h2>
+                    <div class="header-actions">
+                        <select id="contentTypeFilter">
+                            <option value="all">সকল কন্টেন্ট</option>
+                            <option value="prayers">দোয়া</option>
+                            <option value="comments">কমেন্ট</option>
+                        </select>
+                        <div class="search-box">
+                            <input type="text" id="contentSearch" placeholder="কন্টেন্ট সার্চ করুন...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-container">
+                    <div class="content-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">📝</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalContent">0</div>
+                                <div class="stat-label">মোট কন্টেন্ট</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="activeContent">0</div>
+                                <div class="stat-label">সক্রিয় কন্টেন্ট</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">👁️</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="hiddenContent">0</div>
+                                <div class="stat-label">লুকানো কন্টেন্ট</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="contentList" class="content-list">
+                        <!-- Content will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="hidden-postsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>লুকানো পোস্টসমূহ</h2>
+                    <button id="refreshHiddenPosts" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        রিফ্রেশ
+                    </button>
+                </div>
+                <div id="hiddenPostsContainer" class="content-list">
+                    <!-- Hidden posts will be loaded dynamically -->
+                </div>
+            </div>
+            
+            <div id="admin-logsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>অ্যাডমিন অ্যাক্টিভিটি লগ</h2>
+                    <button id="refreshLogsBtn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        রিফ্রেশ
+                    </button>
+                </div>
+                <div class="card">
+                    <p>এখানে সকল অ্যাডমিনের সাম্প্রতিক কার্যকলাপের রেকর্ড দেখানো হচ্ছে।</p>
+                    <div id="adminLogsContainer" class="logs-container">
+                        <!-- Admin logs will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Moderation Tab -->
+            <div id="moderationContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>মডারেশন সেটিংস</h2>
+                </div>
+
+                <div class="moderation-settings">
+                    <div class="card">
+                        <h3>অটো মডারেশন</h3>
+                        <div class="setting-group">
+                            <label class="checkbox-label modern" for="autoModerationToggle">
+                                <input type="checkbox" id="autoModerationToggle" checked>
+                                <span class="custom-checkbox"></span>
+                                অটো মডারেশন সক্রিয় করুন
+                            </label>
+                            <p class="setting-description">
+                                স্বয়ংক্রিয়ভাবে অনুপযুক্ত কন্টেন্ট (নিষিদ্ধ কীওয়ার্ড যুক্ত) সনাক্ত করে রিপোর্ট তৈরি করবে।
+                            </p>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="sensitivityLevel">সেন্সিটিভিটি লেভেল</label>
+                            <select id="sensitivityLevel">
+                                <option value="low">নিম্ন</option>
+                                <option value="medium" selected>মধ্যম</option>
+                                <option value="high">উচ্চ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>সেন্সিটিভ কীওয়ার্ড</h3>
+                        <div class="keywords-management">
+                            <div class="keywords-list" id="keywordsList">
+                                <!-- Keywords will be loaded dynamically -->
+                            </div>
+                            <div class="add-keyword">
+                                <input type="text" id="newKeyword" placeholder="নতুন কীওয়ার্ড যোগ করুন...">
+                                <button id="addKeywordBtn" class="btn btn-primary">যোগ করুন</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>মডারেশন স্ট্যাটাস</h3>
+                        <div class="moderation-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">মোট পোস্ট ও কমেন্ট:</span>
+                                <span id="scannedContent" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item clickable" data-action="view-flagged-content">
+                                <span class="stat-label">রিপোর্টেড কন্টেন্ট (পেন্ডিং):</span>
+                                <span id="flaggedContent" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item clickable" data-action="view-hidden-content">
+                                <span class="stat-label">এডমিন দ্বারা লুকানো:</span>
+                                <span id="autoHidden" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">রিপোর্ট রিজল্ভ হার:</span>
+                                <span id="approvalRate" class="stat-value">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsContent" class="tab-content">
+                <div class="tab-header">
+                    <h2>সিস্টেম সেটিংস</h2>
+                </div>
+
+                <div class="system-settings">
+                    <div class="card">
+                        <h3>সাধারণ সেটিংস</h3>
+                        <div class="setting-group">
+                            <label for="siteName">সাইটের নাম</label>
+                            <input type="text" id="siteName" value="iPray">
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="siteDescription">সাইটের বিবরণ</label>
+                            <textarea id="siteDescription" rows="3">iPray-এ আপনাকে স্বাগতম। এটি শুধু একটি অ্যাপ নয়, এটি আমাদের বিশ্বাসের উঠোন।</textarea>
+                        </div>
+                        <div class="setting-group" style="text-align: right; margin-top: 1rem;">
+                            <button id="saveGeneralSettingsBtn" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                সেটিংস সেভ করুন
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>নোটিফিকেশন সেটিংস</h3>
+                        <div class="setting-group">
+                            <label class="checkbox-label" for="emailNotifications">
+                                <input type="checkbox" id="emailNotifications" checked>
+                                ইমেইল নোটিফিকেশন
+                            </label>
+                        </div>
+
+                        <div class="setting-group">
+                             <label class="checkbox-label" for="pushNotifications">
+                                <input type="checkbox" id="pushNotifications">
+                                পুশ নোটিফিকেশন
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>গ্লোবাল অ্যানাউন্সমেন্ট</h3>
+                        <p class="setting-description">সকল ব্যবহারকারীকে একটি নোটিফিকেশন পাঠান। এই ফিচারটি অত্যন্ত সাবধানে ব্যবহার করুন।</p>
+                        <div class="setting-group">
+                            <label for="announcementTitle">শিরোনাম</label>
+                            <input type="text" id="announcementTitle" placeholder="অ্যানাউন্সমেন্টের শিরোনাম..." required>
+                        </div>
+                        <div class="setting-group">
+                            <label for="announcementMessage">বার্তা</label>
+                            <textarea id="announcementMessage" rows="3" placeholder="সকল ব্যবহারকারীকে পাঠানোর জন্য বার্তা লিখুন..." required></textarea>
+                        </div>
+                        <div class="setting-group" style="text-align: right; margin-top: 1rem;">
+                            <button id="sendAnnouncementBtn" class="btn btn-danger">
+                                <i class="fas fa-bullhorn"></i>
+                                সকলকে পাঠান
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>সিস্টেম রক্ষণাবেক্ষণ</h3>
+                        <div class="maintenance-actions">
+                            <button id="clearCacheBtn" class="btn btn-warning">
+                                <i class="fas fa-broom"></i>
+                                ক্যাশে পরিষ্কার করুন
+                            </button>
+                            <button id="exportDataBtn" class="btn btn-outline">
+                                <i class="fas fa-download"></i>
+                                ডেটা এক্সপোর্ট করুন
+                            </button>
+                            <button id="systemHealthBtn" class="btn btn-info">
+                                <i class="fas fa-stethoscope"></i>
+                                সিস্টেম হেলথ চেক
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="adminLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>এডমিন প্যানেল লোড হচ্ছে...</p>
+    </div>
+
+    <!-- ===== Warning Modal ===== -->
+    <div id="warningModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">ব্যবহারকারীকে সতর্ক করুন</h2>
+                <span class="close-btn" onclick="document.getElementById('warningModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>আপনি <strong id="warnUserName"></strong>-কে সতর্ক করছেন।</p>
+                <input type="hidden" id="warnUserId">
+                
+                <div class="setting-group">
+                    <label for="warningReason">সতর্কতার কারণ:</label>
+                    <textarea id="warningReason" rows="4" placeholder="ব্যবহারকারীকে কী কারণে সতর্ক করা হচ্ছে তা বিস্তারিত লিখুন..." required></textarea>
+                </div>
+                
+                <div class="setting-group">
+                    <label for="warningResolveAt">কখন সতর্কবার্তা মুছে যাবে (ঐচ্ছিক):</label>
+                    <input type="datetime-local" id="warningResolveAt">
+                    <p class="setting-description">যদি খালি রাখা হয়, সতর্কবার্তাটি স্থায়ীভাবে থাকবে।</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="submitWarningBtn" class="btn btn-primary">সতর্কবার্তা পাঠান</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Files -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

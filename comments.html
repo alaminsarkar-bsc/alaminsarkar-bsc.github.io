@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>কমেন্টস - iPray</title>
+    
+    <!-- Meta Tags -->
+    <meta property="og:title" content="দোয়ার আবেদন - iPray">
+    <meta property="og:description" content="এই দোয়াটি পড়তে এবং আমিন বলতে লিংকে ক্লিক করুন।">
+    <meta property="og:image" content="https://pnsvptaanvtdaspqjwbk.supabase.co/storage/v1/object/public/post_images/default_share_image.jpg">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="iPray">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* কমেন্ট পেজের জন্য স্পেসিফিক স্টাইল */
+        body {
+            padding-bottom: 80px; /* ফুটারের জন্য জায়গা */
+            background-color: var(--bg-color);
+        }
+        
+        /* Header styling specific to back-navigation pages */
+        .header-container {
+            height: 50px; /* Single row height */
+        }
+        
+        .header-top-row {
+            justify-content: flex-start;
+            gap: 15px;
+            border-bottom: 1px solid #ddd; /* Separator for single header */
+        }
+        
+        .page-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Content Adjustment */
+        .main-view {
+            padding-top: 10px;
+        }
+
+        /* Fixed Comment Input Footer */
+        .comment-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #replyingToContainer {
+            display: none; /* Toggled by JS */
+            background: #f0f2f5;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--light-text);
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #commentForm {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        #commentInput {
+            flex-grow: 1;
+            border-radius: 20px;
+            padding: 10px 15px;
+            border: none;
+            background-color: #f0f2f5;
+            resize: none;
+            max-height: 80px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        #commentInput:focus { outline: none; background-color: #e4e6eb; }
+
+        #submitCommentBtn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+        #submitCommentBtn:disabled { color: var(--light-text); }
+        #submitCommentBtn:hover { transform: scale(1.1); }
+
+        /* Comment List Styles */
+        .comment-section {
+            background: var(--card-bg);
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .comment-count-header {
+            padding: 10px 15px;
+            font-weight: 600;
+            color: var(--light-text);
+            border-bottom: 1px solid #f0f2f5;
+            background: white;
+        }
+    </style>
+</head>
+<body id="comments-page">
+
+    <div id="appContainer">
+        <!-- হেডার (Back Button Style) -->
+        <div class="header-container">
+            <div class="header-top-row">
+                <a href="/index.html" class="nav-btn" title="ফিরে যান" style="font-size: 20px; color: var(--text-color); padding: 0; width: auto;">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h2 class="page-title">কমেন্টস</h2>
+            </div>
+        </div>
+
+        <!-- প্রধান কন্টেন্ট -->
+        <main class="main-view">
+            <!-- মূল পোস্ট (Script.js দিয়ে লোড হবে) -->
+            <div id="originalPostContainer" class="feed-container" style="padding-top: 0;">
+                <!-- Post Card Here -->
+            </div>
+
+            <!-- কমেন্টের তালিকা -->
+            <div style="background: white; margin-top: 10px; border-top: 1px solid var(--border-color);">
+                <div class="comment-count-header">সকল কমেন্ট</div>
+                <div class="comment-section" id="commentList">
+                     <div id="loadingIndicator" style="text-align: center; padding: 20px; color: var(--light-text);">লোড হচ্ছে...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ফিক্সড কমেন্ট ফুটার -->
+        <footer class="comment-footer">
+             <div id="replyingToContainer">
+                <span id="replyingToText"></span>
+                <button id="cancelReplyBtn" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-color);">&times;</button>
+            </div>
+            <form id="commentForm">
+                <div class="avatar" id="currentUserAvatarFooter" style="width: 32px; height: 32px; font-size: 14px; display: none;"></div>
+                <textarea id="commentInput" rows="1" placeholder="একটি কমেন্ট লিখুন..." required aria-label="কমেন্ট লিখুন"></textarea>
+                
+                <!-- এই বাটনে কোনো onclick নেই, এটি form submit ইভেন্ট ব্যবহার করবে -->
+                <button id="submitCommentBtn" type="submit" aria-label="পোস্ট করুন">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <!-- ১. লগইন মডাল (Global) -->
+    <div id="loginPage" style="display: none;">
+        <div class="login-box">
+            <h1>iPray</h1>
+            <p>কমেন্ট করতে অনুগ্রহ করে লগইন করুন।</p>
+            <button id="googleSignInBtn"><i class="fab fa-google"></i> গুগল দিয়ে সাইন ইন করুন</button>
+            <button id="facebookSignInBtn" class="facebook-btn"><i class="fab fa-facebook-f"></i> ফেসবুক দিয়ে সাইন ইন করুন</button>
+            <div class="login-divider">অথবা</div>
+            <div id="phoneLoginContainer">
+                <div id="phoneInputStep">
+                    <input type="tel" id="phoneInput" class="login-input" placeholder="মোবাইল নাম্বার (+880...)" />
+                    <button id="sendOtpBtn" class="phone-login-btn">ওটিপি পাঠান</button>
+                </div>
+                <div id="otpInputStep" style="display: none;">
+                    <input type="text" id="otpInput" class="login-input" placeholder="কোড" />
+                    <button id="verifyOtpBtn" class="phone-login-btn">যাচাই করুন</button>
+                    <button id="backToPhoneBtn" class="text-btn">নাম্বার পরিবর্তন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ২. কমেন্ট এডিট মডাল -->
+    <div id="editCommentModal" class="modal">
+        <div class="modal-content">
+            <form id="editCommentForm">
+                <div class="modal-header">
+                    <h2 class="modal-title">কমেন্ট সম্পাদনা</h2>
+                    <span class="close-btn" onclick="document.getElementById('editCommentModal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editCommentId">
+                    <textarea id="editCommentTextarea" rows="4" required class="login-input" style="resize: none;"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveCommentBtn" type="submit">আপডেট করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- ৩. রিপোর্ট মডাল -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">রিপোর্ট করুন</h2>
+                <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportContentId">
+                    <input type="hidden" id="reportContentType">
+                    <div class="form-group">
+                        <label>কারণ</label>
+                        <select id="reportCategory" required>
+                            <option value="">নির্বাচন করুন...</option>
+                            <option value="SPAM">স্প্যাম</option>
+                            <option value="HARASSMENT">হারাসমেন্ট</option>
+                            <option value="HATE_SPEECH">ঘৃণামূলক বক্তব্য</option>
+                            <option value="INAPPROPRIATE">অনুপযুক্ত</option>
+                            <option value="OTHER">অন্যান্য</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="reportDescription" rows="3" placeholder="বিস্তারিত..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="submitReportBtn" type="button">জমা দিন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ৪. ইমেজ ভিউয়ার মডাল -->
+    <div id="image-view-modal" class="image-modal">
+        <span class="close-image-modal">&times;</span>
+        <img class="image-modal-content" id="modal-image">
+    </div>
+
+    <!-- স্ক্রিপ্ট ফাইল -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Global Logic -->
+    <script src="script.js"></script>
+    <!-- Page Specific Logic -->
+    <script src="comments.js"></script>
+
+</body>
+</html>

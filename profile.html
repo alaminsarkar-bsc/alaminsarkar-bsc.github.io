@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>প্রোফাইল - iPray</title>
+    
+    <!-- Meta Tags -->
+    <meta property="og:title" content="প্রোফাইল - iPray">
+    <meta property="og:type" content="profile">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+</head>
+<body id="profile-page">
+
+    <!-- Admin Links (Hidden by default) -->
+    <a href="/admin.html" id="adminLink" style="display: none; position: fixed; top: 110px; right: 20px; z-index: 1000; background: #2c3e50; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <i class="fas fa-shield-alt"></i> Admin
+    </a>
+    <a href="/campaign-admin.html" id="campaignAdminLink" style="display: none; position: fixed; top: 150px; right: 20px; z-index: 1000; background: #27ae60; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-size: 13px;">
+        <i class="fas fa-tasks"></i> Campaign
+    </a>
+
+    <!-- Login Modal -->
+    <div id="loginPage" style="display: none;">
+        <div class="login-box">
+            <h1>iPray</h1>
+            <p>প্রোফাইল দেখতে লগইন করুন।</p>
+            <button id="googleSignInBtn"><i class="fab fa-google"></i> গুগল দিয়ে সাইন ইন করুন</button>
+            <button id="facebookSignInBtn" class="facebook-btn"><i class="fab fa-facebook-f"></i> ফেসবুক দিয়ে সাইন ইন করুন</button>
+            <div class="login-divider">অথবা</div>
+            <div id="phoneLoginContainer">
+                <div id="phoneInputStep">
+                    <input type="tel" id="phoneInput" class="login-input" placeholder="মোবাইল নাম্বার (+880...)" />
+                    <button id="sendOtpBtn" class="phone-login-btn">ওটিপি পাঠান</button>
+                </div>
+                <div id="otpInputStep" style="display: none;">
+                    <input type="text" id="otpInput" class="login-input" placeholder="কোড" />
+                    <button id="verifyOtpBtn" class="phone-login-btn">যাচাই করুন</button>
+                    <button id="backToPhoneBtn" class="text-btn">নাম্বার পরিবর্তন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container (Hidden initially for Flash Fix) -->
+    <div id="appContainer" style="display: none;">
+        <!-- HEADER START -->
+        <div class="header-container">
+            <!-- Top Row -->
+            <div class="header-top-row">
+                <a href="/index.html" class="logo-link">iPray</a>
+                
+                <!-- Search Box -->
+                <input type="search" id="searchInput" class="floating-search-box" placeholder="খুঁজুন...">
+
+                <div class="header-actions-top">
+                    <button id="searchBtn" class="top-icon-btn" title="খুঁজুন">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="globalDonateBtn" class="top-icon-btn" title="সাপোর্ট">
+                        <i class="fas fa-hand-holding-heart" style="color: #e74c3c;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Navigation Tabs -->
+            <div class="header-nav-row">
+                <!-- Back Button (Replaces Home Icon) -->
+                <a href="/index.html" class="nav-tab" title="হোম পেজে ফিরে যান">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                
+                <a href="/index.html" class="nav-tab">
+                    <i class="fas fa-film"></i>
+                </a>
+                <a href="/index.html" class="nav-tab">
+                    <i class="fas fa-users"></i>
+                </a>
+                
+                <!-- Add Post Button -->
+                <a href="post.html" class="nav-tab" id="addPostLink" title="পোস্ট করুন">
+                    <i class="fas fa-plus-circle" style="font-size: 28px; color: var(--text-color);"></i>
+                </a>
+
+                <div class="notification-wrapper">
+                    <button id="notificationBtn" class="nav-tab">
+                        <i class="fas fa-bell"></i>
+                        <span id="notification-badge" class="notification-badge" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <!-- Profile Tab (Active) -->
+                <a href="/profile.html" class="nav-tab active">
+                    <i class="fas fa-user-circle"></i>
+                </a>
+            </div>
+        </div>
+        <!-- HEADER END -->
+
+        <div class="profile-view" id="profileView">
+            <!-- Profile Info Header -->
+            <div class="profile-header">
+                <div id="profileAvatar" class="avatar"></div>
+                <h2 id="profileName">লোড হচ্ছে...</h2>
+                <p id="profileAddress" class="profile-info" style="color: var(--light-text); margin: 5px 0; font-size: 14px;"></p>
+                
+                <div class="profile-stats">
+                    <span id="postCount"><strong>-</strong> পোস্ট</span>
+                    <span class="stat-divider"></span>
+                    <span id="followersCount"><strong>-</strong> অনুসারী</span>
+                    <span class="stat-divider"></span>
+                    <span id="followingCount"><strong>-</strong> অনুসরণ</span>
+                </div>
+
+                <div class="profile-actions" id="profileActions">
+                    <!-- Buttons injected via JS -->
+                    <button id="editProfileBtn" style="display: none;"><i class="fas fa-pen"></i> প্রোফাইল এডিট</button>
+                    <button id="followBtn" class="follow-btn" style="display: none;">অনুসরণ করুন</button>
+                    <button id="signOutBtn" class="sign-out-btn" style="display: none; background-color: #e4e6eb; color: black; margin-top: 5px;"><i class="fas fa-sign-out-alt"></i> লগআউট</button>
+                </div>
+            </div>
+
+            <!-- Warning Section (Only visible if warned) -->
+            <div id="warnings-section" class="profile-section" style="display: none; padding: 15px; margin-bottom: 10px; border: 1px solid var(--danger-color); border-radius: 8px; background: #fff5f5;">
+                <h3 style="color: var(--danger-color); border-bottom: 1px solid #ffc9c9; padding-bottom: 10px; margin: 0 0 10px 0; font-size: 16px;">
+                    <i class="fas fa-exclamation-triangle"></i> সতর্কবার্তা
+                </h3>
+                <div id="warnings-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+            
+            <!-- Profile Content Tabs -->
+            <div class="profile-tabs" id="profileTabs">
+                <button class="tab-btn active" data-tab="active">পোস্ট</button>
+                <button class="tab-btn" data-tab="saved" style="display: none;">সংরক্ষিত</button>
+                <button class="tab-btn" data-tab="hidden" style="display: none;">লুকানো</button>
+            </div>
+
+            <!-- Posts Container -->
+            <div class="feed-container" id="myPostsContainer"></div>
+            
+            <div id="loadingIndicator" style="text-align: center; padding: 20px; color: var(--light-text);">
+                <div class="loader" style="border-color: #999; border-bottom-color: transparent;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ================= MODALS ================= -->
+
+    <!-- Edit Prayer Modal -->
+    <div id="editPrayerModal" class="modal">
+        <div class="modal-content">
+            <form id="editPrayerForm">
+                <div class="modal-header">
+                    <h2 class="modal-title">পোস্ট সম্পাদনা</h2>
+                    <span class="close-btn" onclick="document.getElementById('editPrayerModal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editPrayerId">
+                    <div class="form-group">
+                        <label>শিরোনাম</label>
+                        <input type="text" id="editPrayerTitleInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label>বিস্তারিত</label>
+                        <textarea id="editPrayerDetailsTextarea" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>ইউটিউব লিংক (ঐচ্ছিক)</label>
+                        <input type="text" id="editYoutubeLinkInput">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="savePrayerBtn" type="submit">সেভ করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <form id="editProfileForm">
+                <div class="modal-header">
+                    <h2 class="modal-title">প্রোফাইল সম্পাদনা</h2>
+                    <span class="close-btn" onclick="document.getElementById('editProfileModal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editNameInput">আপনার নাম</label>
+                        <input type="text" id="editNameInput" placeholder="সম্পূর্ণ নাম" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAddressInput">ঠিকানা / বায়ো</label>
+                        <textarea id="editAddressInput" rows="3" placeholder="আপনার সম্পর্কে কিছু লিখুন..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveProfileBtn" type="submit">আপডেট করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">রিপোর্ট করুন</h2>
+                <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportContentId">
+                    <input type="hidden" id="reportContentType">
+                    <div class="form-group">
+                        <label>কারণ</label>
+                        <select id="reportCategory" required>
+                            <option value="">নির্বাচন করুন...</option>
+                            <option value="SPAM">স্প্যাম</option>
+                            <option value="HARASSMENT">হারাসমেন্ট</option>
+                            <option value="HATE_SPEECH">ঘৃণামূলক বক্তব্য</option>
+                            <option value="INAPPROPRIATE">অনুপযুক্ত</option>
+                            <option value="OTHER">অন্যান্য</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="reportDescription" rows="3" placeholder="বিস্তারিত..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="submitReportBtn" type="button">জমা দিন</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Specific Donation Modal (For Campaign Cards) -->
+    <div id="donationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">সহায়তা পাঠান</h2>
+                <span class="close-btn" onclick="document.getElementById('donationModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body" id="donationDetailsBody"></div>
+        </div>
+    </div>
+
+    <!-- General Donation Modal -->
+    <div id="generalDonationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">iPray সাপোর্ট</h2>
+                <span class="close-btn" onclick="document.getElementById('generalDonationModal').style.display='none'">&times;</span>
+            </div>
+            <div class="profile-tabs" style="margin-bottom:15px;">
+                <button class="tab-btn active" onclick="switchDonationTab('donate')">ডোনেট</button>
+                <button class="tab-btn" onclick="switchDonationTab('history')">হিস্ট্রি</button>
+            </div>
+            <div class="modal-body">
+                <div id="donateTabContent">
+                    <div id="adminPaymentMethods" class="payment-methods"></div>
+                    <div id="genPaymentForm" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+                        <div class="number-display">
+                            <b><span id="genMethodName"></span></b>: <span id="genTargetNumber" style="color:#e74c3c;"></span> 
+                            <i class="fas fa-copy" onclick="copyGenNumber()" style="cursor:pointer; margin-left:10px;"></i>
+                        </div>
+                        <form id="submitGeneralDonation">
+                            <div class="form-group"><input type="number" id="genAmount" placeholder="টাকার পরিমাণ" required></div>
+                            <div class="form-group"><input type="text" id="genSender" placeholder="প্রেরক নাম্বার" required></div>
+                            <div class="form-group"><input type="text" id="genTrxId" placeholder="TrxID" required></div>
+                            <button type="submit" class="btn-full-width">জমা দিন</button>
+                        </form>
+                    </div>
+                </div>
+                <div id="historyTabContent" style="display:none;"><div id="donationHistoryList"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="notification-modal">
+        <div class="notification-modal-content">
+            <div class="notification-modal-header">
+                <button id="closeNotificationModalBtn" class="back-btn-modal"><i class="fas fa-arrow-left"></i></button>
+                <h2 class="modal-title">নোটিফিকেশন</h2>
+                <div class="header-actions">
+                    <button id="mark-all-read-btn-modal" class="mark-all-read-btn-modal" style="font-size: 13px; color: var(--primary-color); font-weight: 600;">সব পঠিত</button>
+                    <button id="clear-all-notif-btn" class="clear-all-btn">সব মুছুন</button>
+                </div>
+            </div>
+            <div id="notification-list-modal" class="notification-modal-body"></div>
+        </div>
+    </div>
+    
+    <!-- Story Viewer (Just placeholder logic if needed, usually on Home) -->
+    <div id="storyViewerModal" style="display: none;"></div>
+
+    <!-- Image Viewer Modal -->
+    <div id="image-view-modal" class="image-modal">
+        <span class="close-image-modal">&times;</span>
+        <img class="image-modal-content" id="modal-image">
+    </div>
+
+    <button id="scrollToTopBtn" class="scroll-to-top-btn"><i class="fas fa-arrow-up"></i></button>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>

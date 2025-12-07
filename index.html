@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPray</title>
+    
+    <!-- Meta Tags -->
+    <meta property="og:title" content="iPray - বিশ্বাসের উঠোন">
+    <meta property="og:description" content="আপনার মনের দোয়া শেয়ার করুন এবং অন্যদের জন্য দোয়া করুন।">
+    <meta property="og:image" content="https://pnsvptaanvtdaspqjwbk.supabase.co/storage/v1/object/public/post_images/default_banner.jpg">
+    <meta property="og:url" content="https://doa-angina.vercel.app/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="iPray">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <!-- Image Generation Library (For Text Stories) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body id="home-page">
+
+    <!-- Offline Indicator -->
+    <div id="offlineIndicator" class="offline-indicator" style="display: none;"></div>
+
+    <!-- Admin Links -->
+    <a href="/admin.html" id="adminLink" style="display: none; position: fixed; top: 110px; right: 20px; z-index: 1000; background: #2c3e50; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <i class="fas fa-shield-alt"></i> Admin
+    </a>
+    <a href="/campaign-admin.html" id="campaignAdminLink" style="display: none; position: fixed; top: 150px; right: 20px; z-index: 1000; background: #27ae60; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-size: 13px;">
+        <i class="fas fa-tasks"></i> Campaign
+    </a>
+
+    <!-- Login Modal -->
+    <div id="loginPage" style="display: none;">
+        <div class="login-box">
+            <h1>iPray</h1>
+            <p>বিশ্বাস ও দোয়ার এক অনন্য মেলবন্ধন। এগিয়ে যেতে লগইন করুন।</p>
+            <button id="googleSignInBtn"><i class="fab fa-google"></i> গুগল দিয়ে সাইন ইন করুন</button>
+            <button id="facebookSignInBtn" class="facebook-btn"><i class="fab fa-facebook-f"></i> ফেসবুক দিয়ে সাইন ইন করুন</button>
+            <div class="login-divider">অথবা</div>
+            <div id="phoneLoginContainer">
+                <div id="phoneInputStep">
+                    <input type="tel" id="phoneInput" class="login-input" placeholder="মোবাইল নাম্বার (+880...)" />
+                    <button id="sendOtpBtn" class="phone-login-btn">ওটিপি পাঠান</button>
+                </div>
+                <div id="otpInputStep" style="display: none;">
+                    <input type="text" id="otpInput" class="login-input" placeholder="৬ ডিজিটের কোড" />
+                    <button id="verifyOtpBtn" class="phone-login-btn">যাচাই করুন</button>
+                    <button id="backToPhoneBtn" class="text-btn">নাম্বার পরিবর্তন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer">
+        <!-- HEADER START -->
+        <div class="header-container">
+            <!-- Top Row -->
+            <div class="header-top-row">
+                <a href="/index.html" class="logo-link">iPray</a>
+                
+                <!-- Search Box -->
+                <input type="search" id="searchInput" class="floating-search-box" placeholder="খুঁজুন...">
+
+                <div class="header-actions-top">
+                    
+                    <!-- NEW: Islamic Page Link (Book Icon) -->
+                    <a href="islamic.html" class="top-icon-btn" title="কুরআন, হাদিস ও নামাজের সময়">
+                        <i class="fas fa-book-open" style="color: #8e44ad;"></i>
+                    </a>
+
+                    <!-- Create Story Button (Opens New Editor) -->
+                    <button id="createStoryBtn" class="top-icon-btn" title="স্টোরি তৈরি করুন">
+                        <i class="fas fa-plus" style="color: #27ae60;"></i>
+                    </button>
+
+                    <button id="searchBtn" class="top-icon-btn" title="খুঁজুন">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="globalDonateBtn" class="top-icon-btn" title="সাপোর্ট">
+                        <i class="fas fa-hand-holding-heart" style="color: #e74c3c;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Navigation Tabs -->
+            <div class="header-nav-row">
+                <a href="/index.html" class="nav-tab active" id="homeTabBtn">
+                    <i class="fas fa-home"></i>
+                </a>
+                <button id="videoFeedBtn" class="nav-tab">
+                    <i class="fas fa-film"></i>
+                </button>
+                <button id="feedToggleBtn" class="nav-tab">
+                    <i class="fas fa-users"></i>
+                </button>
+                
+                <!-- Add Post Button -->
+                <a href="post.html" class="nav-tab" id="addPostLink" title="পোস্ট করুন">
+                    <i class="fas fa-plus-circle" style="font-size: 28px; color: var(--text-color);"></i>
+                </a>
+
+                <div class="notification-wrapper">
+                    <button id="notificationBtn" class="nav-tab">
+                        <i class="fas fa-bell"></i>
+                        <span id="notification-badge" class="notification-badge" style="display: none;"></span>
+                    </button>
+                </div>
+                
+                <a href="/profile.html" class="nav-tab">
+                    <i class="fas fa-user-circle"></i>
+                </a>
+            </div>
+        </div>
+        <!-- HEADER END -->
+
+        <main id="main-content" class="main-view">
+            <!-- Story Skeleton -->
+            <div id="storySkeletonContainer" class="story-container">
+                <div class="skeleton-story"></div>
+                <div class="skeleton-story"></div>
+                <div class="skeleton-story"></div>
+                <div class="skeleton-story"></div>
+            </div>
+
+            <!-- Real Story Container (Database Driven) -->
+            <div id="storyContainer" class="story-container" style="display: none;"></div>
+            
+            <!-- Feed Skeleton -->
+            <div id="skeletonContainer">
+                <div class="skeleton-card">
+                    <div class="skeleton-header">
+                        <div class="skeleton-avatar"></div>
+                        <div class="skeleton-author-info">
+                            <div class="skeleton-line" style="width: 50%;"></div>
+                            <div class="skeleton-line" style="width: 30%;"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-line" style="width: 90%;"></div>
+                    <div class="skeleton-line" style="width: 70%;"></div>
+                    <div class="skeleton-block" style="height: 200px;"></div>
+                </div>
+            </div>
+
+            <!-- Posts Feed -->
+            <div class="feed-container" id="feedContainer"></div>
+            
+            <div id="loadingIndicator" style="text-align: center; padding: 20px; display: none; color: var(--light-text);">
+                <div class="loader" style="border-color: #999; border-bottom-color: transparent;"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- ==============================================
+         NEW: ADVANCED PROFESSIONAL STORY EDITOR MODAL
+         ============================================== -->
+    <div id="storyCreateModal" class="story-editor-modal" style="display: none;">
+        <div class="editor-container">
+            
+            <!-- 1. Top Bar (Close & Tabs) -->
+            <div class="editor-top-bar">
+                <button class="icon-btn close-editor" id="closeStoryEditorBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <!-- Editor Mode Switcher -->
+                <div class="editor-tabs-center">
+                    <button class="editor-tab-btn active" data-mode="text" id="tabTextBtn">লেখা</button>
+                    <button class="editor-tab-btn" data-mode="media" id="tabMediaBtn">মিডিয়া</button>
+                </div>
+
+                <!-- Top Right Tools (Initially hidden, shown based on mode) -->
+                <div class="editor-top-actions">
+                    <button class="icon-btn" id="storyMuteBtn" style="display:none;" title="সাউন্ড মিউট/আনমিউট">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Main Canvas Area -->
+            <div class="editor-canvas-area">
+                
+                <!-- MODE 1: TEXT CANVAS -->
+                <div id="textCanvas" class="story-canvas" style="display: flex;">
+                    <div class="canvas-content">
+                        <div id="storyTextInput" class="draggable-text" contenteditable="true" spellcheck="false" data-placeholder="এখানে লিখুন..."></div>
+                    </div>
+                    <div class="watermark"><i class="fas fa-praying-hands"></i> iPray</div>
+                </div>
+
+                <!-- MODE 2: MEDIA CANVAS (Video/Image/Camera) -->
+                <div id="mediaCanvas" class="story-canvas" style="display: none; background: #000;">
+                    
+                    <!-- Live Camera Feed -->
+                    <video id="liveCameraFeed" autoplay muted playsinline style="display:none; width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
+                    
+                    <!-- Uploaded/Recorded Preview -->
+                    <img id="storyImgPreview" style="display: none; width: 100%; height: 100%; object-fit: contain;">
+                    <video id="storyVidPreview" style="display: none; width: 100%; height: 100%; object-fit: contain;" playsinline loop></video>
+                    
+                    <!-- Placeholder UI (Initial State) -->
+                    <div id="mediaPlaceholder" class="media-placeholder-content">
+                        <div class="media-upload-options">
+                            <!-- Gallery Button -->
+                            <label for="storyFileUpload" class="upload-trigger-btn">
+                                <div class="upload-icon-circle"><i class="fas fa-images"></i></div>
+                                <span>গ্যালারি</span>
+                            </label>
+                            
+                            <!-- Camera Trigger Button (Starts Camera) -->
+                            <button id="openCameraBtn" class="upload-trigger-btn" style="background:none; border:none;">
+                                <div class="upload-icon-circle"><i class="fas fa-camera"></i></div>
+                                <span>ক্যামেরা চালু করুন</span>
+                            </button>
+
+                            <!-- Hidden Inputs -->
+                            <input type="file" id="storyFileUpload" accept="image/*,video/*" hidden>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Sidebar Tools (Changes based on Tab) -->
+            <div class="editor-sidebar" id="textModeTools">
+                <div class="tool-item" id="storyBgColorBtn">
+                    <div class="tool-icon" style="background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%); border: none;"></div>
+                    <span>ব্যাকগ্রাউন্ড</span>
+                </div>
+                <div class="tool-item" id="storyTextColorBtn">
+                    <div class="tool-icon"><i class="fas fa-font"></i></div>
+                    <span>রং</span>
+                </div>
+            </div>
+
+            <!-- 4. Bottom Action Bar & Recording Controls -->
+            <div class="editor-bottom-bar">
+                
+                <!-- Color Palette (Hidden initially) -->
+                <div class="color-palette" id="storyColorPalette" style="display: none;">
+                    <div class="c-dot" style="background: #ffffff;" data-color="#ffffff"></div>
+                    <div class="c-dot" style="background: #000000;" data-color="#000000"></div>
+                    <div class="c-dot" style="background: #ff4757;" data-color="#ff4757"></div>
+                    <div class="c-dot" style="background: #2ed573;" data-color="#2ed573"></div>
+                    <div class="c-dot" style="background: #1e90ff;" data-color="#1e90ff"></div>
+                    <div class="c-dot" style="background: #ffa502;" data-color="#ffa502"></div>
+                </div>
+
+                <!-- Caption Box (Only for Media Mode) -->
+                <div id="mediaCaptionContainer" style="display: none; width: 100%; margin-bottom: 10px;">
+                    <input type="text" id="storyCaptionInput" placeholder="ক্যাপশন লিখুন..." class="story-caption-input">
+                </div>
+
+                <!-- Recording Button with Ring (Only Visible when Camera is Active) -->
+                <div id="recordingArea" style="display:none; justify-content:center; margin-bottom: 15px;">
+                    <button id="recordBtn" class="record-btn-ring">
+                        <svg class="progress-ring" width="80" height="80">
+                           <circle class="progress-ring__circle" stroke="white" stroke-width="4" fill="transparent" r="36" cx="40" cy="40"/>
+                        </svg>
+                        <div class="record-inner-dot"></div>
+                    </button>
+                </div>
+
+                <div class="action-buttons-row">
+                    <!-- Reset/Change Media Button (Hidden initially) -->
+                    <button id="resetMediaBtn" class="editor-btn secondary" style="display:none;">
+                        <i class="fas fa-trash"></i> বাতিল
+                    </button>
+
+                    <button id="publishStoryBtn" class="editor-btn primary" style="flex: 1; justify-content: center;">
+                        স্টোরিতে শেয়ার করুন <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- END OF ADVANCED STORY EDITOR MODAL -->
+
+
+    <!-- Edit Post Modal -->
+    <div id="editPrayerModal" class="modal">
+        <div class="modal-content">
+            <form id="editPrayerForm">
+                <div class="modal-header">
+                    <h2 class="modal-title">পোস্ট সম্পাদনা</h2>
+                    <span class="close-btn" onclick="document.getElementById('editPrayerModal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editPrayerId">
+                    <div class="form-group">
+                        <label>শিরোনাম</label>
+                        <input type="text" id="editPrayerTitleInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label>বিস্তারিত</label>
+                        <textarea id="editPrayerDetailsTextarea" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>ইউটিউব লিংক (ঐচ্ছিক)</label>
+                        <input type="text" id="editYoutubeLinkInput">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="savePrayerBtn" type="submit">সেভ করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">রিপোর্ট করুন</h2>
+                <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportContentId">
+                    <input type="hidden" id="reportContentType">
+                    <div class="form-group">
+                        <label>কারণ নির্বাচন করুন</label>
+                        <select id="reportCategory" required>
+                            <option value="">নির্বাচন করুন...</option>
+                            <option value="SPAM">স্প্যাম</option>
+                            <option value="HARASSMENT">হারাসমেন্ট</option>
+                            <option value="HATE_SPEECH">ঘৃণামূলক বক্তব্য</option>
+                            <option value="INAPPROPRIATE">অনুপযুক্ত</option>
+                            <option value="OTHER">অন্যান্য</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="reportDescription" rows="3" placeholder="বিস্তারিত..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="submitReportBtn">রিপোর্ট জমা দিন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Donation Modal (For specific campaigns) -->
+    <div id="donationModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 class="modal-title">সহায়তা পাঠান</h2>
+                <span class="close-btn" onclick="document.getElementById('donationModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body" id="donationDetailsBody">
+                <!-- JS will populate this dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- General Donation Modal (For Global Donate Button) -->
+    <div id="generalDonationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">iPray সাপোর্ট</h2>
+                <span class="close-btn" onclick="document.getElementById('generalDonationModal').style.display='none'">&times;</span>
+            </div>
+            <div class="profile-tabs" style="margin-bottom:15px;">
+                <button class="tab-btn active" id="tabDonateBtn" onclick="switchDonationTab('donate')">ডোনেট</button>
+                <button class="tab-btn" id="tabHistoryBtn" onclick="switchDonationTab('history')">হিস্ট্রি</button>
+            </div>
+            <div class="modal-body">
+                <!-- Donate Tab -->
+                <div id="donateTabContent">
+                    <p style="text-align:center; color:#666; margin-bottom:15px;">পেমেন্ট মেথড নির্বাচন করুন:</p>
+                    <div id="adminPaymentMethods" class="payment-methods">
+                        <!-- Dynamic Payment Methods will load here -->
+                    </div>
+                    
+                    <!-- Input Form (Hidden initially) -->
+                    <div id="genPaymentForm" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+                        <div class="number-display">
+                            <b><span id="genMethodName"></span></b> নাম্বারে টাকা পাঠান: 
+                            <div class="copy-box" style="margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                                <span id="genTargetNumber" style="color:#e74c3c; font-size: 18px; font-weight: bold;"></span> 
+                                <button class="copy-btn-small" onclick="copyGenNumber()" title="কপি করুন"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <form id="submitGeneralDonation" style="margin-top: 15px;">
+                            <div class="form-group">
+                                <input type="number" id="genAmount" placeholder="টাকার পরিমাণ" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="genSender" placeholder="আপনার নাম্বার (প্রেরক)" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" id="genTrxId" placeholder="TrxID (Transaction ID)" required>
+                            </div>
+                            <button type="submit" class="btn-full-width">তথ্য জমা দিন</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- History Tab -->
+                <div id="historyTabContent" style="display:none;">
+                    <div id="donationHistoryList" style="max-height: 300px; overflow-y: auto;">
+                        <p style="text-align:center;">লোড হচ্ছে...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal with Clear All -->
+    <div id="notificationModal" class="notification-modal">
+        <div class="notification-modal-content">
+            <div class="notification-modal-header">
+                <button id="closeNotificationModalBtn" class="back-btn-modal"><i class="fas fa-arrow-left"></i></button>
+                <h2 class="modal-title">নোটিফিকেশন</h2>
+                <div class="header-actions">
+                    <button id="mark-all-read-btn-modal" class="mark-all-read-btn-modal" style="font-size: 13px; color: var(--primary-color); font-weight: 600;">সব পঠিত</button>
+                    <button id="clear-all-notif-btn" class="clear-all-btn">সব মুছুন</button>
+                </div>
+            </div>
+            <div id="notification-list-modal" class="notification-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Story Viewer (For Viewing Stories) -->
+    <div id="storyViewerModal" style="display: none;">
+        <div id="storyProgressBars"></div>
+        <div id="storyUserInfo"></div>
+        <button id="closeStoryViewerBtn">&times;</button>
+        <div class="story-viewer-media">
+            <!-- Media will be injected here via JS -->
+        </div>
+        
+        <!-- Navigation Areas -->
+        <div id="prevStoryBtn"></div>
+        <div id="nextStoryBtn"></div>
+        
+        <!-- Story Reply (Optional Future Feature) -->
+        <div class="story-reply-container" style="display:none;">
+            <input type="text" placeholder="রিপ্লাই দিন..." class="story-reply-input">
+            <button class="story-send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="image-view-modal" class="image-modal">
+        <span class="close-image-modal">&times;</span>
+        <img class="image-modal-content" id="modal-image">
+    </div>
+
+    <!-- Scroll To Top Button -->
+    <button id="scrollToTopBtn" class="scroll-to-top-btn" title="উপরে যান">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নতুন পোস্ট করুন - iPray</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body id="post-page">
+
+    <div id="appContainer">
+        <!-- হেডার -->
+        <div class="header-container">
+            <div class="header-top-row" style="justify-content: flex-start; gap: 15px;">
+                <a href="/index.html" class="nav-btn" title="ফিরে যান" style="color: var(--text-color); font-size: 20px;">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h2 class="page-title" id="pageTitle" style="margin: 0; font-size: 18px;">নতুন দোয়া পোস্ট করুন</h2>
+            </div>
+        </div>
+
+        <!-- পোস্ট করার ফর্ম -->
+        <main class="post-page-container">
+            <div class="form-wrapper">
+                <form id="prayerForm">
+                    <div class="form-content">
+                        <!-- শিরোনাম -->
+                        <div class="input-group">
+                            <label class="input-label">শিরোনাম</label>
+                            <input type="text" id="prayerTitleInput" class="post-input" placeholder="পোস্টের শিরোনাম লিখুন..." required 
+                                   aria-required="true" aria-label="পোস্টের শিরোনাম">
+                        </div>
+                        
+                        <!-- ফান্ডরাইজিং ফিল্ডস (শুধুমাত্র এডমিন মোডে JS দিয়ে শো হবে) -->
+                        <div id="fundraisingFields" style="display: none;" class="fundraising-section">
+                            <div class="input-group">
+                                <label class="input-label">প্রতিষ্ঠানের নাম</label>
+                                <input type="text" id="organizationName" class="post-input" placeholder="প্রতিষ্ঠানের নাম লিখুন..." aria-label="প্রতিষ্ঠানের নাম">
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">লক্ষ্য (টাকা)</label>
+                                <input type="number" id="goalAmount" class="post-input" placeholder="কত টাকা প্রয়োজন?" aria-label="লক্ষ্য টাকা">
+                            </div>
+                            
+                            <!-- ডায়নামিক পেমেন্ট মেথড সেকশন -->
+                            <div class="payment-setup-group">
+                                <label class="input-label">পেমেন্ট মেথড যুক্ত করুন</label>
+                                
+                                <!-- কন্ট্রোল প্যানেল -->
+                                <div class="payment-controls">
+                                    <select id="methodSelector" class="method-select">
+                                        <option value="bkash">বিকাশ (Bkash)</option>
+                                        <option value="nagad">নগদ (Nagad)</option>
+                                        <option value="rocket">রকেট (Rocket)</option>
+                                        <option value="upay">উপায় (Upay)</option>
+                                        <option value="bank">ব্যাংক (Bank)</option>
+                                    </select>
+                                    <button type="button" id="addPaymentMethodBtn" class="add-method-btn">
+                                        <i class="fas fa-plus"></i> যুক্ত করুন
+                                    </button>
+                                </div>
+
+                                <!-- যেখানে ডায়নামিক ফিল্ডগুলো জমা হবে -->
+                                <div id="dynamicPaymentList" class="dynamic-list">
+                                    <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে আইটেম যোগ হবে -->
+                                </div>
+
+                                <textarea id="campaignOtherDetails" class="post-input" rows="2" placeholder="অতিরিক্ত নোট (যেমন: রেফারেন্স বা বিশেষ নির্দেশনা)..." style="margin-top: 15px; min-height: 60px;"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- POLL TOGGLE (NEW FEATURE) -->
+                        <div class="poll-section-wrapper">
+                            <div class="poll-toggle-btn" id="pollToggleBtn">
+                                <i class="fas fa-poll"></i> পোল তৈরি করুন
+                            </div>
+
+                            <div id="pollInputs" style="display: none; margin-top: 15px; animation: fadeIn 0.3s;">
+                                <div class="input-group">
+                                    <label class="input-label">অপশনসমূহ (কমপক্ষে ২টি)</label>
+                                    <div class="poll-input-row">
+                                        <input type="text" class="post-input poll-option-input" placeholder="অপশন ১ (যেমন: হ্যাঁ)">
+                                    </div>
+                                    <div class="poll-input-row">
+                                        <input type="text" class="post-input poll-option-input" placeholder="অপশন ২ (যেমন: না)">
+                                    </div>
+                                    <div class="poll-input-row">
+                                        <input type="text" class="post-input poll-option-input" placeholder="অপশন ৩ (ঐচ্ছিক)">
+                                    </div>
+                                    <div class="poll-input-row">
+                                        <input type="text" class="post-input poll-option-input" placeholder="অপশন ৪ (ঐচ্ছিক)">
+                                    </div>
+                                </div>
+                                <p style="font-size: 12px; color: #e74c3c; margin-top: 5px;">* পোল মুডে ছবি বা ভিডিও আপলোড করা যাবে না।</p>
+                            </div>
+                        </div>
+                        
+                        <!-- বিস্তারিত -->
+                        <div class="input-group">
+                            <label class="input-label">বিস্তারিত</label>
+                            <textarea id="prayerDetailsTextarea" class="post-input" rows="6" placeholder="আপনার মনের কথা বিস্তারিত লিখুন..." required
+                                      aria-required="true" aria-label="পোস্টের বিস্তারিত"></textarea>
+                        </div>
+
+                        <!-- মিডিয়া আপলোড বাটনস -->
+                        <div class="media-upload-section">
+                            <p class="section-title">মিডিয়া যুক্ত করুন</p>
+                            <div class="media-buttons-row">
+                                <label for="imageUploadInput" class="media-btn image-btn">
+                                    <i class="fas fa-image"></i> ছবি
+                                </label>
+                                <input type="file" id="imageUploadInput" accept="image/*" style="display: none;">
+                                
+                                <label for="videoUploadInput" class="media-btn video-btn">
+                                    <i class="fas fa-video"></i> ভিডিও
+                                </label>
+                                <input type="file" id="videoUploadInput" accept="video/mp4,video/quicktime,video/x-m4v,video/*" style="display: none;">
+
+                                <label for="audioUploadInput" class="media-btn audio-btn">
+                                    <i class="fas fa-music"></i> অডিও
+                                </label>
+                                <input type="file" id="audioUploadInput" accept="audio/*" style="display: none;">
+                                
+                                <label id="addAudioBtn" class="media-btn record-btn">
+                                    <i class="fas fa-microphone"></i> রেকর্ড
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- অডিও রেকর্ডিং কন্ট্রোল -->
+                        <div id="recordingControls" class="recording-box" style="display: none;">
+                            <p class="recording-status"><i class="fas fa-microphone-alt pulse"></i> রেকর্ডিং চলছে... <span id="recordingTimer">00:00</span></p>
+                            <button type="button" id="stopRecordingBtn" class="stop-recording-btn">বন্ধ করুন</button>
+                        </div>
+                        
+                        <!-- ফাইল আপলোড প্রোগ্রেস বার -->
+                        <div id="uploadProgressContainer" class="progress-container" style="display: none;">
+                            <div class="progress-header">
+                                <p id="progressLabel">আপলোড হচ্ছে...</p>
+                                <p id="progressText">0%</p>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="uploadProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <!-- প্রিভিউ সেকশন -->
+                        <div class="previews-area">
+                            <div id="audioPlaybackContainer" class="media-preview-box" style="display: none;">
+                                <div class="preview-header">
+                                    <span>রেকর্ড করা অডিও</span>
+                                    <button type="button" id="rerecordBtn" class="remove-media-btn text-only">মুছে ফেলুন</button>
+                                </div>
+                                <audio id="audioPlayback" controls class="custom-audio-player"></audio>
+                            </div>
+
+                            <div id="imagePreviewContainer" class="media-preview-box" style="display: none;">
+                                <div class="image-wrapper">
+                                    <img id="imagePreview" src="#" alt="Image Preview">
+                                    <button type="button" id="removeImageBtn" class="remove-media-btn icon-only">&times;</button>
+                                </div>
+                            </div>
+
+                            <div id="videoPreviewContainer" class="media-preview-box" style="display: none;">
+                                <div class="video-wrapper">
+                                    <video id="videoPreview" controls muted></video>
+                                    <button type="button" id="removeVideoBtn" class="remove-media-btn icon-only">&times;</button>
+                                </div>
+                            </div>
+                            
+                            <div id="audioFilePreviewContainer" class="media-preview-box" style="display: none;">
+                                <div class="preview-header">
+                                    <span>অডিও ফাইল</span>
+                                    <button type="button" id="removeAudioFileBtn" class="remove-media-btn icon-only">&times;</button>
+                                </div>
+                                <audio id="audioFilePreview" controls class="custom-audio-player"></audio>
+                            </div>
+                        </div>
+                        
+                        <!-- ইউটিউব লিংক -->
+                        <div class="input-group">
+                            <label class="input-label">ইউটিউব লিংক (ঐচ্ছিক)</label>
+                            <div class="youtube-input-wrapper">
+                                <i class="fab fa-youtube"></i>
+                                <input type="text" id="youtubeLinkInput" class="post-input pl-40" placeholder="https://youtu.be/...">
+                            </div>
+                        </div>
+                        
+                        <!-- নাম গোপন অপশন -->
+                        <div class="anonymous-check" id="anonymousCheckContainer">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="anonymousCheckbox">
+                                <span class="checkmark"></span>
+                                নাম গোপন রেখে পোস্ট করুন
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- সাবমিট বাটন -->
+                    <div class="form-footer">
+                        <button id="submitPrayerBtn" type="submit" class="submit-btn-full">পোস্ট করুন</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- AI Moderation Libraries (NEW ADDITION) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nsfwjs@latest/dist/nsfwjs.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="post.js"></script>
+</body>
+</html>

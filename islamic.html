@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ইসলামিক প্রো</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Scheherazade+New:wght@400;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- এক্সটার্নাল সিএসএস ফাইল লিঙ্ক করা হয়েছে -->
+    <link rel="stylesheet" href="islamic.css">
+</head>
+<body style="--font-size-multiplier: 1;">
+    <div class="app-container">
+        <!-- === পরিবর্তিত হেডার START === -->
+        <header class="app-header">
+            <button id="menu-btn" class="header-btn header-btn-left">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div id="menu-dropdown" class="menu-dropdown">
+                <button id="user-guide-btn" class="menu-item" data-translate-key="userGuideTitle">
+                    <i class="fa-solid fa-book-open-reader"></i> <span>ইউজার গাইড</span>
+                </button>
+            </div>
+            <div class="header-center">
+                <h1 data-translate-key="appName">ইসলামিক প্রো</h1>
+                <div class="date-display" id="current-date"></div>
+            </div>
+            <div class="header-btn header-btn-right"></div>
+        </header>
+        <!-- === পরিবর্তিত হেডার END === -->
+        
+        <main class="tab-content">
+
+
+    
+    
+
+
+            <div class="ad-container">
+                <script type="text/javascript">
+                   atOptions = {
+                        'key' : 'b84635e3ce763beb1c94efa161d25c88',
+                        'format' : 'iframe',
+                        'height' : 60,
+                        'width' : 468,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="//offensivefountainrabbit.com/b84635e3ce763beb1c94efa161d25c88/invoke.js"></script>
+            </div>
+
+            <div class="tab-pane active" id="prayer-tab">
+                <div class="card" id="prayer-arc-container" style="padding: 1rem; margin-top: 15px;">
+                    <div id="prayer-arc-holder"><div class="loader"><div class="spinner"></div></div></div>
+                </div>
+                <div class="card" style="padding: 1rem;"><div id="prayer-times-list"></div></div>
+            </div>
+            <div class="tab-pane" id="quran-tab"></div>
+            <div class="tab-pane" id="audio-quran-tab"></div>
+            <div class="tab-pane" id="amal-tab"></div>
+            <div class="tab-pane" id="tasbih-tab"></div>
+            <div class="tab-pane" id="namaz-shikkha-tab"></div>
+            <div class="tab-pane" id="hadith-tab"></div>
+            <div class="tab-pane" id="settings-tab"></div>
+        </main>
+
+        <div class="ad-container">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '77dc032f82ffc78efc4fc89a217607cb',
+                    'format' : 'iframe',
+                    'height' : 50,
+                    'width' : 320,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="//offensivefountainrabbit.com/77dc032f82ffc78efc4fc89a217607cb/invoke.js"></script>
+        </div>
+
+        <div id="prayer-widget-placeholder"></div>
+        <div id="audio-player-placeholder"></div>
+
+        <nav class="tabs">
+            <div class="tab active" data-tab="prayer"><i class="fa-solid fa-mosque"></i><p data-translate-key="tabPrayer">নামাজ</p></div>
+            <div class="tab" data-tab="quran"><i class="fa-solid fa-book-quran"></i><p data-translate-key="tabQuran">কুরআন</p></div>
+            <div class="tab" data-tab="audio-quran"><i class="fa-solid fa-headphones"></i><p data-translate-key="tabAudioQuran">অডিও কুরআন</p></div>
+            <div class="tab" data-tab="amal"><i class="fa-solid fa-star-and-crescent"></i><p data-translate-key="tabAmal">আমল</p></div>
+            <div class="tab" data-tab="tasbih"><i class="fa-solid fa-hand-dots"></i><p data-translate-key="tabTasbih">তাসবিহ</p></div>
+            <div class="tab" data-tab="namaz-shikkha"><i class="fa-solid fa-person-praying"></i><p data-translate-key="tabNamazShikkha">নামাজ শিক্ষা</p></div>
+            <div class="tab" data-tab="hadith"><i class="fa-solid fa-book-bookmark"></i><p data-translate-key="tabHadith">হাদিস</p></div>
+            <div class="tab" data-tab="settings"><i class="fa-solid fa-cog"></i><p data-translate-key="tabSettings">সেটিংস</p></div>
+        </nav>
+        
+        <div id="user-guide-overlay" class="page-overlay"></div>
+    </div>
+    
+    <!-- এক্সটার্নাল জাভাস্ক্রিপ্ট ফাইল লিঙ্ক করা হয়েছে -->
+    <script src="islamic.js"></script>
+
+</body>
