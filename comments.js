@@ -1,11 +1,19 @@
 // ====================================
-// COMMENTS PAGE LOGIC
+// COMMENTS PAGE LOGIC (FULL FILE)
 // ====================================
 
+// গ্লোবাল ভ্যারিয়েবল
 let currentPrayerIdForComment = null;
 let currentParentCommentId = null;
-// ডাবল সাবমিশন রোধ করার জন্য ফ্ল্যাগ (Lock)
 let isCommentSubmitting = false;
+
+// অডিও রেকর্ডিং ভ্যারিয়েবল
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlob = null;
+let recordInterval = null;
+let isRecording = false;
+let currentlyPlayingAudio = null; // এক সাথে একাধিক অডিও যাতে না বাজে
 
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -19,20 +27,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     setupCommentPageEventListeners();
+    setupAudioRecordingLogic(); // ভয়েস রেকর্ডার সেটআপ
 });
 
 async function initializeCommentPage() {
     // অথেন্টিকেশন চেক
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
-        // যদি গ্লোবাল currentUser সেট না থাকে তবে সেট করে নিচ্ছি
         if (!currentUser) {
             const { data: profile } = await supabaseClient.from('users').select('*').eq('id', session.user.id).single();
             currentUser = { ...session.user, profile };
         }
         updateFooterAvatar();
     }
-
     await loadPageContent(currentPrayerIdForComment);
 }
 
@@ -51,10 +58,98 @@ function updateFooterAvatar() {
     }
 }
 
+// ====================================
+// AUDIO RECORDING FUNCTIONS
+// ====================================
+function setupAudioRecordingLogic() {
+    const startBtn = document.getElementById('startRecordBtn');
+    const stopBtn = document.getElementById('stopRecordBtn');
+    const cancelBtn = document.getElementById('cancelRecordBtn');
+
+    if(startBtn) startBtn.addEventListener('click', startRecording);
+    if(stopBtn) stopBtn.addEventListener('click', stopRecordingAndSubmit); 
+    if(cancelBtn) cancelBtn.addEventListener('click', cancelRecording);
+}
+
+async function startRecording() {
+    if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (!isRecording) return; 
+            handleCommentSubmit(new Event('submit')); 
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        
+        document.getElementById('commentForm').style.display = 'none';
+        document.getElementById('audioRecordUI').style.display = 'flex';
+        startTimer();
+
+    } catch (error) {
+        console.error("Mic Error:", error);
+        alert("মাইক্রোফোনের অনুমতি পাওয়া যায়নি।");
+    }
+}
+
+function stopRecordingAndSubmit() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        stopTimer();
+    }
+}
+
+function cancelRecording() {
+    isRecording = false;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        if(mediaRecorder.stream) {
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+    }
+    stopTimer();
+    audioBlob = null;
+    audioChunks = [];
+    
+    document.getElementById('audioRecordUI').style.display = 'none';
+    document.getElementById('commentForm').style.display = 'flex';
+    document.getElementById('startRecordBtn').style.display = 'inline-block';
+}
+
+function startTimer() {
+    let seconds = 0;
+    const timerEl = document.getElementById('recordTimer');
+    clearInterval(recordInterval);
+    recordInterval = setInterval(() => {
+        seconds++;
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function stopTimer() {
+    clearInterval(recordInterval);
+    document.getElementById('recordTimer').textContent = "00:00";
+}
+
+// ====================================
+// CORE FUNCTIONS
+// ====================================
+
 function setupCommentPageEventListeners() {
     const commentForm = document.getElementById('commentForm');
     if (commentForm) {
-        // পুরনো লিসেনার রিমুভ করে নতুন করে অ্যাড করা হচ্ছে যাতে ডুপ্লিকেট না হয়
         const newForm = commentForm.cloneNode(true);
         commentForm.parentNode.replaceChild(newForm, commentForm);
         newForm.addEventListener('submit', handleCommentSubmit);
@@ -62,25 +157,26 @@ function setupCommentPageEventListeners() {
     
     const editCommentForm = document.getElementById('editCommentForm');
     if(editCommentForm) {
-        editCommentForm.addEventListener('submit', handleEditCommentSubmit);
+        const newEditForm = editCommentForm.cloneNode(true);
+        editCommentForm.parentNode.replaceChild(newEditForm, editCommentForm);
+        newEditForm.addEventListener('submit', handleEditCommentSubmit);
     }
 
-    // ডেলিগেটেড ইভেন্ট লিসেনার
     const list = document.getElementById('commentList');
-    if (list) {
-        list.addEventListener('click', handleCommentListClick);
-    }
+    if (list) list.addEventListener('click', handleCommentListClick);
     
-    // রিপ্লাই বাতিল বাটন
     document.getElementById('cancelReplyBtn')?.addEventListener('click', resetReplyState);
 
-    // ইনপুট বক্স অটো-রিসাইজ
     const commentInput = document.getElementById('commentInput');
     if(commentInput) {
         commentInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
             if(this.value === '') this.style.height = 'auto';
+            
+            const micBtn = document.getElementById('startRecordBtn');
+            if(this.value.trim().length > 0) micBtn.style.display = 'none';
+            else micBtn.style.display = 'inline-block';
         });
     }
 }
@@ -90,11 +186,9 @@ async function loadPageContent(postId) {
     await loadComments(postId);
 }
 
-// ১. মূল পোস্ট লোড করা
 async function loadOriginalPost(postId) {
     const container = document.getElementById('originalPostContainer');
     container.innerHTML = '<div class="loader" style="margin: 20px auto; border-color: #ccc; border-bottom-color: transparent;"></div>';
-    
     try {
         const { data: prayer, error } = await supabaseClient
             .from('prayers')
@@ -103,19 +197,11 @@ async function loadOriginalPost(postId) {
             .single();
 
         if (error) throw error;
-        
         if (prayer) {
-            // গ্লোবাল ম্যাপে ডেটা সেট (script.js এর ফাংশন ব্যবহারের জন্য)
             allFetchedPrayers.set(prayer.id, prayer);
-            
-            // script.js এর createPrayerCardElement ব্যবহার করা হচ্ছে
-            // যাতে কার্ডের ডিজাইন হুবহু হোম পেজের মতো হয়
             const card = createPrayerCardElement(prayer);
-            
-            // কমেন্ট পেজে কমেন্ট বাটন হাইড রাখা
             const commentBtn = card.querySelector('.comment-btn');
             if(commentBtn) commentBtn.style.display = 'none'; 
-
             container.innerHTML = '';
             container.appendChild(card);
         }
@@ -125,10 +211,12 @@ async function loadOriginalPost(postId) {
     }
 }
 
-// ২. কমেন্ট লোড করা
 async function loadComments(postId) {
     const commentList = document.getElementById('commentList');
     
+    // ১. লোডিং শুরু: স্কেলেটন লোডার দেখানো হচ্ছে
+    renderCommentSkeleton(commentList);
+
     try {
         const { data, error } = await supabaseClient
             .from('comments')
@@ -137,6 +225,8 @@ async function loadComments(postId) {
             .order('created_at', { ascending: true });
 
         if (error) throw error;
+        
+        // ২. ডেটা আসার পর রেন্ডার
         renderComments(commentList, data);
         
         // হেডার কাউন্ট আপডেট
@@ -147,6 +237,21 @@ async function loadComments(postId) {
         console.error('কমেন্ট লোড সমস্যা:', error);
         commentList.innerHTML = `<p style="color:red; text-align:center; padding: 20px;">কমেন্ট লোড করা যায়নি।</p>`;
     }
+}
+
+// স্কেলেটন জেনারেটর ফাংশন
+function renderCommentSkeleton(container) {
+    const skeletonHTML = Array(6).fill('').map(() => `
+        <div class="skeleton-comment-wrapper">
+            <div class="skeleton-comment-avatar"></div>
+            <div class="skeleton-comment-block">
+                <div class="skeleton-comment-bubble"></div>
+                <div class="skeleton-comment-meta"></div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = skeletonHTML;
 }
 
 function renderComments(container, comments) {
@@ -184,27 +289,46 @@ function createCommentNode(comment, isReply = false) {
 
     const author = comment.users || {};
     const authorName = author.display_name || 'নাম নেই';
-    const authorPhotoURL = author.photo_url;
     
     let avatarHTML;
-    if (authorPhotoURL) {
-        avatarHTML = `<img src="${authorPhotoURL}" alt="${authorName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    if (author.photo_url) {
+        avatarHTML = `<img src="${author.photo_url}" alt="${authorName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     } else {
         avatarHTML = (authorName.charAt(0) || '?').toUpperCase();
     }
-    const avatarStyle = authorPhotoURL ? '' : `background-color: ${generateAvatarColor(authorName)}; color: white; display: flex; align-items: center; justify-content: center;`;
+    const avatarStyle = author.photo_url ? '' : `background-color: ${generateAvatarColor(authorName)}; color: white; display: flex; align-items: center; justify-content: center;`;
 
     const hasLiked = currentUser && JSON.parse(localStorage.getItem(`userCommentLikes_${currentUser.id}`) || '[]').includes(comment.id);
 
     let menuItems = '';
     if (currentUser && currentUser.id === comment.author_uid) {
         menuItems = `
-            <button class="action-edit" data-id="${comment.id}" data-text="${comment.text.replace(/"/g, '&quot;')}"><i class="fas fa-pencil-alt"></i> এডিট</button>
+            <button class="action-edit" data-id="${comment.id}" data-text="${(comment.text || '').replace(/"/g, '&quot;')}"><i class="fas fa-pencil-alt"></i> এডিট</button>
             <button class="action-delete" data-id="${comment.id}"><i class="fas fa-trash-alt"></i> ডিলিট</button>
         `;
     } else {
-        menuItems = `
-            <button class="action-report" data-id="${comment.id}"><i class="fas fa-flag"></i> রিপোর্ট</button>
+        menuItems = `<button class="action-report" data-id="${comment.id}"><i class="fas fa-flag"></i> রিপোর্ট</button>`;
+    }
+
+    // ====================================
+    // CUSTOM VOICE PLAYER HTML
+    // ====================================
+    let audioPlayerHTML = '';
+    if (comment.audio_url) {
+        const uniqueId = `audio-${comment.id}`;
+        audioPlayerHTML = `
+            <div class="voice-note-wrapper">
+                <button class="voice-play-btn" data-audio-id="${uniqueId}" onclick="toggleVoice('${uniqueId}', this)">
+                    <i class="fas fa-play"></i>
+                </button>
+                <div class="voice-progress-container">
+                    <div class="voice-progress-track">
+                        <div class="voice-progress-fill" id="fill-${uniqueId}"></div>
+                    </div>
+                    <span class="voice-duration" id="time-${uniqueId}">0:00</span>
+                </div>
+                <audio id="${uniqueId}" src="${comment.audio_url}" preload="metadata" hidden ontimeupdate="updateVoiceProgress('${uniqueId}')" onended="resetVoiceBtn('${uniqueId}')"></audio>
+            </div>
         `;
     }
 
@@ -216,7 +340,8 @@ function createCommentNode(comment, isReply = false) {
             <div class="comment-content">
                 <div class="comment-body">
                     <a href="/profile.html?id=${comment.author_uid}" style="text-decoration:none; color:inherit; font-weight:bold; font-size:14px;">${authorName}</a>
-                    <p class="comment-text">${linkifyText(comment.text)}</p>
+                    ${comment.text ? `<p class="comment-text">${linkifyText(comment.text)}</p>` : ''}
+                    ${audioPlayerHTML}
                 </div>
                 <div class="comment-meta">
                     <span>${timeAgo(comment.created_at)}</span>
@@ -244,39 +369,219 @@ function createCommentNode(comment, isReply = false) {
         });
     }
 
+    // টাইম লোডিং ফিক্স
+    if (comment.audio_url) {
+        setTimeout(() => {
+            const audioEl = wrapper.querySelector('audio');
+            if(audioEl) {
+                audioEl.onloadedmetadata = function() {
+                    const timeEl = document.getElementById(`time-${audioEl.id}`);
+                    if(timeEl && isFinite(audioEl.duration)) {
+                        timeEl.textContent = formatTime(audioEl.duration);
+                    }
+                };
+            }
+        }, 100);
+    }
+
     return wrapper;
 }
 
-// ৩. ইভেন্ট হ্যান্ডলার
+// ====================================
+// VOICE PLAYER CONTROL FUNCTIONS
+// ====================================
+
+window.toggleVoice = function(audioId, btn) {
+    const audio = document.getElementById(audioId);
+    
+    if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
+        currentlyPlayingAudio.pause();
+        const oldBtn = document.querySelector(`button[data-audio-id="${currentlyPlayingAudio.id}"]`);
+        if (oldBtn) oldBtn.innerHTML = '<i class="fas fa-play"></i>';
+    }
+
+    if (audio.paused) {
+        audio.play().catch(e => console.log("Playback error:", e));
+        btn.innerHTML = '<i class="fas fa-pause"></i>';
+        currentlyPlayingAudio = audio;
+    } else {
+        audio.pause();
+        btn.innerHTML = '<i class="fas fa-play"></i>';
+        currentlyPlayingAudio = null;
+    }
+};
+
+window.updateVoiceProgress = function(audioId) {
+    const audio = document.getElementById(audioId);
+    const fill = document.getElementById(`fill-${audioId}`);
+    const time = document.getElementById(`time-${audioId}`);
+    
+    if (audio.duration && isFinite(audio.duration)) {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        fill.style.width = `${percent}%`;
+        
+        const timeLeft = Math.max(0, audio.duration - audio.currentTime);
+        time.textContent = formatTime(timeLeft);
+    }
+};
+
+window.resetVoiceBtn = function(audioId) {
+    const btn = document.querySelector(`button[data-audio-id="${audioId}"]`);
+    const fill = document.getElementById(`fill-${audioId}`);
+    const time = document.getElementById(`time-${audioId}`);
+    const audio = document.getElementById(audioId);
+
+    if (btn) btn.innerHTML = '<i class="fas fa-play"></i>';
+    if (fill) fill.style.width = '0%';
+    
+    if (time && audio && isFinite(audio.duration)) {
+        time.textContent = formatTime(audio.duration);
+    }
+    
+    currentlyPlayingAudio = null;
+};
+
+function formatTime(seconds) {
+    if(isNaN(seconds) || !isFinite(seconds)) return "0:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+// ====================================
+// SUBMIT, LIKE, DELETE FUNCTIONS
+// ====================================
+
+async function handleCommentSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isCommentSubmitting) return;
+    if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
+
+    const input = document.getElementById('commentInput');
+    let text = input.value.trim();
+    
+    if (!text && !audioBlob) {
+        if(!isRecording && !audioBlob) return;
+    }
+
+    isCommentSubmitting = true;
+    const btn = document.getElementById('submitCommentBtn');
+    
+    if(document.getElementById('audioRecordUI').style.display !== 'none') {
+        const stopBtn = document.getElementById('stopRecordBtn');
+        if(stopBtn) stopBtn.innerHTML = 'পাঠানো হচ্ছে... <i class="fas fa-spinner fa-spin"></i>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+    }
+
+    try {
+        let audioUrl = null;
+
+        if (audioBlob) {
+            console.log("Uploading audio...");
+            const fileName = `comment_audio_${currentUser.id}_${Date.now()}.webm`;
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('comment_audios')
+                .upload(fileName, audioBlob, { cacheControl: '3600', upsert: false });
+
+            if (uploadError) throw new Error("অডিও আপলোড ব্যর্থ হয়েছে: " + uploadError.message);
+            
+            const { data: publicUrlData } = supabaseClient.storage
+                .from('comment_audios')
+                .getPublicUrl(uploadData.path);
+            
+            audioUrl = publicUrlData.publicUrl;
+        }
+
+        if (!text && audioUrl) text = null; 
+
+        const { data, error } = await supabaseClient
+            .from('comments')
+            .insert([{
+                text: text,
+                audio_url: audioUrl,
+                author_uid: currentUser.id,
+                prayer_id: currentPrayerIdForComment,
+                parent_id: currentParentCommentId
+            }])
+            .select(`*, users!author_uid(display_name, photo_url)`)
+            .single();
+
+        if (error) throw error;
+
+        input.value = '';
+        input.style.height = 'auto';
+        document.getElementById('startRecordBtn').style.display = 'inline-block';
+        
+        cancelRecording();
+
+        if (!document.getElementById(`comment-wrapper-${data.id}`)) {
+            const newCommentNode = createCommentNode({ ...data, replies: [] }, !!currentParentCommentId);
+            const list = document.getElementById('commentList');
+            
+            if (currentParentCommentId) {
+                const parentWrapper = document.getElementById(`comment-wrapper-${currentParentCommentId}`);
+                if (parentWrapper) parentWrapper.appendChild(newCommentNode);
+                else list.appendChild(newCommentNode);
+            } else {
+                const noMsg = list.querySelector('.no-results-message');
+                if (noMsg) noMsg.remove();
+                list.appendChild(newCommentNode);
+                setTimeout(() => { newCommentNode.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+            }
+        }
+
+        const card = document.getElementById(`prayer-${currentPrayerIdForComment}`);
+        if(card) {
+             const countSpan = card.querySelector('.comment-count-text');
+             if(countSpan) {
+                 const currentText = countSpan.innerText;
+                 const currentCount = parseInt(currentText) || 0;
+                 countSpan.innerText = `${currentCount + 1} টি কমেন্ট`;
+             }
+        }
+
+        resetReplyState();
+
+        const prayer = allFetchedPrayers.get(currentPrayerIdForComment);
+        if (prayer && prayer.author_uid !== currentUser.id) {
+             const notifText = audioUrl ? `${currentUser.profile.display_name} আপনার পোস্টে একটি ভয়েস কমেন্ট করেছেন।` : `${currentUser.profile.display_name} আপনার পোস্টে কমেন্ট করেছেন।`;
+             await createNotification(prayer.author_uid, currentUser.id, 'comment', notifText, `post_id=${prayer.id}`);
+        }
+
+    } catch (error) {
+        console.error('কমেন্ট পোস্ট ত্রুটি:', error);
+        alert(error.message || 'কমেন্ট পোস্ট করতে সমস্যা হয়েছে।');
+    } finally {
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        btn.disabled = false;
+        const stopBtn = document.getElementById('stopRecordBtn');
+        if(stopBtn) stopBtn.innerHTML = 'থেমে পাঠান <i class="fas fa-paper-plane"></i>';
+        isCommentSubmitting = false; 
+    }
+}
+
 function handleCommentListClick(e) {
     const btn = e.target.closest('button') || e.target.closest('.actions-menu-trigger');
     if (!btn) return;
+
+    if (btn.classList.contains('voice-play-btn')) return;
 
     if (btn.classList.contains('actions-menu-trigger')) {
         e.stopPropagation();
         const dropdownId = btn.dataset.dropdownId;
         const dropdown = document.getElementById(dropdownId);
-        
-        document.querySelectorAll('.dropdown-menu').forEach(d => {
-            if(d.id !== dropdownId) d.style.display = 'none';
-        });
-
-        if (dropdown) {
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        }
+        document.querySelectorAll('.dropdown-menu').forEach(d => { if(d.id !== dropdownId) d.style.display = 'none'; });
+        if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         return;
     }
 
-    if (!currentUser) {
-        document.getElementById('loginPage').style.display = 'flex';
-        return;
-    }
-
+    if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
     const id = btn.dataset.id;
 
     if (btn.classList.contains('reply-comment-btn')) {
-        const name = btn.dataset.name;
-        startReply(id, name);
+        startReply(id, btn.dataset.name);
     } else if (btn.classList.contains('like-comment-btn')) {
         handleCommentLike(id, btn);
     } else if (btn.classList.contains('action-delete')) {
@@ -297,7 +602,6 @@ function startReply(commentId, authorName) {
     const container = document.getElementById('replyingToContainer');
     const textSpan = document.getElementById('replyingToText');
     const input = document.getElementById('commentInput');
-    
     container.style.display = 'flex';
     textSpan.innerHTML = `রিপ্লাই দিচ্ছেন: <strong>${authorName}</strong>`;
     input.focus();
@@ -311,107 +615,13 @@ function resetReplyState() {
     input.placeholder = "একটি কমেন্ট লিখুন...";
 }
 
-// **** FIX: Anti-Double Submission Logic ****
-async function handleCommentSubmit(e) {
-    e.preventDefault();
-    
-    // লক চেক: যদি ইতিমধ্যে সাবমিট হতে থাকে, ফিরে যান
-    if (isCommentSubmitting) return;
-
-    if (!currentUser) { 
-        document.getElementById('loginPage').style.display = 'flex'; 
-        return; 
-    }
-
-    const input = document.getElementById('commentInput');
-    const text = input.value.trim();
-    const btn = document.getElementById('submitCommentBtn');
-
-    if (!text || !currentPrayerIdForComment) return;
-
-    // লক চালু
-    isCommentSubmitting = true;
-    
-    const originalIcon = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('comments')
-            .insert([{
-                text: text,
-                author_uid: currentUser.id,
-                prayer_id: currentPrayerIdForComment,
-                parent_id: currentParentCommentId
-            }])
-            .select(`*, users!author_uid(display_name, photo_url)`)
-            .single();
-
-        if (error) throw error;
-
-        // সফল হলে
-        input.value = '';
-        input.style.height = 'auto';
-        
-        // নতুন কমেন্ট অ্যাপেন্ড করা (DOM চেক করে যাতে ডুপ্লিকেট না হয়)
-        if (!document.getElementById(`comment-wrapper-${data.id}`)) {
-            const newCommentNode = createCommentNode({ ...data, replies: [] }, !!currentParentCommentId);
-            const list = document.getElementById('commentList');
-            
-            if (currentParentCommentId) {
-                const parentWrapper = document.getElementById(`comment-wrapper-${currentParentCommentId}`);
-                if (parentWrapper) {
-                    parentWrapper.appendChild(newCommentNode);
-                } else {
-                    list.appendChild(newCommentNode);
-                }
-            } else {
-                const noMsg = list.querySelector('.no-results-message');
-                if (noMsg) noMsg.remove();
-                list.appendChild(newCommentNode);
-                
-                // নতুন কমেন্টে স্ক্রল
-                setTimeout(() => {
-                   newCommentNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-            }
-        }
-
-        // কমেন্ট কাউন্ট আপডেট (ডাটাবেজ এবং UI)
-        if (typeof updateCommentCount === 'function') {
-            await updateCommentCount(currentPrayerIdForComment);
-        }
-        
-        // রিসেট
-        resetReplyState();
-
-        // নোটিফিকেশন পাঠানো
-        const prayer = allFetchedPrayers.get(currentPrayerIdForComment);
-        if (prayer && prayer.author_uid !== currentUser.id) {
-             await createNotification(prayer.author_uid, currentUser.id, 'comment', `${currentUser.profile.display_name} আপনার পোস্টে কমেন্ট করেছেন।`, `post_id=${prayer.id}`);
-        }
-
-    } catch (error) {
-        console.error('কমেন্ট পোস্ট ত্রুটি:', error);
-        // সাইলেন্ট ফেইল বা ইউজারকে জানানো
-    } finally {
-        // লক রিলিজ এবং বাটন রিসেট
-        btn.innerHTML = originalIcon;
-        btn.disabled = false;
-        isCommentSubmitting = false; 
-    }
-}
-
 async function handleCommentLike(commentId, btn) {
     const countSpan = btn.querySelector('.like-count');
     let currentCount = parseInt(countSpan.textContent, 10);
-    
     const storageKey = `userCommentLikes_${currentUser.id}`;
     let userCommentLikes = JSON.parse(localStorage.getItem(storageKey) || '[]').map(Number);
     const isLiked = userCommentLikes.includes(parseInt(commentId));
 
-    // UI অপটিমিস্টিক আপডেট
     btn.classList.toggle('liked');
     if(isLiked) {
         btn.childNodes[0].textContent = 'লাইক ';
@@ -427,33 +637,38 @@ async function handleCommentLike(commentId, btn) {
     try {
         const rpcName = isLiked ? 'decrement_comment_like' : 'increment_comment_like';
         await supabaseClient.rpc(rpcName, { c_id: parseInt(commentId) });
-    } catch (err) {
-        console.error("Like error:", err);
-    }
+    } catch (err) { console.error("Like error:", err); }
 }
 
 async function handleDeleteComment(commentId) {
-    if (!confirm('আপনি কি নিশ্চিত যে এই কমেন্টটি ডিলিট করতে চান?')) return;
-
+    if (!confirm('আপনি কি নিশ্চিত?')) return;
     try {
-        const { error } = await supabaseClient
-            .from('comments')
-            .delete()
-            .eq('id', commentId);
-
+        const { data: commentData } = await supabaseClient.from('comments').select('audio_url').eq('id', commentId).single();
+        const { error } = await supabaseClient.from('comments').delete().eq('id', commentId);
         if (error) throw error;
+
+        if (commentData && commentData.audio_url) {
+            try {
+                const urlParts = commentData.audio_url.split('/comment_audios/');
+                if (urlParts.length > 1) {
+                    await supabaseClient.storage.from('comment_audios').remove([urlParts[1]]);
+                }
+            } catch (storageErr) { console.warn("Audio delete failed:", storageErr); }
+        }
 
         const wrapper = document.getElementById(`comment-wrapper-${commentId}`);
         if (wrapper) wrapper.remove();
         
-        if (typeof updateCommentCount === 'function') {
-            updateCommentCount(currentPrayerIdForComment);
+        const card = document.getElementById(`prayer-${currentPrayerIdForComment}`);
+        if(card) {
+             const countSpan = card.querySelector('.comment-count-text');
+             if(countSpan) {
+                 const currentText = countSpan.innerText;
+                 const currentCount = parseInt(currentText) || 0;
+                 countSpan.innerText = `${Math.max(0, currentCount - 1)} টি কমেন্ট`;
+             }
         }
-
-    } catch (error) {
-        console.error("Delete error:", error);
-        alert("কমেন্ট ডিলিট করতে সমস্যা হয়েছে।");
-    }
+    } catch (error) { alert("ডিলিট করতে সমস্যা হয়েছে।"); }
 }
 
 function openEditCommentModal(id, text) {
@@ -467,32 +682,13 @@ async function handleEditCommentSubmit(e) {
     const btn = document.getElementById('saveCommentBtn');
     const id = document.getElementById('editCommentId').value;
     const newText = document.getElementById('editCommentTextarea').value.trim();
-
     if (!newText) return;
-
-    btn.textContent = 'আপডেট হচ্ছে...';
-    btn.disabled = true;
-
+    btn.textContent = 'আপডেট হচ্ছে...'; btn.disabled = true;
     try {
-        const { error } = await supabaseClient
-            .from('comments')
-            .update({ text: newText })
-            .eq('id', id);
-
+        const { error } = await supabaseClient.from('comments').update({ text: newText }).eq('id', id);
         if (error) throw error;
-
         const commentTextEl = document.querySelector(`#comment-${id} .comment-text`);
         if (commentTextEl) commentTextEl.innerHTML = linkifyText(newText);
-        
-        const editBtn = document.querySelector(`.action-edit[data-id="${id}"]`);
-        if(editBtn) editBtn.dataset.text = newText;
-
         document.getElementById('editCommentModal').style.display = 'none';
-
-    } catch (error) {
-        alert('আপডেট করতে সমস্যা হয়েছে।');
-    } finally {
-        btn.textContent = 'আপডেট করুন';
-        btn.disabled = false;
-    }
+    } catch (error) { alert('সমস্যা হয়েছে।'); } finally { btn.textContent = 'আপডেট করুন'; btn.disabled = false; }
 }
