@@ -2006,7 +2006,7 @@ async function handleGoogleSignIn() {
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
             options: { 
-                redirectTo: 'https://alaminsarkar-bsc.github.io/ipray/' // <--- আপনার সঠিক লিংক
+                redirectTo: 'https://alaminsarkar-bsc.github.io/' // <--- আপনার সঠিক লিংক
             } 
         }); 
         if (error) throw error; 
