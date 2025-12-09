@@ -2731,31 +2731,55 @@ async function handleProfileImageUpload(e, type) {
     if(loadingModal) loadingModal.style.display = 'flex';
 
     try {
+        // ১. আগে ডাটাবেজ থেকে বর্তমান (পুরানো) ছবির লিংকটি নিয়ে আসি
+        const dbColumn = type === 'cover' ? 'cover_photo_url' : 'photo_url';
+        const { data: userData, error: fetchError } = await supabaseClient
+            .from('users')
+            .select(dbColumn)
+            .eq('id', currentUser.id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const oldUrl = userData ? userData[dbColumn] : null;
+
+        // ২. যদি পুরানো ছবি থাকে, তবে সেটি স্টোরেজ থেকে ডিলিট করি
+        if (oldUrl) {
+            try {
+                // সুপাবেস ইউআরএল থেকে প্যাথ বের করা (যেমন: profiles/img.jpg)
+                // আপনার বাকেটের নাম 'post_images'
+                const pathParts = oldUrl.split('/post_images/'); 
+                if (pathParts.length > 1) {
+                    const oldPath = pathParts[1]; // বাকেটের পরের অংশ
+                    await supabaseClient.storage.from('post_images').remove([oldPath]);
+                    console.log("পুরানো ছবি ডিলিট করা হয়েছে:", oldPath);
+                }
+            } catch (delErr) {
+                console.warn("পুরানো ছবি ডিলিট করতে সমস্যা হয়েছে (হয়তো ফাইলটি নেই):", delErr);
+            }
+        }
+
+        // ৩. নতুন ফাইল আপলোড
         const fileExt = file.name.split('.').pop();
         const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
-        const filePath = `${type}s/${fileName}`; // e.g., covers/cover_123_... or profiles/profile_123_...
+        const filePath = `${type}s/${fileName}`; // e.g. covers/cover_123.jpg
 
-        // ১. স্টোরেজে আপলোড
         const { data, error: uploadError } = await supabaseClient.storage
-            .from('post_images') // আমরা 'post_images' বাকেট ব্যবহার করছি কারণ এটি অলরেডি সেটআপ করা
+            .from('post_images')
             .upload(filePath, file, { upsert: true });
 
         if (uploadError) throw uploadError;
 
-        // ২. পাবলিক ইউআরএল তৈরি
+        // ৪. নতুন পাবলিক ইউআরএল তৈরি
         const { data: publicUrlData } = supabaseClient.storage
             .from('post_images')
             .getPublicUrl(filePath);
             
         const imageUrl = publicUrlData.publicUrl;
 
-        // ৩. ডাটাবেজ আপডেট
+        // ৫. ডাটাবেজ আপডেট
         const updateData = {};
-        if (type === 'cover') {
-            updateData.cover_photo_url = imageUrl;
-        } else {
-            updateData.photo_url = imageUrl;
-        }
+        updateData[dbColumn] = imageUrl;
 
         const { error: dbError } = await supabaseClient
             .from('users')
@@ -2764,7 +2788,7 @@ async function handleProfileImageUpload(e, type) {
 
         if (dbError) throw dbError;
 
-        // ৪. ইউআই আপডেট
+        // ৬. ইউআই আপডেট (তাৎক্ষণিক পরিবর্তনের জন্য)
         if (type === 'cover') {
             const imgEl = document.getElementById('profileCoverDisplay');
             imgEl.src = imageUrl;
@@ -2773,8 +2797,10 @@ async function handleProfileImageUpload(e, type) {
             const avatarEl = document.getElementById('profileAvatar');
             avatarEl.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
             
-            // সাইডবারে বা অন্য কোথাও ছোট ছবি থাকলে আপডেট করুন (অপশনাল)
-            // location.reload(); // ফুল রিফ্রেশ দিলে সব জায়গায় আপডেট হবে
+            // currentUser অবজেক্টও আপডেট করে দিই যাতে রিফ্রেশ না করলেও চলে
+            if(currentUser.profile) {
+                currentUser.profile[dbColumn] = imageUrl;
+            }
         }
 
         alert("আপলোড সফল হয়েছে!");
@@ -2784,7 +2810,7 @@ async function handleProfileImageUpload(e, type) {
         alert("আপলোড করতে সমস্যা হয়েছে: " + error.message);
     } finally {
         if(loadingModal) loadingModal.style.display = 'none';
-        // ইনপুট ক্লিয়ার করা যাতে একই ফাইল আবার সিলেক্ট করা যায়
+        // ইনপুট ক্লিয়ার করা
         e.target.value = '';
     }
 }
