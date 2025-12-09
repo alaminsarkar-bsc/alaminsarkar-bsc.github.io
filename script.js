@@ -1,4 +1,3 @@
-
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -305,8 +304,7 @@ async function handleUserLoggedIn(user) {
                 display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                 photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
             }]).select().single();
-            // Note: Fixed potential undefined error here by checking error in next step if needed
-            if (error) throw error;
+            if (createError) throw createError;
             profile = newProfile;
         } else if (error) throw error;
         
@@ -1636,12 +1634,7 @@ async function handleGlobalClick(e) {
     
     if (e.target.closest('#googleSignInBtn')) handleGoogleSignIn();
     if (e.target.closest('#facebookSignInBtn')) handleFacebookSignIn();
-    
-    // Updated: Async Sign Out
-    if (e.target.closest('#signOutBtn')) {
-        await supabaseClient.auth.signOut();
-        handleUserLoggedOut(); // Explicitly call UI update
-    }
+    if (e.target.closest('#signOutBtn')) supabaseClient.auth.signOut();
     
     if (e.target.closest('#sendOtpBtn')) handleSendOtp();
     if (e.target.closest('#verifyOtpBtn')) handleVerifyOtp();
@@ -1711,17 +1704,12 @@ async function handleActionButtonClick(actionBtn) {
     else if (actionBtn.classList.contains('love-btn')) handleReaction(prayerId, 'love', actionBtn); 
 }
 
-// Updated Google Sign In with Force Account Selection
 async function handleGoogleSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
             options: { 
-                redirectTo: 'https://alaminsarkar-bsc.github.io/',
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent select_account' // Forces account chooser
-                }
+                redirectTo: 'https://alaminsarkar-bsc.github.io/' 
             } 
         }); 
         if (error) throw error; 
