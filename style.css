@@ -3440,3 +3440,23 @@ textarea.post-input {
         content: "";
     }
 }
+
+
+/* ====================================
+   HEADER PROFILE IMAGE STYLE
+   (Paste at the bottom of style.css)
+   ==================================== */
+.header-profile-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #ddd;
+}
+
+/* যখন প্রোফাইল ট্যাব অ্যাক্টিভ থাকবে তখন বর্ডার নীল হবে */
+.nav-tab.active .header-profile-img {
+    border: 2px solid var(--primary-color);
+    width: 26px; /* বর্ডার বাড়লে সাইজ একটু কমানো হলো যাতে লেআউট ঠিক থাকে */
+    height: 26px;
+}
