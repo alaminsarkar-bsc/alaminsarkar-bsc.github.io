@@ -13,7 +13,7 @@ let allFetchedPrayers = new Map();
 let isVideoFeedActive = false;
 const ADMIN_USERS = ['bm15.telecom@gmail.com', 'alaminsarkar.bsc@gmail.com'];
 
-// Feed & Pagination State
+// Feed &Pagination State
 let currentPage = 0;
 const prayersPerPage = 8; 
 let isLoadingMore = false;
@@ -313,7 +313,10 @@ async function handleUserLoggedIn(user) {
         }
         
         currentUser = { ...user, profile };
+        
+        // [UPDATED] হেডারে প্রোফাইল ছবি আপডেট করা
         updateHeaderProfileIcon(profile.photo_url);
+
         await fetchSavedPostIds(); 
 
         const pageId = document.body.id;
@@ -335,6 +338,8 @@ async function handleUserLoggedIn(user) {
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
+    
+    // [UPDATED] হেডারের ছবি রিসেট করা
     updateHeaderProfileIcon(null);
 
     const pageId = document.body.id;
@@ -610,14 +615,18 @@ function setupNavigationLogic() {
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
 
+            // ১. যদি এটি পোস্ট করার বাটন বা প্রোফাইল পেজের লিংক হয়, তবে স্বাভাবিক কাজ করতে দিন
             if (link.id === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) {
                 return; 
             }
 
+            // ২. ফিক্স: যদি আমরা প্রোফাইল পেজে থাকি এবং ইউজার ব্যাক/হোম বাটনে ক্লিক করে
+            // তাহলে জাভাস্ক্রিপ্ট আটকাতে বারণ করা হচ্ছে, যাতে index.html এ চলে যায়।
             if (!isHomePage && (href === '/index.html' || href === './index.html' || href === 'index.html')) {
                 return; 
             }
 
+            // ৩. শুধুমাত্র হোম পেজেই ফিড সুইচ করার জন্য ডিফল্ট একশন আটকানো হবে
             e.preventDefault();
             
             document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
@@ -1461,7 +1470,7 @@ async function submitDonationDetails(e) {
 }
 
 // ====================================
-// 13. EVENTS & GLOBAL HANDLERS (FIXED)
+// 13. EVENTS & GLOBAL HANDLERS (UPDATED)
 // ====================================
 function setupEventListeners() {
     document.addEventListener('click', handleGlobalClick);
@@ -1503,16 +1512,21 @@ async function handleFollow(btn) {
 }
 
 async function handleGlobalClick(e) {
+    // ১. নোটিফিকেশন ডিলিট বাটন
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
     if(deleteNotifBtn) { e.stopPropagation(); deleteNotification(deleteNotifBtn.dataset.id); return; }
 
+    // ২. প্রোফাইল লিংক (লগইন চেক)
     const profileLink = e.target.closest('a[href="/profile.html"]');
     if (profileLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
+    // ৩. গ্লোবাল ডোনেট বাটন
     if (e.target.closest('#globalDonateBtn')) { openGeneralDonationModal(); return; }
 
+    // ৪. ফলো বাটন
     const followBtn = e.target.closest('#followBtn'); if (followBtn) { handleFollow(followBtn); return; }
     
+    // ৫. নোটিফিকেশন আইটেম ক্লিক
     if (e.target.closest('.notification-item')) { 
         const item = e.target.closest('.notification-item'); 
         const url = item.dataset.url; 
@@ -1529,8 +1543,10 @@ async function handleGlobalClick(e) {
         return; 
     }
     
+    // ৬. স্টোরি ক্লিক
     const storyItem = e.target.closest('.story-item:not(.my-story)'); if (storyItem) { return; }
     
+    // ৭. শেয়ার বাটন
     const shareBtn = e.target.closest('.share-btn'); 
     if (shareBtn) { 
         const prayerId = shareBtn.dataset.id; 
@@ -1538,10 +1554,11 @@ async function handleGlobalClick(e) {
         const prayerText = shareBtn.dataset.text || '';
         const url = `${window.location.origin}/comments.html?postId=${prayerId}`;
         const fullShareText = `${prayerTitle}\n\n${prayerText}\n\nআমিন বলতে নিচের লিংকে ক্লিক করুন:\n${url}`;
-        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক এবং বিস্তারিত কপি করা হয়েছে!'); }, () => { alert('আপনার ব্রাউজার শেয়ার সাপোর্ট করে না।'); }); } 
+        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক কপি হয়েছে!'); }, () => { alert('কপি করা যায়নি।'); }); } 
         return; 
     }
     
+    // ৮. ইমেজ ভিউয়ার
     const postImage = e.target.closest('.post-image, .fundraising-image'); if (postImage) { const modal = document.getElementById('image-view-modal'); const modalImg = document.getElementById('modal-image'); modal.style.display = "flex"; modalImg.src = postImage.dataset.src || postImage.src; return; }
     const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); if (closeImageModal && !e.target.closest('.image-modal-content')) { document.getElementById('image-view-modal').style.display = "none"; return; }
     const loginPage = document.getElementById('loginPage'); if (loginPage && loginPage.style.display === 'flex' && !e.target.closest('.login-box')) { return; }
