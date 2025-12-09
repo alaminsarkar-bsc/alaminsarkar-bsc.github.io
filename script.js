@@ -2067,82 +2067,106 @@ async function handleVerifyOtp() {
 }
 
 async function handleReaction(prayerId, type, btn) {
-    if (!currentUser) { showLoginModal(); return; }
-
-    // বাটন সাময়িক ডিজেবল (ডাবল ক্লিক ঠেকানোর জন্য)
-    btn.disabled = true;
-
-    // ১. UI অপটিমিস্টিক আপডেট (সাথে সাথে রেসপন্স)
-    const isLove = type === 'love';
-    const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
-    
-    // বর্তমান সংখ্যা এবং স্ট্যাটাস নেওয়া
-    let currentCount = parseInt(countSpan.innerText.replace(/,/g, '') || '0', 10);
-    const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
-    
-    // নতুন সংখ্যা এবং স্ট্যাটাস নির্ধারণ
-    const newCount = wasActive ? Math.max(0, currentCount - 1) : currentCount + 1;
-    const newActiveState = !wasActive;
-
-    // UI আপডেট করে দেওয়া (দেরি না করে)
-    btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
-    countSpan.innerText = newCount; // textContent এর বদলে innerText ব্যবহার সেইফ
-    
-    if (isLove) {
-        const icon = btn.querySelector('i');
-        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
+    // লগইন চেক
+    if (!currentUser) { 
+        showLoginModal(); 
+        return; 
     }
 
+    console.log(`Click registered: ID=${prayerId}, Type=${type}`); // ডিবাগিং
+
+    // ১. বাটন ডিজেবল করা যাতে ডাবল ক্লিক না হয়
+    btn.disabled = true;
+
+    // ২. UI এলিমেন্ট ধরা
+    const isLove = type === 'love';
+    const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
+    const icon = btn.querySelector('i');
+
+    // ৩. বর্তমান অবস্থা জানা
+    // সংখ্যা যদি ফাঁকা থাকে বা টেক্সট থাকে তবে ০ ধরবে
+    let currentCountText = countSpan.innerText || '0';
+    // বাংলা বা ইংলিশ সংখ্যা হ্যান্ডেল করার জন্য replace
+    let currentCount = parseInt(currentCountText.replace(/,/g, ''), 10);
+    if (isNaN(currentCount)) currentCount = 0;
+
+    // আগে থেকেই লাইক দেওয়া ছিল কি না?
+    const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
+    
+    // ৪. নতুন অবস্থা নির্ধারণ (Optimistic Update)
+    const newActiveState = !wasActive;
+    const newCount = newActiveState ? (currentCount + 1) : Math.max(0, currentCount - 1);
+
+    // ৫. UI আপডেট (সাথে সাথে)
+    // ক্লাস টগল
+    if (isLove) {
+        btn.classList.toggle('loved', newActiveState);
+        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
+    } else {
+        btn.classList.toggle('ameened', newActiveState);
+    }
+    // কাউন্ট আপডেট
+    countSpan.innerText = newCount;
+
     try {
-        // ২. লোকাল ক্যাশে আপডেট (যাতে পেজ স্ক্রল করলে বা অন্য কোথাও গেলে ডাটা ঠিক থাকে)
+        // ৬. লোকাল ক্যাশে (allFetchedPrayers) আপডেট
+        // যাতে পেজ স্ক্রল করলে বা অন্য পেজে গেলে ডাটা ঠিক থাকে
         const prayer = allFetchedPrayers.get(prayerId);
         if (prayer) {
             const listKey = isLove ? 'loved_by' : 'ameened_by';
             const countKey = isLove ? 'love_count' : 'ameen_count';
             
             let list = prayer[listKey] || [];
-            if (wasActive) {
-                list = list.filter(id => id !== currentUser.id); // রিমুভ
+            if (!newActiveState) {
+                // রিমুভ
+                list = list.filter(id => id !== currentUser.id);
             } else {
-                if (!list.includes(currentUser.id)) list.push(currentUser.id); // অ্যাড
+                // অ্যাড (ডুপ্লিকেট চেক করে)
+                if (!list.includes(currentUser.id)) list.push(currentUser.id);
             }
             
+            // ক্যাশ আপডেট
             prayer[listKey] = list;
             prayer[countKey] = newCount;
             allFetchedPrayers.set(prayerId, prayer);
         }
 
-        // ৩. ডাটাবেজ আপডেট (RPC কল)
+        // ৭. ডাটাবেজ আপডেট (RPC কল)
         const { error } = await supabaseClient.rpc('toggle_reaction', {
             p_id: prayerId,
             u_id: currentUser.id,
             r_type: type
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('RPC Error:', error);
+            throw error;
+        }
 
-        // ৪. নোটিফিকেশন (যদি নিজের পোস্ট না হয় এবং লাইক দেওয়া হয়)
+        console.log('Database updated successfully');
+
+        // ৮. নোটিফিকেশন (যদি নতুন লাইক হয় এবং নিজের পোস্ট না হয়)
         if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
             const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
+            // এটি ব্যাকগ্রাউন্ডে চলবে
             createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayer.id}`);
         }
 
     } catch (error) {
-        console.error('Reaction error:', error);
-        // এরর হলে আগের অবস্থায় ফিরিয়ে আনা (Rollback)
-        btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
-        countSpan.innerText = currentCount;
+        console.error('Reaction Failed:', error);
+        alert("ইন্টারনেট সমস্যার কারণে লাইক/আমিন সেভ হয়নি।");
+
+        // ৯. এরর হলে আগের অবস্থায় ফিরিয়ে আনা (Rollback UI)
         if (isLove) {
-            btn.querySelector('i').className = wasActive ? 'fas fa-heart' : 'far fa-heart';
+            btn.classList.toggle('loved', wasActive);
+            icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
+        } else {
+            btn.classList.toggle('ameened', wasActive);
         }
-        // ক্যাশ রোলব্যাক
-        const prayer = allFetchedPrayers.get(prayerId);
-        if(prayer) {
-             // রিফ্রেশ করলে ঠিক হয়ে যাবে, তাই এখানে জটিল লজিক দরকার নেই
-        }
+        countSpan.innerText = currentCount;
     } finally {
-        // বাটন আবার সচল করা
-        setTimeout(() => { btn.disabled = false; }, 500);
+        // ১০. বাটন আবার সচল করা (একটু সময় নিয়ে)
+        setTimeout(() => { btn.disabled = false; }, 300);
     }
 }
 
