@@ -1922,99 +1922,110 @@ async function handleFollow(btn) {
 }
 
 async function handleGlobalClick(e) {
+    // ১. নোটিফিকেশন ডিলিট বাটন
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
     if(deleteNotifBtn) { e.stopPropagation(); deleteNotification(deleteNotifBtn.dataset.id); return; }
 
+    // ২. প্রোফাইল লিংক (লগইন চেক)
     const profileLink = e.target.closest('a[href="/profile.html"]');
     if (profileLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
+    // ৩. গ্লোবাল ডোনেট বাটন
     if (e.target.closest('#globalDonateBtn')) { openGeneralDonationModal(); return; }
 
+    // ৪. ফলো বাটন
     const followBtn = e.target.closest('#followBtn'); if (followBtn) { handleFollow(followBtn); return; }
     
+    // ৫. নোটিফিকেশন আইটেম ক্লিক
     if (e.target.closest('.notification-item')) { 
         const item = e.target.closest('.notification-item'); 
         const url = item.dataset.url; 
-        markNotificationAsRead(item.dataset.id); 
-        if (url && url.startsWith('post_id=')) { 
-            const prayerId = parseInt(url.split('=')[1]); 
-            if (!isNaN(prayerId)) { window.location.href = `comments.html?postId=${prayerId}`; } 
-        } else if (url && url.startsWith('/profile')) {
-            window.location.href = url;
+        // ডিলিট বাটনে ক্লিক না লাগলে তবেই রিড মার্ক হবে
+        if (!e.target.closest('.delete-notif-btn')) {
+            markNotificationAsRead(item.dataset.id); 
+            if (url && url.startsWith('post_id=')) { 
+                const prayerId = parseInt(url.split('=')[1]); 
+                if (!isNaN(prayerId)) { window.location.href = `comments.html?postId=${prayerId}`; } 
+            } else if (url && url.startsWith('/profile')) {
+                window.location.href = url;
+            }
+            document.getElementById('notificationModal').classList.remove('active'); 
         }
-        document.getElementById('notificationModal').classList.remove('active'); 
         return; 
     }
     
+    // ৬. স্টোরি ক্লিক
     const storyItem = e.target.closest('.story-item:not(.my-story)'); if (storyItem) { return; }
     
+    // ৭. শেয়ার বাটন
     const shareBtn = e.target.closest('.share-btn'); 
     if (shareBtn) { 
+        // শেয়ার লজিক...
         const prayerId = shareBtn.dataset.id; 
         const prayerTitle = shareBtn.dataset.title; 
         const prayerText = shareBtn.dataset.text || '';
         const url = `${window.location.origin}/comments.html?postId=${prayerId}`;
         const fullShareText = `${prayerTitle}\n\n${prayerText}\n\nআমিন বলতে নিচের লিংকে ক্লিক করুন:\n${url}`;
-        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার করতে সমস্যা:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক এবং বিস্তারিত কপি করা হয়েছে!'); }, () => { alert('আপনার ব্রাউজার শেয়ার সাপোর্ট করে না।'); }); } 
+        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক কপি হয়েছে!'); }, () => { alert('কপি করা যায়নি।'); }); } 
         return; 
     }
     
+    // ৮. ইমেজ ভিউয়ার
     const postImage = e.target.closest('.post-image, .fundraising-image'); if (postImage) { const modal = document.getElementById('image-view-modal'); const modalImg = document.getElementById('modal-image'); modal.style.display = "flex"; modalImg.src = postImage.dataset.src || postImage.src; return; }
     const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); if (closeImageModal && !e.target.closest('.image-modal-content')) { document.getElementById('image-view-modal').style.display = "none"; return; }
-    const loginPage = document.getElementById('loginPage'); if (loginPage && loginPage.style.display === 'flex' && !e.target.closest('.login-box')) { return; }
     
-    const profileTrigger = e.target.closest('.profile-link-trigger'); 
-    if (profileTrigger && !currentUser) { e.preventDefault(); showLoginModal(); return; }
-
+    // ৯. অন্যান্য সাধারণ বাটন (লগইন, ড্রপডাউন ইত্যাদি)
+    const loginPage = document.getElementById('loginPage'); if (loginPage && loginPage.style.display === 'flex' && !e.target.closest('.login-box')) { return; }
+    const profileTrigger = e.target.closest('.profile-link-trigger'); if (profileTrigger && !currentUser) { e.preventDefault(); showLoginModal(); return; }
     const dropdownTrigger = e.target.closest('.actions-menu-trigger'); if (dropdownTrigger) { document.querySelectorAll('.dropdown-menu').forEach(d => { if (d.id !== dropdownTrigger.dataset.dropdownId) d.style.display = 'none'; }); const targetDropdown = document.getElementById(dropdownTrigger.dataset.dropdownId); if (targetDropdown) targetDropdown.style.display = targetDropdown.style.display === 'block' ? 'none' : 'block'; return; }
     if (!e.target.closest('.dropdown-menu')) { document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none'); }
     if (e.target.closest('.close-btn')) { const modal = e.target.closest('.modal'); if(modal) modal.style.display = 'none'; }
-    
     if (e.target.closest('#googleSignInBtn')) handleGoogleSignIn();
     if (e.target.closest('#facebookSignInBtn')) handleFacebookSignIn();
     if (e.target.closest('#signOutBtn')) supabaseClient.auth.signOut();
-    
     if (e.target.closest('#sendOtpBtn')) handleSendOtp();
     if (e.target.closest('#verifyOtpBtn')) handleVerifyOtp();
     if (e.target.closest('#backToPhoneBtn')) { document.getElementById('otpInputStep').style.display = 'none'; document.getElementById('phoneInputStep').style.display = 'block'; }
-
     const addPostLink = e.target.closest('#addPostLink'); if (addPostLink && !currentUser) { e.preventDefault(); showLoginModal(); }
     const saveBtn = e.target.closest('.save-btn'); if (saveBtn) { handleSavePost(saveBtn); return; }
     
+    // ১০. ডোনেশন বাটন
     const donateBtn = e.target.closest('.donate-btn, .donate-btn-modern');
     if (donateBtn) {
+        // ডোনেশন লজিক... (আপনার আগের কোড অনুযায়ী)
         const campaignId = parseInt(donateBtn.dataset.id, 10);
         const campaignData = allFetchedPrayers.get(campaignId);
-        
         if (campaignData) {
             activeDonationCampaignId = campaignId;
             const modalBody = document.getElementById('donationDetailsBody');
             let methodsHtml = '';
-            
+            // ... (বাকি ডোনেশন কোড একই থাকবে) ...
             if (campaignData.payment_details && campaignData.payment_details.methods && Array.isArray(campaignData.payment_details.methods)) {
                 methodsHtml = campaignData.payment_details.methods.map(m => {
                     const logos = { 'bkash': './images/bkash.png', 'nagad': './images/nagad.png', 'rocket': './images/rocket.png', 'upay': './images/upay.png', 'bank': './images/bank.png' };
                     const logoSrc = logos[m.type] || logos['bank'];
                     return `<div class="pay-row-display"><div class="pay-info-left"><img src="${logoSrc}" alt="${m.type}" onerror="this.style.display='none'"><div><div class="pay-number">${m.number}</div><div class="pay-type">${m.mode}</div></div></div><button class="copy-btn-small" onclick="navigator.clipboard.writeText('${m.number}').then(() => alert('নাম্বার কপি হয়েছে!'))"><i class="fas fa-copy"></i></button></div>`;
                 }).join('');
-            } else if (campaignData.payment_details && campaignData.payment_details.info) {
-                 methodsHtml = `<div class="payment-info"><pre>${campaignData.payment_details.info}</pre></div>`;
-            } else {
-                 methodsHtml = `<p>কোনো পেমেন্ট তথ্য পাওয়া যায়নি।</p>`;
-            }
-
+            } else if (campaignData.payment_details && campaignData.payment_details.info) { methodsHtml = `<div class="payment-info"><pre>${campaignData.payment_details.info}</pre></div>`; } else { methodsHtml = `<p>কোনো পেমেন্ট তথ্য পাওয়া যায়নি।</p>`; }
             let otherInfoHtml = '';
-            if (campaignData.payment_details && campaignData.payment_details.other_info) {
-                otherInfoHtml = `<div class="other-info-box"><strong>নোট:</strong> ${campaignData.payment_details.other_info}</div>`;
-            }
-
+            if (campaignData.payment_details && campaignData.payment_details.other_info) { otherInfoHtml = `<div class="other-info-box"><strong>নোট:</strong> ${campaignData.payment_details.other_info}</div>`; }
             modalBody.innerHTML = `<p style="text-align:center; margin-bottom:15px;"><strong>${campaignData.organization_name}</strong>-কে সহায়তা করুন।</p>${methodsHtml}${otherInfoHtml}<div class="donation-submit-section"><p style="font-size:12px; color:#666; text-align:center;">টাকা পাঠানোর পর নিচের বাটনে ক্লিক করে তথ্য দিন (ঐচ্ছিক)</p><button class="btn-full-width" style="margin-top:10px; background:#2c3e50;" onclick="openDonationConfirmation()">ডোনেশন কনফার্ম করুন</button></div>`;
             document.getElementById('donationModal').style.display = 'flex';
         }
         return;
     }
 
-    const actionBtn = e.target.closest('.action-btn:not(.share-btn):not(.comment-btn):not(.save-btn):not(.donate-btn):not(.donate-btn-modern)'); if (actionBtn) handleActionButtonClick(actionBtn);
+    // ১১. === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
+    // আগের জটিল সিলেক্টর বাদ দিয়ে সহজ করা হয়েছে
+    if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
+        const btn = e.target.closest('.action-btn');
+        const id = parseInt(btn.dataset.id, 10);
+        const type = btn.classList.contains('love-btn') ? 'love' : 'ameen';
+        handleReaction(id, type, btn);
+        return;
+    }
+
+    // ১২. অন্যান্য অ্যাকশন
     const editPostBtn = e.target.closest('.edit-post-btn'); if (editPostBtn) handleEditPost(editPostBtn);
     const deletePostBtn = e.target.closest('.delete-post-btn'); if (deletePostBtn) handleDeletePost(deletePostBtn);
     const hidePostBtn = e.target.closest('.hide-post-btn'); if (hidePostBtn) handleHidePost(hidePostBtn);
@@ -2067,105 +2078,87 @@ async function handleVerifyOtp() {
 }
 
 async function handleReaction(prayerId, type, btn) {
-    // লগইন চেক
     if (!currentUser) { 
         showLoginModal(); 
         return; 
     }
 
-    console.log(`Click registered: ID=${prayerId}, Type=${type}`); // ডিবাগিং
+    // আইডি ইন্টিজার কিনা চেক করা
+    prayerId = parseInt(prayerId, 10);
+    if (isNaN(prayerId)) {
+        console.error("Invalid Prayer ID");
+        return;
+    }
 
-    // ১. বাটন ডিজেবল করা যাতে ডাবল ক্লিক না হয়
+    // বাটন সাময়িক ডিজেবল (ডাবল ক্লিক ঠেকানোর জন্য)
     btn.disabled = true;
 
-    // ২. UI এলিমেন্ট ধরা
+    // ১. UI এলিমেন্ট ধরা
     const isLove = type === 'love';
     const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
     const icon = btn.querySelector('i');
 
-    // ৩. বর্তমান অবস্থা জানা
-    // সংখ্যা যদি ফাঁকা থাকে বা টেক্সট থাকে তবে ০ ধরবে
-    let currentCountText = countSpan.innerText || '0';
-    // বাংলা বা ইংলিশ সংখ্যা হ্যান্ডেল করার জন্য replace
-    let currentCount = parseInt(currentCountText.replace(/,/g, ''), 10);
+    // ২. বর্তমান সংখ্যা এবং স্ট্যাটাস নেওয়া
+    // কমা থাকলে সরিয়ে ফেলা (যেমন 1,200 -> 1200)
+    let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10);
     if (isNaN(currentCount)) currentCount = 0;
 
-    // আগে থেকেই লাইক দেওয়া ছিল কি না?
     const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
     
-    // ৪. নতুন অবস্থা নির্ধারণ (Optimistic Update)
+    // ৩. নতুন সংখ্যা এবং স্ট্যাটাস নির্ধারণ
     const newActiveState = !wasActive;
     const newCount = newActiveState ? (currentCount + 1) : Math.max(0, currentCount - 1);
 
-    // ৫. UI আপডেট (সাথে সাথে)
-    // ক্লাস টগল
+    // ৪. UI আপডেট (সাথে সাথে)
+    btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
+    countSpan.innerText = newCount; 
+    
     if (isLove) {
-        btn.classList.toggle('loved', newActiveState);
-        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
-    } else {
-        btn.classList.toggle('ameened', newActiveState);
+        if(icon) icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
     }
-    // কাউন্ট আপডেট
-    countSpan.innerText = newCount;
 
     try {
-        // ৬. লোকাল ক্যাশে (allFetchedPrayers) আপডেট
-        // যাতে পেজ স্ক্রল করলে বা অন্য পেজে গেলে ডাটা ঠিক থাকে
-        const prayer = allFetchedPrayers.get(prayerId);
-        if (prayer) {
-            const listKey = isLove ? 'loved_by' : 'ameened_by';
-            const countKey = isLove ? 'love_count' : 'ameen_count';
-            
-            let list = prayer[listKey] || [];
-            if (!newActiveState) {
-                // রিমুভ
-                list = list.filter(id => id !== currentUser.id);
-            } else {
-                // অ্যাড (ডুপ্লিকেট চেক করে)
-                if (!list.includes(currentUser.id)) list.push(currentUser.id);
-            }
-            
-            // ক্যাশ আপডেট
-            prayer[listKey] = list;
-            prayer[countKey] = newCount;
-            allFetchedPrayers.set(prayerId, prayer);
-        }
-
-        // ৭. ডাটাবেজ আপডেট (RPC কল)
+        // ৫. ডাটাবেজ আপডেট (RPC কল)
         const { error } = await supabaseClient.rpc('toggle_reaction', {
             p_id: prayerId,
             u_id: currentUser.id,
             r_type: type
         });
 
-        if (error) {
-            console.error('RPC Error:', error);
-            throw error;
+        if (error) throw error;
+
+        // ৬. লোকাল ক্যাশে আপডেট
+        const prayer = allFetchedPrayers.get(prayerId);
+        if (prayer) {
+            const listKey = isLove ? 'loved_by' : 'ameened_by';
+            const countKey = isLove ? 'love_count' : 'ameen_count';
+            
+            let list = prayer[listKey] || [];
+            if (newActiveState) {
+                if (!list.includes(currentUser.id)) list.push(currentUser.id);
+            } else {
+                list = list.filter(id => id !== currentUser.id);
+            }
+            
+            prayer[listKey] = list;
+            prayer[countKey] = newCount;
+            allFetchedPrayers.set(prayerId, prayer);
         }
 
-        console.log('Database updated successfully');
-
-        // ৮. নোটিফিকেশন (যদি নতুন লাইক হয় এবং নিজের পোস্ট না হয়)
+        // ৭. নোটিফিকেশন
         if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
             const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
-            // এটি ব্যাকগ্রাউন্ডে চলবে
             createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayer.id}`);
         }
 
     } catch (error) {
-        console.error('Reaction Failed:', error);
-        alert("ইন্টারনেট সমস্যার কারণে লাইক/আমিন সেভ হয়নি।");
-
-        // ৯. এরর হলে আগের অবস্থায় ফিরিয়ে আনা (Rollback UI)
-        if (isLove) {
-            btn.classList.toggle('loved', wasActive);
-            icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
-        } else {
-            btn.classList.toggle('ameened', wasActive);
-        }
+        console.error('Reaction error:', error);
+        // এরর হলে রোলব্যাক
+        btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
         countSpan.innerText = currentCount;
+        if (isLove && icon) icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
+        alert("নেটওয়ার্ক সমস্যার কারণে লাইক সেভ হয়নি।");
     } finally {
-        // ১০. বাটন আবার সচল করা (একটু সময় নিয়ে)
         setTimeout(() => { btn.disabled = false; }, 300);
     }
 }
