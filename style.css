@@ -3254,72 +3254,61 @@ textarea.post-input {
 .profile-cover-area {
     position: relative;
     width: 100%;
-    height: 200px; /* মোবাইলে হাইট */
-    background-color: #cbd5e1; /* ডিফল্ট কালার যদি ছবি না থাকে */
+    height: 220px; /* মোবাইলে স্ট্যান্ডার্ড হাইট */
+    background-color: #cbd5e1;
     background-size: cover;
     background-position: center;
-    overflow: hidden;
+    overflow: visible; /* বাটন যাতে কেটে না যায় */
 }
 
 .profile-cover-img {
     width: 100%;
     height: 100%;
-    object-fit: cove;
+    object-fit: cover;
     display: block;
 }
 
-/* কভার ফটো এডিট বাটন */
+/* কভার ফটো এডিট বাটন (ডানদিকের কোণায় ফিক্সড) */
 .edit-cover-btn {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.9);
+    bottom: 15px; /* কভারের নিচ থেকে একটু উপরে */
+    right: 15px;  /* ডানপাশ থেকে একটু বামে */
+    background: white;
     border: none;
     padding: 6px 12px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 10;
+    z-index: 10; /* ছবির উপরে থাকবে */
     color: #333;
-    transition: background 0.2s;
 }
 
-/* ২. প্রোফাইল পিকচার এবং হেডার অ্যাডজাস্টমেন্ট */
-.profile-header {
-    padding-top: 0 !important; /* উপরের প্যাডিং রিমুভ যাতে ছবি উপরে উঠে আসে */
-    position: relative;
-    margin-bottom: 10px;
-    background: white;
-    text-align: center;
-    padding-bottom: 20px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-/* প্রোফাইল ছবির কন্টেইনার */
+/* ২. প্রোফাইল পিকচার কন্টেইনার (অর্ধেক উপরে তোলার জন্য) */
 .profile-picture-container {
     position: relative;
-    width: 140px;
-    height: 140px;
-    margin: -75px auto 15px auto; /* নেগেটিভ মার্জিন দিয়ে উপরে তোলা হয়েছে */
-    z-index: 5;
+    width: 160px;  /* ছবির সাইজ */
+    height: 160px;
+    /* নেগেটিভ মার্জিন দিয়ে অর্ধেক উপরে তোলা হয়েছে */
+    margin: -85px auto 10px auto; 
+    z-index: 20; /* কভারের উপরে থাকবে */
 }
 
-/* বড় গোল ছবি */
+/* ৩. বড় গোল ছবি */
 .big-avatar {
     width: 100% !important;
     height: 100% !important;
     border-radius: 50%;
-    border: 4px solid white; /* ফেসবুকের মতো সাদা বর্ডার */
+    border: 5px solid white; /* ফেসবুকের মতো মোটা সাদা বর্ডার */
     background-color: #e4e6eb;
     overflow: hidden;
     position: relative;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    font-size: 60px !important; /* টেক্সট থাকলে ফন্ট বড় হবে */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    font-size: 60px !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3331,13 +3320,13 @@ textarea.post-input {
     object-fit: cover;
 }
 
-/* প্রোফাইল পিকচার এডিট বাটন (ক্যামেরা আইকন) */
+/* ৪. প্রোফাইল পিকচার এডিট বাটন (ক্যামেরা আইকন) */
 .edit-pic-btn {
     position: absolute;
     bottom: 5px;
-    right: 5px;
-    width: 38px;
-    height: 38px;
+    right: 10px; /* পজিশন ঠিক করা হয়েছে */
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: #e4e6eb;
     border: 3px solid white;
@@ -3345,27 +3334,69 @@ textarea.post-input {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 20px;
     color: black;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: background 0.2s;
+    z-index: 25; /* সবার উপরে */
 }
 
 .edit-pic-btn:hover, .edit-cover-btn:hover {
     background-color: #d8dadf;
 }
 
-/* ডেস্কটপ বা বড় স্ক্রিনের জন্য সাইজ ঠিক করা */
+/* প্রোফাইল হেডার টেক্সট অ্যাডজাস্টমেন্ট */
+.profile-header {
+    padding-top: 0 !important;
+    margin-bottom: 10px;
+    background: white;
+    text-align: center;
+    padding-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    position: relative;
+    margin-top: 0; /* গ্যাপ রিমুভ */
+}
+
+/* ডেস্কটপ বা বড় স্ক্রিনের জন্য */
 @media (min-width: 600px) {
     .profile-cover-area {
-        height: 320px; /* ডেস্কটপে কভার বড় হবে */
+        height: 350px; /* ডেস্কটপে কভার বড় */
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
     }
     
     .profile-picture-container {
-        width: 168px;
-        height: 168px;
-        margin-top: -90px;
+        width: 180px;
+        height: 180px;
+        margin-top: -100px; /* ডেস্কটপে আরও উপরে উঠবে */
+        margin-left: 30px; /* ডেস্কটপে বাম পাশে থাকে (অপশনাল, চাইলে সেন্টারে রাখতে margin: -100px auto... দিন) */
+        float: left; /* বামে সরানোর জন্য */
+    }
+    
+    .profile-header {
+        text-align: left; /* টেক্সট বামে */
+        padding-left: 230px; /* ছবির জন্য জায়গা ছাড়া */
+        padding-top: 15px !important;
+        min-height: 100px;
+    }
+    
+    .profile-actions {
+        justify-content: flex-start; /* বাটন বামে */
+    }
+    
+    .profile-stats {
+        justify-content: flex-start;
+    }
+}
+
+/* মোবাইল ভিউ ঠিক রাখার জন্য ক্লিয়ার ফিক্স */
+@media (max-width: 599px) {
+    .profile-picture-container {
+        margin-left: auto;
+        margin-right: auto;
+        float: none;
+    }
+    .profile-header {
+        text-align: center;
+        padding-left: 0;
     }
 }
