@@ -1,5 +1,3 @@
-
-
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -33,6 +31,10 @@ let adminPaymentNumbers = {};
 
 // Video Tracking
 const viewedVideosSession = new Set();
+
+// NEW: User Reaction Cache
+let userLovedPrayers = new Set();
+let userAmeenedPrayers = new Set();
 
 // ====================================
 // 2. STORY EDITOR STATE (ADVANCED)
@@ -317,7 +319,11 @@ async function handleUserLoggedIn(user) {
         // [UPDATED] হেডারে প্রোফাইল ছবি আপডেট করা
         updateHeaderProfileIcon(profile.photo_url);
 
-        await fetchSavedPostIds(); 
+        // [FIXED] ফেচ ইউজার রিয়্যাকশনস যোগ করা হয়েছে
+        await Promise.all([
+            fetchSavedPostIds(),
+            fetchUserReactions() // NEW: Fetch user's reaction history
+        ]);
 
         const pageId = document.body.id;
         if (pageId === 'home-page') {
@@ -338,6 +344,9 @@ async function handleUserLoggedIn(user) {
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
+    // [FIXED] রিয়্যাকশন ক্যাশে ক্লিয়ার করা হয়েছে
+    userLovedPrayers.clear();
+    userAmeenedPrayers.clear();
     
     // [UPDATED] হেডারের ছবি রিসেট করা
     updateHeaderProfileIcon(null);
@@ -381,6 +390,41 @@ async function fetchSavedPostIds() {
         if (error) throw error;
         savedPostIds = new Set(data.map(item => item.post_id));
     } catch (error) { console.error("Saved posts error:", error); }
+}
+
+// [FIXED] NEW FUNCTION: Fetch user's reaction history
+async function fetchUserReactions() {
+    if (!currentUser) return;
+    
+    try {
+        // Get all prayers where user has loved
+        const { data: lovedPrayers, error: loveError } = await supabaseClient
+            .from('prayers')
+            .select('id')
+            .contains('loved_by', [currentUser.id]);
+        
+        if (loveError) throw loveError;
+        
+        // Get all prayers where user has ameened
+        const { data: ameenedPrayers, error: ameenError } = await supabaseClient
+            .from('prayers')
+            .select('id')
+            .contains('ameened_by', [currentUser.id]);
+        
+        if (ameenError) throw ameenError;
+        
+        // Store in global variables
+        userLovedPrayers = new Set(lovedPrayers?.map(p => p.id) || []);
+        userAmeenedPrayers = new Set(ameenedPrayers?.map(p => p.id) || []);
+        
+        console.log('User reactions loaded:', {
+            loved: userLovedPrayers.size,
+            ameened: userAmeenedPrayers.size
+        });
+        
+    } catch (error) {
+        console.error("Error fetching user reactions:", error);
+    }
 }
 
 async function createNotification(userId, actorId, type, content, targetUrl) { 
@@ -1195,8 +1239,26 @@ const createPrayerCardElement = (prayer) => {
     const profileLinkAttr = isAnonymous ? '' : `href="/profile.html?id=${prayer.author_uid}"`; 
     const profileLinkClass = isAnonymous ? '' : 'profile-link-trigger'; 
     const avatar = isAnonymous ? '<i class="fas fa-user-secret"></i>' : (authorPhotoURL ? `<img src="${authorPhotoURL}" alt="${authorName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (authorName.charAt(0) || '?')); const avatarStyle = isAnonymous ? 'background-color: #888;' : `background-color: ${generateAvatarColor(authorName)}`;
+    
+    // [FIXED] Check user reaction state - প্রথমে prayer object থেকে চেক, তারপর ক্যাশ থেকে
     let hasLoved = false, hasAmeened = false; 
-    if (currentUser) { hasLoved = prayer.loved_by && prayer.loved_by.includes(currentUser.id); hasAmeened = prayer.ameened_by && prayer.ameened_by.includes(currentUser.id); }
+    if (currentUser) { 
+        // প্রথমে prayer object এর loved_by/ameened_by array থেকে চেক
+        if (prayer.loved_by && Array.isArray(prayer.loved_by)) {
+            hasLoved = prayer.loved_by.includes(currentUser.id);
+        } else {
+            // ক্যাশ থেকে চেক (লগইনের পর লোড করা হয়)
+            hasLoved = userLovedPrayers.has(prayer.id);
+        }
+        
+        if (prayer.ameened_by && Array.isArray(prayer.ameened_by)) {
+            hasAmeened = prayer.ameened_by.includes(currentUser.id);
+        } else {
+            // ক্যাশ থেকে চেক
+            hasAmeened = userAmeenedPrayers.has(prayer.id);
+        }
+    }
+    
     const ameenCount = prayer.ameen_count || 0; const loveCount = prayer.love_count || 0;
     const viewCount = prayer.view_count || 0; 
 
@@ -1674,7 +1736,7 @@ async function handleVerifyOtp() {
     try { const { data, error } = await supabaseClient.auth.verifyOtp({ phone: phone, token: token, type: 'sms' }); if (error) throw error; if (data.session) { document.getElementById('loginPage').style.display = 'none'; alert("লগইন সফল হয়েছে!"); } } catch (error) { console.error("Verify Error:", error); alert("ভুল কোড। আবার চেষ্টা করুন।"); } finally { setLoading(btn, false); }
 }
 
-// [UPDATED] Reaction Handler with RPC & Optimistic UI
+// [FIXED] Reaction Handler with RPC & Optimistic UI and Local Cache Update
 async function handleReaction(prayerId, type, btn) {
     if (!currentUser) { 
         showLoginModal(); 
@@ -1688,13 +1750,14 @@ async function handleReaction(prayerId, type, btn) {
 
     const isLove = type === 'love';
     
-    // [FIX] DOM Selector Fixed: Finding counter from the CARD, not the button
+    // DOM Selector
     const card = document.getElementById(`prayer-${prayerId}`);
     if (!card) return;
     
     const countSpan = card.querySelector(isLove ? '.love-count' : '.ameen-count');
     const icon = btn.querySelector('i');
 
+    // Get current state from DOM
     let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10);
     if (isNaN(currentCount)) currentCount = 0;
 
@@ -1706,11 +1769,12 @@ async function handleReaction(prayerId, type, btn) {
     btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
     countSpan.innerText = newCount; 
     
-    if (isLove) {
-        if(icon) icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
+    if (isLove && icon) {
+        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
     }
 
     try {
+        // Call RPC function
         const { error } = await supabaseClient.rpc('toggle_reaction', {
             p_id: prayerId,
             u_id: currentUser.id,
@@ -1719,6 +1783,22 @@ async function handleReaction(prayerId, type, btn) {
 
         if (error) throw error;
 
+        // [FIXED] Update local caches based on reaction type
+        if (isLove) {
+            if (newActiveState) {
+                userLovedPrayers.add(prayerId);
+            } else {
+                userLovedPrayers.delete(prayerId);
+            }
+        } else {
+            if (newActiveState) {
+                userAmeenedPrayers.add(prayerId);
+            } else {
+                userAmeenedPrayers.delete(prayerId);
+            }
+        }
+
+        // Update prayer in local cache
         const prayer = allFetchedPrayers.get(prayerId);
         if (prayer) {
             const listKey = isLove ? 'loved_by' : 'ameened_by';
@@ -1736,18 +1816,23 @@ async function handleReaction(prayerId, type, btn) {
             allFetchedPrayers.set(prayerId, prayer);
         }
 
+        // Send notification if liked/ameened someone else's post
         if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
             const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
-            createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayer.id}`);
+            createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayerId}`);
         }
 
     } catch (error) {
         console.error('Reaction error:', error);
-        // Rollback
+        
+        // Rollback on error
         btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
         countSpan.innerText = currentCount;
-        if (isLove && icon) icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
-        alert("নেটওয়ার্ক সমস্যার কারণে লাইক সেভ হয়নি।");
+        if (isLove && icon) {
+            icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
+        }
+        
+        alert("নেটওয়ার্ক সমস্যার কারণে রিয়্যাকশন সেভ হয়নি।");
     } finally {
         setTimeout(() => { btn.disabled = false; }, 300);
     }
