@@ -313,10 +313,7 @@ async function handleUserLoggedIn(user) {
         }
         
         currentUser = { ...user, profile };
-        
-        // [UPDATED] হেডারে প্রোফাইল ছবি আপডেট করা
         updateHeaderProfileIcon(profile.photo_url);
-
         await fetchSavedPostIds(); 
 
         const pageId = document.body.id;
@@ -338,8 +335,6 @@ async function handleUserLoggedIn(user) {
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
-    
-    // [UPDATED] হেডারের ছবি রিসেট করা
     updateHeaderProfileIcon(null);
 
     const pageId = document.body.id;
@@ -615,18 +610,14 @@ function setupNavigationLogic() {
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
 
-            // ১. যদি এটি পোস্ট করার বাটন বা প্রোফাইল পেজের লিংক হয়, তবে স্বাভাবিক কাজ করতে দিন
             if (link.id === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) {
                 return; 
             }
 
-            // ২. ফিক্স: যদি আমরা প্রোফাইল পেজে থাকি এবং ইউজার ব্যাক/হোম বাটনে ক্লিক করে
-            // তাহলে জাভাস্ক্রিপ্ট আটকাতে বারণ করা হচ্ছে, যাতে index.html এ চলে যায়।
             if (!isHomePage && (href === '/index.html' || href === './index.html' || href === 'index.html')) {
                 return; 
             }
 
-            // ৩. শুধুমাত্র হোম পেজেই ফিড সুইচ করার জন্য ডিফল্ট একশন আটকানো হবে
             e.preventDefault();
             
             document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
@@ -664,7 +655,7 @@ function refreshFeed() {
 }
 
 // ====================================
-// 8. ADVANCED STORY EDITOR (COMPLETE)
+// 8. ADVANCED STORY EDITOR
 // ====================================
 function setupStoryEditor() {
     document.getElementById('createStoryBtn')?.addEventListener('click', (e) => { e.preventDefault(); if(!currentUser) { showLoginModal(); return; } openProStoryEditor(); });
@@ -714,7 +705,6 @@ function switchEditorTab(mode) {
     }
 }
 
-// Camera Logic
 async function initCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -738,7 +728,6 @@ function stopCamera() {
     document.getElementById('liveCameraFeed').style.display = 'none';
 }
 
-// Recording Logic (With Gauge Bar & Timer)
 function toggleRecording() {
     if (storyEditorState.isRecording) stopRecording();
     else startRecording();
@@ -794,14 +783,12 @@ function stopRecording() {
     circle.style.strokeDashoffset = 226; 
 }
 
-// Mute Toggle
 function toggleMute() {
     storyEditorState.isMuted = !storyEditorState.isMuted;
     const btn = document.getElementById('storyMuteBtn');
     if(storyEditorState.isMuted) { btn.innerHTML = '<i class="fas fa-microphone-slash" style="color:red;"></i>'; } else { btn.innerHTML = '<i class="fas fa-microphone"></i>'; }
 }
 
-// File Upload Logic
 function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -878,7 +865,7 @@ async function publishProStory() {
 }
 
 // ====================================
-// 9. STORY VIEWER (STANDARD)
+// 9. STORY VIEWER
 // ====================================
 async function fetchAndRenderStories() {
     const container = document.getElementById('storyContainer');
@@ -1474,7 +1461,7 @@ async function submitDonationDetails(e) {
 }
 
 // ====================================
-// 13. EVENTS & GLOBAL HANDLERS
+// 13. EVENTS & GLOBAL HANDLERS (FIXED)
 // ====================================
 function setupEventListeners() {
     document.addEventListener('click', handleGlobalClick);
@@ -1551,7 +1538,7 @@ async function handleGlobalClick(e) {
         const prayerText = shareBtn.dataset.text || '';
         const url = `${window.location.origin}/comments.html?postId=${prayerId}`;
         const fullShareText = `${prayerTitle}\n\n${prayerText}\n\nআমিন বলতে নিচের লিংকে ক্লিক করুন:\n${url}`;
-        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার করতে সমস্যা:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক এবং বিস্তারিত কপি করা হয়েছে!'); }, () => { alert('আপনার ব্রাউজার শেয়ার সাপোর্ট করে না।'); }); } 
+        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক এবং বিস্তারিত কপি করা হয়েছে!'); }, () => { alert('আপনার ব্রাউজার শেয়ার সাপোর্ট করে না।'); }); } 
         return; 
     }
     
@@ -1610,8 +1597,7 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // ১১. === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
-    // আগের জটিল সিলেক্টর বাদ দিয়ে সহজ করা হয়েছে
+    // === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
     if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
         const btn = e.target.closest('.action-btn');
         const id = parseInt(btn.dataset.id, 10);
@@ -1620,7 +1606,6 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // ১২. অন্যান্য অ্যাকশন
     const editPostBtn = e.target.closest('.edit-post-btn'); if (editPostBtn) handleEditPost(editPostBtn);
     const deletePostBtn = e.target.closest('.delete-post-btn'); if (deletePostBtn) handleDeletePost(deletePostBtn);
     const hidePostBtn = e.target.closest('.hide-post-btn'); if (hidePostBtn) handleHidePost(hidePostBtn);
@@ -1685,7 +1670,12 @@ async function handleReaction(prayerId, type, btn) {
     btn.disabled = true;
 
     const isLove = type === 'love';
-    const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
+    
+    // [FIX] DOM Selector Fixed: Finding counter from the CARD, not the button
+    const card = document.getElementById(`prayer-${prayerId}`);
+    if (!card) return;
+    
+    const countSpan = card.querySelector(isLove ? '.love-count' : '.ameen-count');
     const icon = btn.querySelector('i');
 
     let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10);

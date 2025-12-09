@@ -1,11 +1,11 @@
 // service-worker.js - Enhanced for Full Offline Support (Islamic Pro)
 // Updated Strategy: NetworkFirst for Admin Pages to ensure updates are visible immediately.
 
-const CACHE_NAME = 'doa-angina-v5-offline'; // Version updated to v5 to force update
-const ASSETS_CACHE = 'assets-v5';
-const MEDIA_CACHE = 'media-v5';
-const API_CACHE = 'api-v5';
-const FONT_CACHE = 'fonts-v5';
+const CACHE_NAME = 'doa-angina-v6-offline'; // Version updated to v5 to force update
+const ASSETS_CACHE = 'assets-v6';
+const MEDIA_CACHE = 'media-v6';
+const API_CACHE = 'api-v6';
+const FONT_CACHE = 'fonts-v6';
 
 // admin.html এবং campaign-admin.html এখান থেকে সরানো হয়েছে
 // যাতে ইন্সটলেশনের সময় এগুলো স্ট্যাটিক ক্যাশে জমা না হয়।
