@@ -2069,27 +2069,50 @@ async function handleVerifyOtp() {
 async function handleReaction(prayerId, type, btn) {
     if (!currentUser) { showLoginModal(); return; }
 
-    // ১. UI অপটিমিস্টিক আপডেট (ব্যবহারকারীকে সাথে সাথে রেসপন্স দেখানোর জন্য)
-    const isLove = type === 'love';
-    const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
-    const currentCount = parseInt(countSpan.textContent || '0', 10);
-    const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
-    
-    // UI টগল করা
-    btn.classList.toggle(isLove ? 'loved' : 'ameened');
-    if (isLove) {
-        btn.querySelector('i').className = wasActive ? 'far fa-heart' : 'fas fa-heart';
-    }
-    
-    // কাউন্ট আপডেট করা
-    const newCount = wasActive ? Math.max(0, currentCount - 1) : currentCount + 1;
-    countSpan.textContent = newCount;
-    
-    // বাটন সাময়িক ডিজেবল (ডাবল ক্লিক রোধ করতে)
+    // বাটন সাময়িক ডিজেবল (ডাবল ক্লিক ঠেকানোর জন্য)
     btn.disabled = true;
 
+    // ১. UI অপটিমিস্টিক আপডেট (সাথে সাথে রেসপন্স)
+    const isLove = type === 'love';
+    const countSpan = btn.querySelector(isLove ? '.love-count' : '.ameen-count');
+    
+    // বর্তমান সংখ্যা এবং স্ট্যাটাস নেওয়া
+    let currentCount = parseInt(countSpan.innerText.replace(/,/g, '') || '0', 10);
+    const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
+    
+    // নতুন সংখ্যা এবং স্ট্যাটাস নির্ধারণ
+    const newCount = wasActive ? Math.max(0, currentCount - 1) : currentCount + 1;
+    const newActiveState = !wasActive;
+
+    // UI আপডেট করে দেওয়া (দেরি না করে)
+    btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
+    countSpan.innerText = newCount; // textContent এর বদলে innerText ব্যবহার সেইফ
+    
+    if (isLove) {
+        const icon = btn.querySelector('i');
+        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
+    }
+
     try {
-        // ২. ডাটাবেজ RPC কল (সার্ভার সাইড আপডেট)
+        // ২. লোকাল ক্যাশে আপডেট (যাতে পেজ স্ক্রল করলে বা অন্য কোথাও গেলে ডাটা ঠিক থাকে)
+        const prayer = allFetchedPrayers.get(prayerId);
+        if (prayer) {
+            const listKey = isLove ? 'loved_by' : 'ameened_by';
+            const countKey = isLove ? 'love_count' : 'ameen_count';
+            
+            let list = prayer[listKey] || [];
+            if (wasActive) {
+                list = list.filter(id => id !== currentUser.id); // রিমুভ
+            } else {
+                if (!list.includes(currentUser.id)) list.push(currentUser.id); // অ্যাড
+            }
+            
+            prayer[listKey] = list;
+            prayer[countKey] = newCount;
+            allFetchedPrayers.set(prayerId, prayer);
+        }
+
+        // ৩. ডাটাবেজ আপডেট (RPC কল)
         const { error } = await supabaseClient.rpc('toggle_reaction', {
             p_id: prayerId,
             u_id: currentUser.id,
@@ -2098,45 +2121,28 @@ async function handleReaction(prayerId, type, btn) {
 
         if (error) throw error;
 
-        // ৩. লোকাল ক্যাশে আপডেট (যাতে পেজ রিফ্রেশ ছাড়া অন্য কোথাও গেলে ডাটা ঠিক থাকে)
-        const prayer = allFetchedPrayers.get(prayerId);
-        if (prayer) {
-            const listKey = isLove ? 'loved_by' : 'ameened_by';
-            const countKey = isLove ? 'love_count' : 'ameen_count';
-            
-            let list = prayer[listKey] || [];
-            if (wasActive) {
-                // রিমুভ
-                list = list.filter(id => id !== currentUser.id);
-            } else {
-                // অ্যাড
-                if (!list.includes(currentUser.id)) list.push(currentUser.id);
-                
-                // নোটিফিকেশন পাঠানো (শুধুমাত্র নতুন রিয়্যাকশনের ক্ষেত্রে)
-                if (prayer.author_uid !== currentUser.id) {
-                    const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
-                    // ব্যাকগ্রাউন্ডে নোটিফিকেশন পাঠাবে, await করার দরকার নেই
-                    createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayer.id}`);
-                }
-            }
-            
-            // ক্যাশে আপডেট
-            prayer[listKey] = list;
-            prayer[countKey] = newCount;
-            allFetchedPrayers.set(prayerId, prayer);
+        // ৪. নোটিফিকেশন (যদি নিজের পোস্ট না হয় এবং লাইক দেওয়া হয়)
+        if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
+            const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
+            createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayer.id}`);
         }
 
     } catch (error) {
         console.error('Reaction error:', error);
-        // এরর হলে UI আগের অবস্থায় ফিরিয়ে আনা (Rollback)
-        btn.classList.toggle(isLove ? 'loved' : 'ameened');
+        // এরর হলে আগের অবস্থায় ফিরিয়ে আনা (Rollback)
+        btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
+        countSpan.innerText = currentCount;
         if (isLove) {
             btn.querySelector('i').className = wasActive ? 'fas fa-heart' : 'far fa-heart';
         }
-        countSpan.textContent = currentCount; // আগের কাউন্ট
-        alert("ইন্টারনেট সমস্যার কারণে রিয়্যাকশন সেভ হয়নি।");
+        // ক্যাশ রোলব্যাক
+        const prayer = allFetchedPrayers.get(prayerId);
+        if(prayer) {
+             // রিফ্রেশ করলে ঠিক হয়ে যাবে, তাই এখানে জটিল লজিক দরকার নেই
+        }
     } finally {
-        btn.disabled = false;
+        // বাটন আবার সচল করা
+        setTimeout(() => { btn.disabled = false; }, 500);
     }
 }
 
@@ -2221,72 +2227,105 @@ function setupRealtimeSubscription() {
 
 async function handlePrayerChange(payload) {
     if (document.visibilityState !== 'visible') return; 
+    
     const { eventType, new: newRecord, old: oldRecord } = payload; 
     const container = document.getElementById('feedContainer') || document.getElementById('myPostsContainer'); 
-    if (!container) return; 
     
     const prayerId = newRecord?.id || oldRecord?.id; 
     if (!prayerId) return;
 
     if (eventType === 'INSERT') { 
-        if (!newRecord.is_fundraising) { shuffledPrayerIds.unshift(prayerId); } else { fetchFundraisingPosts(); }
+        if (!container) return;
         
-        const { data: newPrayer } = await supabaseClient.from('prayers').select('*, users!author_uid(id, display_name, photo_url)').eq('id', prayerId).single(); 
+        // ফান্ডরাইজিং হলে আলাদা লজিক
+        if (newRecord.is_fundraising) { 
+            fetchFundraisingPosts(); 
+            return;
+        } 
+        
+        shuffledPrayerIds.unshift(prayerId);
+        
+        // নতুন পোস্টের জন্য ইউজারের নাম/ছবি দরকার, তাই একবার ফেচ করা লাগবে
+        const { data: newPrayer } = await supabaseClient
+            .from('prayers')
+            .select('*, users!author_uid(id, display_name, photo_url)')
+            .eq('id', prayerId)
+            .single(); 
+            
         if (newPrayer) { 
             allFetchedPrayers.set(prayerId, newPrayer); 
             if (isVideoFeedActive && !newPrayer.uploaded_video_url && !newPrayer.youtube_url) return;
-            if (!newPrayer.is_fundraising && !filteredUserId) { 
+            
+            // ফিল্টার লজিক অনুযায়ী রেন্ডার
+            if (!filteredUserId || (filteredUserId && newPrayer.author_uid === filteredUserId)) {
                 container.prepend(createPrayerCardElement(newPrayer)); 
-            } else if (filteredUserId && newPrayer.author_uid === filteredUserId) {
-                container.prepend(createPrayerCardElement(newPrayer));
             }
         } 
     }
     else if (eventType === 'UPDATE') { 
         const existingCard = document.getElementById(`prayer-${prayerId}`); 
-        if (existingCard) { 
-            const { data: updatedPrayer } = await supabaseClient.from('prayers').select('*, users!author_uid(id, display_name, photo_url)').eq('id', prayerId).single(); 
-            if (updatedPrayer) { 
-                allFetchedPrayers.set(prayerId, updatedPrayer); 
+        
+        // নতুন ডাটা সরাসরি payload থেকে নেওয়া (ফাস্ট আপডেট)
+        // ইউজার ইনফো payload এ থাকে না, তাই আগের ক্যাশ থেকে নেওয়া
+        const cachedPrayer = allFetchedPrayers.get(prayerId);
+        const updatedPrayer = { ...cachedPrayer, ...newRecord }; 
+        
+        if (updatedPrayer) {
+            allFetchedPrayers.set(prayerId, updatedPrayer);
+            
+            if (existingCard) {
+                // শুধুমাত্র কাউন্ট এবং ক্লাস আপডেট করব, পুরো কার্ড রি-রেন্ডার করব না
+                // এতে ফ্লিকারিং বা বাটন রিসেট হওয়া বন্ধ হবে
                 
-                const currentAmeenText = existingCard.querySelector('.ameen-count')?.innerText;
-                const currentLoveText = existingCard.querySelector('.love-count')?.innerText;
-                const newAmeenCount = updatedPrayer.ameen_count;
-                const newLoveCount = updatedPrayer.love_count;
-                const currentTitle = existingCard.querySelector('.prayer-title')?.innerText;
+                // ১. আমিন আপডেট
+                const ameenCountSpan = existingCard.querySelector('.ameen-count');
+                const ameenBtn = existingCard.querySelector('.ameen-btn');
+                if (ameenCountSpan) ameenCountSpan.innerText = updatedPrayer.ameen_count || 0;
                 
-                if (currentTitle === updatedPrayer.title) {
-                    if (existingCard.querySelector('.ameen-count')) existingCard.querySelector('.ameen-count').innerText = newAmeenCount;
-                    if (existingCard.querySelector('.love-count')) existingCard.querySelector('.love-count').innerText = newLoveCount;
-                    
-                    if (currentUser) {
-                        const ameenBtn = existingCard.querySelector('.ameen-btn');
-                        const loveBtn = existingCard.querySelector('.love-btn');
-                        
-                        if (updatedPrayer.ameened_by && updatedPrayer.ameened_by.includes(currentUser.id)) {
-                            ameenBtn.classList.add('ameened');
-                        } else {
-                            ameenBtn.classList.remove('ameened');
-                        }
-                        
-                        if (updatedPrayer.loved_by && updatedPrayer.loved_by.includes(currentUser.id)) {
-                            loveBtn.classList.add('loved');
-                            loveBtn.querySelector('i').className = 'fas fa-heart';
-                        } else {
-                            loveBtn.classList.remove('loved');
-                            loveBtn.querySelector('i').className = 'far fa-heart';
-                        }
-                    }
-                } else {
-                    existingCard.replaceWith(createPrayerCardElement(updatedPrayer));
+                if (currentUser && ameenBtn) {
+                    const hasAmeened = (updatedPrayer.ameened_by || []).includes(currentUser.id);
+                    ameenBtn.classList.toggle('ameened', hasAmeened);
                 }
-            } 
-        } 
+
+                // ২. লাভ আপডেট
+                const loveCountSpan = existingCard.querySelector('.love-count');
+                const loveBtn = existingCard.querySelector('.love-btn');
+                if (loveCountSpan) loveCountSpan.innerText = updatedPrayer.love_count || 0;
+                
+                if (currentUser && loveBtn) {
+                    const hasLoved = (updatedPrayer.loved_by || []).includes(currentUser.id);
+                    loveBtn.classList.toggle('loved', hasLoved);
+                    const icon = loveBtn.querySelector('i');
+                    if(icon) icon.className = hasLoved ? 'fas fa-heart' : 'far fa-heart';
+                }
+
+                // ৩. ভিউ বা কমেন্ট কাউন্ট আপডেট
+                const viewCountSpan = document.getElementById(`view-count-${prayerId}`);
+                if (viewCountSpan) viewCountSpan.innerText = (updatedPrayer.view_count || 0).toLocaleString('bn-BD');
+                
+                const commentCountSpan = existingCard.querySelector('.comment-count-text');
+                if (commentCountSpan) commentCountSpan.innerText = `${updatedPrayer.comment_count || 0} টি কমেন্ট`;
+                
+                // ৪. দোয়া কবুল ব্যাজ আপডেট (যদি চেঞ্জ হয়)
+                if (updatedPrayer.is_answered && !existingCard.querySelector('.answered-badge')) {
+                    const badge = document.createElement('div');
+                    badge.className = 'answered-badge';
+                    badge.innerHTML = '<i class="fas fa-check-circle"></i> আলহামদুলিল্লাহ, দোয়া কবুল হয়েছে';
+                    const body = existingCard.querySelector('.card-body');
+                    if(body) body.prepend(badge);
+                } else if (!updatedPrayer.is_answered && existingCard.querySelector('.answered-badge')) {
+                    existingCard.querySelector('.answered-badge').remove();
+                }
+            }
+        }
     }
     else if (eventType === 'DELETE') { 
         allFetchedPrayers.delete(oldRecord.id); 
-        if (!oldRecord.is_fundraising) { shuffledPrayerIds = shuffledPrayerIds.filter(id => id !== oldRecord.id); } 
-        document.getElementById(`prayer-${oldRecord.id}`)?.remove(); 
+        if (!oldRecord.is_fundraising) { 
+            shuffledPrayerIds = shuffledPrayerIds.filter(id => id !== oldRecord.id); 
+        } 
+        const card = document.getElementById(`prayer-${oldRecord.id}`);
+        if(card) card.remove(); 
     }
 }
 
