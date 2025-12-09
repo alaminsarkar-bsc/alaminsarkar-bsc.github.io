@@ -3312,19 +3312,27 @@ textarea.post-input {
 }
 
 /* ৩. বড় গোল ছবি */
+/* ৩. বড় গোল ছবি (ব্লু রিং সহ) */
 .big-avatar {
     width: 100% !important;
     height: 100% !important;
     border-radius: 50%;
-    border: 5px solid white; /* ফেসবুকের মতো মোটা সাদা বর্ডার */
+    
+    /* ভেতরের সাদা বর্ডার (ছবি ও রিং এর মাঝে গ্যাপ তৈরি করবে) */
+    border: 4px solid white; 
+    
     background-color: #fff;
     overflow: hidden;
     position: relative;
-    box-shadow: none; /* শ্যাডো রিমুভ করা হলো ক্লিন লুকের জন্য */
+    
+    /* === এই লাইনটি ব্লু রিং তৈরি করবে === */
+    box-shadow: 0 0 0 3px var(--primary-color); 
+    
     font-size: 60px !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 20;
 }
 
 .big-avatar img {
