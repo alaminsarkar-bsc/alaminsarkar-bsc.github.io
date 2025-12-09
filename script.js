@@ -381,9 +381,6 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
     } catch (error) { console.error('Notification create error:', error); } 
 }
 
-// ====================================
-// 5. PROFILE PAGE LOGIC
-// ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
     let userId = urlParams.get('id');
@@ -402,21 +399,40 @@ async function initProfilePage() {
     showSkeletonLoader(true, 'myPostsContainer');
 
     try {
-        const { data: userProfile, error } = await supabaseClient.from('users').select('*').eq('id', userId).single();
+        // cover_photo_url সহ ডাটা আনা হচ্ছে
+        const { data: userProfile, error } = await supabaseClient
+            .from('users')
+            .select('*, cover_photo_url') 
+            .eq('id', userId)
+            .single();
+            
         if (error) throw error;
         if (!userProfile) throw new Error("ব্যবহারকারী পাওয়া যায়নি।");
 
+        // ১. নাম ও বায়ো সেট করা
         document.getElementById('profileName').textContent = userProfile.display_name || 'নাম নেই';
         document.getElementById('profileAddress').textContent = userProfile.address || 'কোনো বায়ো নেই';
         
+        // ২. প্রোফাইল পিকচার সেট করা
         const avatarEl = document.getElementById('profileAvatar');
         if (userProfile.photo_url) {
             avatarEl.innerHTML = `<img src="${userProfile.photo_url}" style="width:100%;height:100%;object-fit:cover;">`;
         } else {
             avatarEl.textContent = (userProfile.display_name || 'U').charAt(0).toUpperCase();
             avatarEl.style.backgroundColor = generateAvatarColor(userProfile.display_name);
+            avatarEl.innerHTML = (userProfile.display_name || 'U').charAt(0).toUpperCase(); // টেক্সট রিসেট
         }
 
+        // ৩. কভার ফটো সেট করা (NEW)
+        const coverEl = document.getElementById('profileCoverDisplay');
+        if (userProfile.cover_photo_url) {
+            coverEl.src = userProfile.cover_photo_url;
+            coverEl.style.display = 'block';
+        } else {
+            coverEl.style.display = 'none';
+        }
+
+        // ৪. পরিসংখ্যান (Stats) লোড করা
         const [postsCount, followersCount, followingCount] = await Promise.all([
             supabaseClient.from('prayers').select('*', { count: 'exact', head: true }).eq('author_uid', userId).eq('status', 'active'),
             supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userId),
@@ -427,19 +443,35 @@ async function initProfilePage() {
         document.getElementById('followersCount').innerHTML = `<strong>${followersCount.count || 0}</strong> অনুসারী`;
         document.getElementById('followingCount').innerHTML = `<strong>${followingCount.count || 0}</strong> অনুসরণ`;
 
+        // ৫. বাটন এবং এডিট অপশন কন্ট্রোল
         const editBtn = document.getElementById('editProfileBtn');
         const followBtn = document.getElementById('followBtn');
         const signOutBtn = document.getElementById('signOutBtn');
         
+        // ছবি আপলোডের বাটনগুলো
+        const changeCoverBtn = document.getElementById('changeCoverBtn');
+        const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
+        
+        // সব লুকিয়ে ফেলা আগে
         editBtn.style.display = 'none';
         followBtn.style.display = 'none';
         signOutBtn.style.display = 'none';
+        if(changeCoverBtn) changeCoverBtn.style.display = 'none';
+        if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'none';
 
         if (currentUser && currentUser.id === userId) {
+            // নিজের প্রোফাইল হলে
             editBtn.style.display = 'inline-block';
             signOutBtn.style.display = 'inline-block';
+            if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; // ফ্লেক্স যাতে আইকন ঠিক থাকে
+            if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'flex';
+            
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'inline-block');
+            
+            // আপলোড ইভেন্ট লিসেনার সেটআপ (নিচে ফাংশন আছে)
+            setupProfileImageUploads(); 
         } else {
+            // অন্যের প্রোফাইল হলে
             followBtn.style.display = 'inline-block';
             followBtn.dataset.userId = userId;
             
@@ -456,6 +488,7 @@ async function initProfilePage() {
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'none');
         }
 
+        // ৬. ওয়ার্নিং সেকশন
         const warningsSection = document.getElementById('warnings-section');
         if (currentUser && currentUser.id === userId) {
             const { data: warnings } = await supabaseClient.from('user_warnings').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -2648,5 +2681,110 @@ function openModalWithBack(modalId) {
         modal.style.display = 'flex'; // অথবা 'block'
         // ব্রাউজারে একটি নকল হিস্ট্রি যোগ করা হচ্ছে
         history.pushState({modal: true}, null, ""); 
+    }
+}
+
+// ====================================
+// PROFILE IMAGE UPLOAD LOGIC
+// ====================================
+
+function setupProfileImageUploads() {
+    // বাটন ক্লিক ইভেন্ট
+    const coverBtn = document.getElementById('changeCoverBtn');
+    const profileBtn = document.getElementById('changeProfilePicBtn');
+    const coverInput = document.getElementById('coverPicInput');
+    const profileInput = document.getElementById('profilePicInput');
+
+    // পুরনো লিসেনার যাতে ডুপ্লিকেট না হয় তাই ক্লোন করে রিপ্লেস করা হচ্ছে (সেফটি)
+    if(coverBtn) {
+        const newCoverBtn = coverBtn.cloneNode(true);
+        coverBtn.parentNode.replaceChild(newCoverBtn, coverBtn);
+        newCoverBtn.addEventListener('click', () => document.getElementById('coverPicInput').click());
+    }
+
+    if(profileBtn) {
+        const newProfileBtn = profileBtn.cloneNode(true);
+        profileBtn.parentNode.replaceChild(newProfileBtn, profileBtn);
+        newProfileBtn.addEventListener('click', () => document.getElementById('profilePicInput').click());
+    }
+
+    // ইনপুট চেঞ্জ ইভেন্ট
+    if(coverInput) {
+        coverInput.onchange = (e) => handleProfileImageUpload(e, 'cover');
+    }
+    if(profileInput) {
+        profileInput.onchange = (e) => handleProfileImageUpload(e, 'profile');
+    }
+}
+
+async function handleProfileImageUpload(e, type) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // ফাইল সাইজ চেক (৫ এমবি)
+    if (file.size > 5 * 1024 * 1024) {
+        alert("ফাইলের আকার খুব বেশি! ৫ এমবির নিচে হতে হবে।");
+        return;
+    }
+
+    const loadingModal = document.getElementById('uploadProgressModal');
+    if(loadingModal) loadingModal.style.display = 'flex';
+
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
+        const filePath = `${type}s/${fileName}`; // e.g., covers/cover_123_... or profiles/profile_123_...
+
+        // ১. স্টোরেজে আপলোড
+        const { data, error: uploadError } = await supabaseClient.storage
+            .from('post_images') // আমরা 'post_images' বাকেট ব্যবহার করছি কারণ এটি অলরেডি সেটআপ করা
+            .upload(filePath, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        // ২. পাবলিক ইউআরএল তৈরি
+        const { data: publicUrlData } = supabaseClient.storage
+            .from('post_images')
+            .getPublicUrl(filePath);
+            
+        const imageUrl = publicUrlData.publicUrl;
+
+        // ৩. ডাটাবেজ আপডেট
+        const updateData = {};
+        if (type === 'cover') {
+            updateData.cover_photo_url = imageUrl;
+        } else {
+            updateData.photo_url = imageUrl;
+        }
+
+        const { error: dbError } = await supabaseClient
+            .from('users')
+            .update(updateData)
+            .eq('id', currentUser.id);
+
+        if (dbError) throw dbError;
+
+        // ৪. ইউআই আপডেট
+        if (type === 'cover') {
+            const imgEl = document.getElementById('profileCoverDisplay');
+            imgEl.src = imageUrl;
+            imgEl.style.display = 'block';
+        } else {
+            const avatarEl = document.getElementById('profileAvatar');
+            avatarEl.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+            
+            // সাইডবারে বা অন্য কোথাও ছোট ছবি থাকলে আপডেট করুন (অপশনাল)
+            // location.reload(); // ফুল রিফ্রেশ দিলে সব জায়গায় আপডেট হবে
+        }
+
+        alert("আপলোড সফল হয়েছে!");
+
+    } catch (error) {
+        console.error("Upload Error:", error);
+        alert("আপলোড করতে সমস্যা হয়েছে: " + error.message);
+    } finally {
+        if(loadingModal) loadingModal.style.display = 'none';
+        // ইনপুট ক্লিয়ার করা যাতে একই ফাইল আবার সিলেক্ট করা যায়
+        e.target.value = '';
     }
 }

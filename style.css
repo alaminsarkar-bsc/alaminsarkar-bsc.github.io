@@ -3249,3 +3249,123 @@ textarea.post-input {
 @keyframes shimmer {
     100% { transform: translateX(100%); }
 }
+
+
+.profile-cover-area {
+    position: relative;
+    width: 100%;
+    height: 200px; /* মোবাইলে হাইট */
+    background-color: #cbd5e1; /* ডিফল্ট কালার যদি ছবি না থাকে */
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+}
+
+.profile-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cove;
+    display: block;
+}
+
+/* কভার ফটো এডিট বাটন */
+.edit-cover-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 10;
+    color: #333;
+    transition: background 0.2s;
+}
+
+/* ২. প্রোফাইল পিকচার এবং হেডার অ্যাডজাস্টমেন্ট */
+.profile-header {
+    padding-top: 0 !important; /* উপরের প্যাডিং রিমুভ যাতে ছবি উপরে উঠে আসে */
+    position: relative;
+    margin-bottom: 10px;
+    background: white;
+    text-align: center;
+    padding-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* প্রোফাইল ছবির কন্টেইনার */
+.profile-picture-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: -75px auto 15px auto; /* নেগেটিভ মার্জিন দিয়ে উপরে তোলা হয়েছে */
+    z-index: 5;
+}
+
+/* বড় গোল ছবি */
+.big-avatar {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50%;
+    border: 4px solid white; /* ফেসবুকের মতো সাদা বর্ডার */
+    background-color: #e4e6eb;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 60px !important; /* টেক্সট থাকলে ফন্ট বড় হবে */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.big-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* প্রোফাইল পিকচার এডিট বাটন (ক্যামেরা আইকন) */
+.edit-pic-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #e4e6eb;
+    border: 3px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: black;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+}
+
+.edit-pic-btn:hover, .edit-cover-btn:hover {
+    background-color: #d8dadf;
+}
+
+/* ডেস্কটপ বা বড় স্ক্রিনের জন্য সাইজ ঠিক করা */
+@media (min-width: 600px) {
+    .profile-cover-area {
+        height: 320px; /* ডেস্কটপে কভার বড় হবে */
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+    
+    .profile-picture-container {
+        width: 168px;
+        height: 168px;
+        margin-top: -90px;
+    }
+}

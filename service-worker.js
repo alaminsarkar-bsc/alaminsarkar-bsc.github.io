@@ -1,20 +1,23 @@
-
 // service-worker.js - Enhanced for Full Offline Support (Islamic Pro)
-const CACHE_NAME = 'doa-angina-v4-offline';
-const ASSETS_CACHE = 'assets-v4';
-const MEDIA_CACHE = 'media-v4';
-const API_CACHE = 'api-v4';
-const FONT_CACHE = 'fonts-v4';
+// Updated Strategy: NetworkFirst for Admin Pages to ensure updates are visible immediately.
 
+const CACHE_NAME = 'doa-angina-v5-offline'; // Version updated to v5 to force update
+const ASSETS_CACHE = 'assets-v5';
+const MEDIA_CACHE = 'media-v5';
+const API_CACHE = 'api-v5';
+const FONT_CACHE = 'fonts-v5';
+
+// admin.html এবং campaign-admin.html এখান থেকে সরানো হয়েছে
+// যাতে ইন্সটলেশনের সময় এগুলো স্ট্যাটিক ক্যাশে জমা না হয়।
 const urlsToCache = [
   './',
   './index.html',
   './profile.html',
-  './admin.html',
   './style.css',
   './admin.css',
   './script.js',
   './admin.js',
+  './campaign-admin.js', // JS ফাইল রাখা হলো, তবে HTML পেজগুলো NetworkFirst এ হ্যান্ডেল হবে
   './post.html',
   './post.js',
   './islamic.html',
@@ -35,17 +38,22 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // 1. Handle Admin Pages (Cache First, fallback to network)
-  if (event.request.url.includes('/admin.html')) {
+  // 1. Handle Admin Pages (Network First, fallback to cache)
+  // এডমিন এবং ক্যাম্পেইন এডমিন পেজের জন্য নেটওয়ার্ক আগে চেক করা হবে।
+  if (event.request.url.includes('/admin.html') || event.request.url.includes('/campaign-admin.html')) {
     event.respondWith(
-      caches.match(event.request).then((response) => {
-        return response || fetch(event.request).then(networkResponse => {
-          return caches.open(ASSETS_CACHE).then(cache => {
+      fetch(event.request)
+        .then((networkResponse) => {
+          return caches.open(ASSETS_CACHE).then((cache) => {
+            // নতুন ভার্সন পেলে ক্যাশ আপডেট করবে
             cache.put(event.request, networkResponse.clone());
             return networkResponse;
           });
-        });
-      })
+        })
+        .catch(() => {
+          // নেটওয়ার্ক না থাকলে ক্যাশ থেকে দেখাবে
+          return caches.match(event.request);
+        })
     );
     return;
   }
