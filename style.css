@@ -3251,14 +3251,14 @@ textarea.post-input {
 }
 
 
+
 .profile-cover-area {
     position: relative;
     width: 100%;
-    height: 220px; /* মোবাইলে স্ট্যান্ডার্ড হাইট */
+    height: 220px; /* মোবাইলে হাইট */
     background-color: #cbd5e1;
     background-size: cover;
     background-position: center;
-    overflow: visible; /* বাটন যাতে কেটে না যায় */
 }
 
 .profile-cover-img {
@@ -3268,24 +3268,32 @@ textarea.post-input {
     display: block;
 }
 
-/* কভার ফটো এডিট বাটন (ডানদিকের কোণায় ফিক্সড) */
+/* কভার ফটো এডিট বাটন (গোল এবং ডানদিকের নিচে) */
 .edit-cover-btn {
     position: absolute;
-    bottom: 15px; /* কভারের নিচ থেকে একটু উপরে */
-    right: 15px;  /* ডানপাশ থেকে একটু বামে */
+    bottom: 15px; 
+    right: 15px;
+    width: 38px;  /* গোল করার জন্য ফিক্সড সাইজ */
+    height: 38px;
+    border-radius: 50%; /* গোল শেপ */
     background: white;
     border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    cursor: pointer;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 10; /* ছবির উপরে থাকবে */
-    color: #333;
+    z-index: 10;
+    color: black;
+    
+    /* লেখা লুকিয়ে শুধু আইকন দেখানোর টেকনিক */
+    font-size: 0; 
+}
+
+/* বাটনের ভেতরের আইকন */
+.edit-cover-btn i {
+    font-size: 18px; /* আইকনের সাইজ */
+    color: #000;
 }
 
 /* ২. প্রোফাইল পিকচার কন্টেইনার (অর্ধেক উপরে তোলার জন্য) */
@@ -3293,9 +3301,9 @@ textarea.post-input {
     position: relative;
     width: 160px;  /* ছবির সাইজ */
     height: 160px;
-    /* নেগেটিভ মার্জিন দিয়ে অর্ধেক উপরে তোলা হয়েছে */
+    /* নেগেটিভ মার্জিন দিয়ে ছবি অর্ধেক কভারের উপরে তোলা হয়েছে */
     margin: -85px auto 10px auto; 
-    z-index: 20; /* কভারের উপরে থাকবে */
+    z-index: 20;
 }
 
 /* ৩. বড় গোল ছবি */
@@ -3320,11 +3328,11 @@ textarea.post-input {
     object-fit: cover;
 }
 
-/* ৪. প্রোফাইল পিকচার এডিট বাটন (ক্যামেরা আইকন) */
+/* ৪. প্রোফাইল পিকচার এডিট বাটন (গোল ক্যামেরা আইকন) */
 .edit-pic-btn {
     position: absolute;
     bottom: 5px;
-    right: 10px; /* পজিশন ঠিক করা হয়েছে */
+    right: 10px;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -3337,7 +3345,7 @@ textarea.post-input {
     font-size: 20px;
     color: black;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 25; /* সবার উপরে */
+    z-index: 25;
 }
 
 .edit-pic-btn:hover, .edit-cover-btn:hover {
@@ -3353,13 +3361,13 @@ textarea.post-input {
     padding-bottom: 20px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     position: relative;
-    margin-top: 0; /* গ্যাপ রিমুভ */
+    margin-top: 0;
 }
 
 /* ডেস্কটপ বা বড় স্ক্রিনের জন্য */
 @media (min-width: 600px) {
     .profile-cover-area {
-        height: 350px; /* ডেস্কটপে কভার বড় */
+        height: 350px;
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
     }
@@ -3368,19 +3376,19 @@ textarea.post-input {
         width: 180px;
         height: 180px;
         margin-top: -100px; /* ডেস্কটপে আরও উপরে উঠবে */
-        margin-left: 30px; /* ডেস্কটপে বাম পাশে থাকে (অপশনাল, চাইলে সেন্টারে রাখতে margin: -100px auto... দিন) */
-        float: left; /* বামে সরানোর জন্য */
+        margin-left: 30px;
+        float: left;
     }
     
     .profile-header {
-        text-align: left; /* টেক্সট বামে */
-        padding-left: 230px; /* ছবির জন্য জায়গা ছাড়া */
+        text-align: left;
+        padding-left: 230px;
         padding-top: 15px !important;
         min-height: 100px;
     }
     
     .profile-actions {
-        justify-content: flex-start; /* বাটন বামে */
+        justify-content: flex-start;
     }
     
     .profile-stats {
@@ -3400,3 +3408,4 @@ textarea.post-input {
         padding-left: 0;
     }
 }
+
