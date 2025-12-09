@@ -1,9 +1,10 @@
+
 // service-worker.js - Enhanced for Full Offline Support (Islamic Pro)
-const CACHE_NAME = 'doa-angina-v5-offline'; // Updated Version
-const ASSETS_CACHE = 'assets-v5';
-const MEDIA_CACHE = 'media-v5';
-const API_CACHE = 'api-v5';
-const FONT_CACHE = 'fonts-v5';
+const CACHE_NAME = 'doa-angina-v4-offline';
+const ASSETS_CACHE = 'assets-v4';
+const MEDIA_CACHE = 'media-v4';
+const API_CACHE = 'api-v4';
+const FONT_CACHE = 'fonts-v4';
 
 const urlsToCache = [
   './',
@@ -88,6 +89,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 4. Handle Islamic APIs (Prayer, Quran, Hadith) -> Stale While Revalidate
+  // এটি অফলাইনে আগের ডেটা দেখাবে এবং অনলাইনে থাকলে আপডেট করবে
   if (requestUrl.hostname.includes('api.aladhan.com') || 
       requestUrl.hostname.includes('api.alquran.cloud') || 
       requestUrl.hostname.includes('cdn.jsdelivr.net') || // Hadith JSONs
@@ -102,6 +104,7 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           }).catch((err) => {
+             // Network failed, swallow error
              console.log('Network fetch failed for API, using offline cache if available.');
           });
           return cachedResponse || fetchPromise;
