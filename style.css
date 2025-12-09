@@ -3474,3 +3474,37 @@ textarea.post-input {
 .nav-tab:hover .header-profile-img {
     box-shadow: 0 0 0 3px var(--primary-color);
 }
+
+/* ====================================
+   HASHTAG & MENTION STYLES
+   ==================================== */
+
+/* হ্যাশট্যাগ ডিজাইন */
+.hashtag {
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.hashtag:hover {
+    text-decoration: underline;
+    background-color: rgba(24, 119, 242, 0.05);
+    border-radius: 4px;
+}
+
+/* মেনশন ডিজাইন */
+.mention {
+    color: #009688; /* একটু ভিন্ন রঙের (Teal) */
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    background-color: rgba(0, 150, 136, 0.08);
+    padding: 0 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+.mention:hover {
+    background-color: rgba(0, 150, 136, 0.2);
+    text-decoration: underline;
+}

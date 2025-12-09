@@ -12,7 +12,7 @@ let allFetchedPrayers = new Map();
 let isVideoFeedActive = false;
 const ADMIN_USERS = ['bm15.telecom@gmail.com', 'alaminsarkar.bsc@gmail.com'];
 
-// Feed &Pagination State
+// Feed & Pagination State
 let currentPage = 0;
 const prayersPerPage = 8; 
 let isLoadingMore = false;
@@ -33,7 +33,7 @@ let adminPaymentNumbers = {};
 // Video Tracking
 const viewedVideosSession = new Set();
 
-// NEW: User Reaction Cache
+// User Reaction Cache
 let userLovedPrayers = new Set();
 let userAmeenedPrayers = new Set();
 
@@ -202,17 +202,79 @@ const timeAgo = dateString => {
     } catch (error) { return 'অজানা'; }
 };
 
+// ======================================================
+// UPDATED: Linkify Function (URL, Hashtag, Mention)
+// ======================================================
 const linkifyText = (text) => {
     if (!text) return '';
+
+    // 1. URL Detection
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    
+    // 2. Hashtag (#) Detection (Supports Bengali)
+    const hashtagRegex = /(^|\s)#([\w\u0980-\u09FF]+)/g;
+
+    // 3. Mention (@) Detection
+    const mentionRegex = /(^|\s)@([\w\u0980-\u09FF]+)/g;
+
+    // URL Replacement
     let linkedText = text.replace(urlRegex, (url) => {
         let fullUrl = url;
         if (!fullUrl.startsWith('http')) { fullUrl = 'http://' + fullUrl; }
         return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="post-link" onclick="event.stopPropagation();">${url}</a>`;
     });
-    linkedText = linkedText.replace(hashtagRegex, `<span class="hashtag">#$1</span>`);
+
+    // Hashtag Replacement
+    linkedText = linkedText.replace(hashtagRegex, '$1<span class="hashtag" onclick="handleHashTagClick(\'$2\', event)">#$2</span>');
+
+    // Mention Replacement
+    linkedText = linkedText.replace(mentionRegex, '$1<span class="mention" onclick="handleMentionClick(\'$2\', event)">@$2</span>');
+
     return linkedText;
+};
+
+// GLOBAL: Handle Hashtag Click -> Search
+window.handleHashTagClick = (tag, e) => {
+    e.stopPropagation();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '#' + tag;
+        searchInput.classList.add('visible');
+        // Trigger input event to start search
+        const event = new Event('input', { bubbles: true });
+        searchInput.dispatchEvent(event);
+        searchInput.focus();
+    }
+};
+
+// GLOBAL: Handle Mention Click -> Profile
+window.handleMentionClick = async (username, e) => {
+    e.stopPropagation();
+    // Try to find user by display_name
+    try {
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('id')
+            .ilike('display_name', username) // Exact case-insensitive match preferred
+            .limit(1)
+            .single();
+
+        if (data) {
+            window.location.href = `/profile.html?id=${data.id}`;
+        } else {
+            // If direct match fails, try partial search via main search bar
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = username;
+                searchInput.classList.add('visible');
+                const event = new Event('input', { bubbles: true });
+                searchInput.dispatchEvent(event);
+                searchInput.focus();
+            }
+        }
+    } catch (err) {
+        console.warn("Mention click error:", err);
+    }
 };
 
 const showSkeletonLoader = (show, containerId = null) => { 
@@ -305,7 +367,6 @@ async function handleUserLoggedIn(user) {
                 display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                 photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
             }]).select().single();
-            // Note: Fixed potential undefined error here by checking error in next step if needed
             if (error) throw error;
             profile = newProfile;
         } else if (error) throw error;
@@ -318,13 +379,11 @@ async function handleUserLoggedIn(user) {
         
         currentUser = { ...user, profile };
         
-        // [UPDATED] হেডারে প্রোফাইল ছবি আপডেট করা
         updateHeaderProfileIcon(profile.photo_url);
 
-        // [FIXED] ফেচ ইউজার রিয়্যাকশনস যোগ করা হয়েছে
         await Promise.all([
             fetchSavedPostIds(),
-            fetchUserReactions() // NEW: Fetch user's reaction history
+            fetchUserReactions() 
         ]);
 
         const pageId = document.body.id;
@@ -346,11 +405,9 @@ async function handleUserLoggedIn(user) {
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
-    // [FIXED] রিয়্যাকশন ক্যাশে ক্লিয়ার করা হয়েছে
     userLovedPrayers.clear();
     userAmeenedPrayers.clear();
     
-    // [UPDATED] হেডারের ছবি রিসেট করা
     updateHeaderProfileIcon(null);
 
     const pageId = document.body.id;
@@ -394,12 +451,10 @@ async function fetchSavedPostIds() {
     } catch (error) { console.error("Saved posts error:", error); }
 }
 
-// [FIXED] NEW FUNCTION: Fetch user's reaction history
 async function fetchUserReactions() {
     if (!currentUser) return;
     
     try {
-        // Get all prayers where user has loved
         const { data: lovedPrayers, error: loveError } = await supabaseClient
             .from('prayers')
             .select('id')
@@ -407,7 +462,6 @@ async function fetchUserReactions() {
         
         if (loveError) throw loveError;
         
-        // Get all prayers where user has ameened
         const { data: ameenedPrayers, error: ameenError } = await supabaseClient
             .from('prayers')
             .select('id')
@@ -415,14 +469,8 @@ async function fetchUserReactions() {
         
         if (ameenError) throw ameenError;
         
-        // Store in global variables
         userLovedPrayers = new Set(lovedPrayers?.map(p => p.id) || []);
         userAmeenedPrayers = new Set(ameenedPrayers?.map(p => p.id) || []);
-        
-        console.log('User reactions loaded:', {
-            loved: userLovedPrayers.size,
-            ameened: userAmeenedPrayers.size
-        });
         
     } catch (error) {
         console.error("Error fetching user reactions:", error);
@@ -437,7 +485,50 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
 }
 
 // ====================================
-// 5. PROFILE PAGE LOGIC (UPDATED WITH COVER & PIC UPLOAD)
+// 5. MENTION PROCESSING HELPER (NEW)
+// ====================================
+async function processMentionsAndNotify(text, postId, type) {
+    if (!text || !currentUser) return;
+
+    // Detect all mentions: @Name
+    const mentionRegex = /(^|\s)@([\w\u0980-\u09FF]+)/g;
+    const matches = text.match(mentionRegex);
+
+    if (!matches) return;
+
+    // Clean up names (remove @ and whitespace, unique only)
+    const uniqueNames = [...new Set(matches.map(m => m.trim().substring(1)))];
+
+    for (const name of uniqueNames) {
+        // Find user ID by name
+        const { data: users } = await supabaseClient
+            .from('users')
+            .select('id')
+            .ilike('display_name', name) // Exact or partial case-insensitive match
+            .limit(1);
+
+        if (users && users.length > 0) {
+            const targetUserId = users[0].id;
+            
+            // Don't notify self
+            if (targetUserId === currentUser.id) continue;
+
+            const actionText = type === 'post' ? 'একটি পোস্টে' : 'একটি কমেন্টে';
+            const url = `/comments.html?postId=${postId}`;
+
+            await createNotification(
+                targetUserId,
+                currentUser.id,
+                'mention',
+                `${currentUser.profile.display_name} আপনাকে ${actionText} মেনশন করেছেন।`,
+                url
+            );
+        }
+    }
+}
+
+// ====================================
+// 6. PROFILE PAGE LOGIC
 // ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -580,7 +671,7 @@ function setupProfileTabs(userId) {
 }
 
 // ====================================
-// 6. NOTIFICATION LOGIC
+// 7. NOTIFICATION LOGIC
 // ====================================
 async function loadNotifications() { 
     if (!currentUser) return; 
@@ -653,7 +744,7 @@ async function clearAllNotifications() {
 }
 
 // ====================================
-// 7. NAVIGATION LOGIC
+// 8. NAVIGATION LOGIC
 // ====================================
 function setupNavigationLogic() {
     document.querySelectorAll('.nav-tab').forEach(link => {
@@ -661,18 +752,14 @@ function setupNavigationLogic() {
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
 
-            // ১. যদি এটি পোস্ট করার বাটন বা প্রোফাইল পেজের লিংক হয়, তবে স্বাভাবিক কাজ করতে দিন
             if (link.id === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) {
                 return; 
             }
 
-            // ২. ফিক্স: যদি আমরা প্রোফাইল পেজে থাকি এবং ইউজার ব্যাক/হোম বাটনে ক্লিক করে
-            // তাহলে জাভাস্ক্রিপ্ট আটকাতে বারণ করা হচ্ছে, যাতে index.html এ চলে যায়।
             if (!isHomePage && (href === '/index.html' || href === './index.html' || href === 'index.html')) {
                 return; 
             }
 
-            // ৩. শুধুমাত্র হোম পেজেই ফিড সুইচ করার জন্য ডিফল্ট একশন আটকানো হবে
             e.preventDefault();
             
             document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
@@ -710,7 +797,7 @@ function refreshFeed() {
 }
 
 // ====================================
-// 8. ADVANCED STORY EDITOR
+// 9. ADVANCED STORY EDITOR
 // ====================================
 function setupStoryEditor() {
     document.getElementById('createStoryBtn')?.addEventListener('click', (e) => { e.preventDefault(); if(!currentUser) { showLoginModal(); return; } openProStoryEditor(); });
@@ -920,7 +1007,7 @@ async function publishProStory() {
 }
 
 // ====================================
-// 9. STORY VIEWER
+// 10. STORY VIEWER
 // ====================================
 async function fetchAndRenderStories() {
     const container = document.getElementById('storyContainer');
@@ -1004,7 +1091,7 @@ function prevStoryItem() { if (storyViewerState.currentStoryIndex > 0) { storyVi
 function closeStoryViewer() { document.getElementById('storyViewerModal').style.display = 'none'; clearTimeout(storyViewerState.storyTimeout); const vid = document.querySelector('.story-viewer-media video'); if(vid) vid.pause(); }
 
 // ====================================
-// 10. HOME & FEED LOGIC
+// 11. HOME & FEED LOGIC
 // ====================================
 async function initHomePage() {
     await fetchFundraisingPosts();
@@ -1188,7 +1275,7 @@ const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
 };
 
 // ====================================
-// 11. CARD CREATION & INTERACTION
+// 12. CARD CREATION & INTERACTION
 // ====================================
 
 function createPollCardElement(prayer) {
@@ -1242,21 +1329,17 @@ const createPrayerCardElement = (prayer) => {
     const profileLinkClass = isAnonymous ? '' : 'profile-link-trigger'; 
     const avatar = isAnonymous ? '<i class="fas fa-user-secret"></i>' : (authorPhotoURL ? `<img src="${authorPhotoURL}" alt="${authorName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (authorName.charAt(0) || '?')); const avatarStyle = isAnonymous ? 'background-color: #888;' : `background-color: ${generateAvatarColor(authorName)}`;
     
-    // [FIXED] Check user reaction state - প্রথমে prayer object থেকে চেক, তারপর ক্যাশ থেকে
     let hasLoved = false, hasAmeened = false; 
     if (currentUser) { 
-        // প্রথমে prayer object এর loved_by/ameened_by array থেকে চেক
         if (prayer.loved_by && Array.isArray(prayer.loved_by)) {
             hasLoved = prayer.loved_by.includes(currentUser.id);
         } else {
-            // ক্যাশ থেকে চেক (লগইনের পর লোড করা হয়)
             hasLoved = userLovedPrayers.has(prayer.id);
         }
         
         if (prayer.ameened_by && Array.isArray(prayer.ameened_by)) {
             hasAmeened = prayer.ameened_by.includes(currentUser.id);
         } else {
-            // ক্যাশ থেকে চেক
             hasAmeened = userAmeenedPrayers.has(prayer.id);
         }
     }
@@ -1320,7 +1403,7 @@ async function handleVideoView(videoId) {
 }
 
 // ====================================
-// 12. DONATION SYSTEM LOGIC
+// 13. DONATION SYSTEM LOGIC
 // ====================================
 function openGeneralDonationModal() {
     const modal = document.getElementById('generalDonationModal');
@@ -1534,14 +1617,13 @@ async function submitDonationDetails(e) {
 }
 
 // ====================================
-// 13. EVENTS & GLOBAL HANDLERS (UPDATED)
+// 14. EVENTS & GLOBAL HANDLERS
 // ====================================
 function setupEventListeners() {
     document.addEventListener('click', handleGlobalClick);
     setupFormSubmissions();
     setupSearchFunctionality();
     
-    // Notification & Story Modals
     document.getElementById('notificationBtn')?.addEventListener('click', () => document.getElementById('notificationModal').classList.add('active'));
     document.getElementById('closeNotificationModalBtn')?.addEventListener('click', () => document.getElementById('notificationModal').classList.remove('active'));
     document.getElementById('mark-all-read-btn-modal')?.addEventListener('click', markAllAsRead);
@@ -1576,21 +1658,16 @@ async function handleFollow(btn) {
 }
 
 async function handleGlobalClick(e) {
-    // ১. নোটিফিকেশন ডিলিট বাটন
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
     if(deleteNotifBtn) { e.stopPropagation(); deleteNotification(deleteNotifBtn.dataset.id); return; }
 
-    // ২. প্রোফাইল লিংক (লগইন চেক)
     const profileLink = e.target.closest('a[href="/profile.html"]');
     if (profileLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
-    // ৩. গ্লোবাল ডোনেট বাটন
     if (e.target.closest('#globalDonateBtn')) { openGeneralDonationModal(); return; }
 
-    // ৪. ফলো বাটন
     const followBtn = e.target.closest('#followBtn'); if (followBtn) { handleFollow(followBtn); return; }
     
-    // ৫. নোটিফিকেশন আইটেম ক্লিক
     if (e.target.closest('.notification-item')) { 
         const item = e.target.closest('.notification-item'); 
         const url = item.dataset.url; 
@@ -1607,10 +1684,8 @@ async function handleGlobalClick(e) {
         return; 
     }
     
-    // ৬. স্টোরি ক্লিক
     const storyItem = e.target.closest('.story-item:not(.my-story)'); if (storyItem) { return; }
     
-    // ৭. শেয়ার বাটন
     const shareBtn = e.target.closest('.share-btn'); 
     if (shareBtn) { 
         const prayerId = shareBtn.dataset.id; 
@@ -1622,7 +1697,6 @@ async function handleGlobalClick(e) {
         return; 
     }
     
-    // ৮. ইমেজ ভিউয়ার
     const postImage = e.target.closest('.post-image, .fundraising-image'); if (postImage) { const modal = document.getElementById('image-view-modal'); const modalImg = document.getElementById('modal-image'); modal.style.display = "flex"; modalImg.src = postImage.dataset.src || postImage.src; return; }
     const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); if (closeImageModal && !e.target.closest('.image-modal-content')) { document.getElementById('image-view-modal').style.display = "none"; return; }
     const loginPage = document.getElementById('loginPage'); if (loginPage && loginPage.style.display === 'flex' && !e.target.closest('.login-box')) { return; }
@@ -1637,10 +1711,9 @@ async function handleGlobalClick(e) {
     if (e.target.closest('#googleSignInBtn')) handleGoogleSignIn();
     if (e.target.closest('#facebookSignInBtn')) handleFacebookSignIn();
     
-    // Updated: Async Sign Out
     if (e.target.closest('#signOutBtn')) {
         await supabaseClient.auth.signOut();
-        handleUserLoggedOut(); // Explicitly call UI update
+        handleUserLoggedOut(); 
     }
     
     if (e.target.closest('#sendOtpBtn')) handleSendOtp();
@@ -1683,7 +1756,6 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
     if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
         const btn = e.target.closest('.action-btn');
         const id = parseInt(btn.dataset.id, 10);
@@ -1711,7 +1783,6 @@ async function handleActionButtonClick(actionBtn) {
     else if (actionBtn.classList.contains('love-btn')) handleReaction(prayerId, 'love', actionBtn); 
 }
 
-// Updated Google Sign In with Force Account Selection
 async function handleGoogleSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
@@ -1720,7 +1791,7 @@ async function handleGoogleSignIn() {
                 redirectTo: 'https://alaminsarkar-bsc.github.io/',
                 queryParams: {
                     access_type: 'offline',
-                    prompt: 'consent select_account' // Forces account chooser
+                    prompt: 'consent select_account'
                 }
             } 
         }); 
@@ -1729,7 +1800,6 @@ async function handleGoogleSignIn() {
         alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); 
     } 
 }
-
 
 async function handleFacebookSignIn() { try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (error) { alert('ফেসবুক সাইনইনে সমস্যা হয়েছে: ' + error.message); } }
 
@@ -1748,7 +1818,6 @@ async function handleVerifyOtp() {
     try { const { data, error } = await supabaseClient.auth.verifyOtp({ phone: phone, token: token, type: 'sms' }); if (error) throw error; if (data.session) { document.getElementById('loginPage').style.display = 'none'; alert("লগইন সফল হয়েছে!"); } } catch (error) { console.error("Verify Error:", error); alert("ভুল কোড। আবার চেষ্টা করুন।"); } finally { setLoading(btn, false); }
 }
 
-// [FIXED] Reaction Handler with RPC & Optimistic UI and Local Cache Update
 async function handleReaction(prayerId, type, btn) {
     if (!currentUser) { 
         showLoginModal(); 
@@ -1762,14 +1831,12 @@ async function handleReaction(prayerId, type, btn) {
 
     const isLove = type === 'love';
     
-    // DOM Selector
     const card = document.getElementById(`prayer-${prayerId}`);
     if (!card) return;
     
     const countSpan = card.querySelector(isLove ? '.love-count' : '.ameen-count');
     const icon = btn.querySelector('i');
 
-    // Get current state from DOM
     let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10);
     if (isNaN(currentCount)) currentCount = 0;
 
@@ -1777,7 +1844,6 @@ async function handleReaction(prayerId, type, btn) {
     const newActiveState = !wasActive;
     const newCount = newActiveState ? (currentCount + 1) : Math.max(0, currentCount - 1);
 
-    // Optimistic Update
     btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
     countSpan.innerText = newCount; 
     
@@ -1786,7 +1852,6 @@ async function handleReaction(prayerId, type, btn) {
     }
 
     try {
-        // Call RPC function
         const { error } = await supabaseClient.rpc('toggle_reaction', {
             p_id: prayerId,
             u_id: currentUser.id,
@@ -1795,7 +1860,6 @@ async function handleReaction(prayerId, type, btn) {
 
         if (error) throw error;
 
-        // [FIXED] Update local caches based on reaction type
         if (isLove) {
             if (newActiveState) {
                 userLovedPrayers.add(prayerId);
@@ -1810,7 +1874,6 @@ async function handleReaction(prayerId, type, btn) {
             }
         }
 
-        // Update prayer in local cache
         const prayer = allFetchedPrayers.get(prayerId);
         if (prayer) {
             const listKey = isLove ? 'loved_by' : 'ameened_by';
@@ -1828,7 +1891,6 @@ async function handleReaction(prayerId, type, btn) {
             allFetchedPrayers.set(prayerId, prayer);
         }
 
-        // Send notification if liked/ameened someone else's post
         if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
             const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
             createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayerId}`);
@@ -1837,7 +1899,6 @@ async function handleReaction(prayerId, type, btn) {
     } catch (error) {
         console.error('Reaction error:', error);
         
-        // Rollback on error
         btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
         countSpan.innerText = currentCount;
         if (isLove && icon) {
@@ -1886,7 +1947,6 @@ async function handleEditPostSubmit(e) { e.preventDefault(); const btn = documen
 async function handleEditProfileSubmit(e) { e.preventDefault(); await supabaseClient.from('users').update({ display_name: document.getElementById('editNameInput').value, address: document.getElementById('editAddressInput').value }).eq('id', currentUser.id); document.getElementById('editProfileModal').style.display = 'none'; if (document.body.id === 'profile-page') initProfilePage(); }
 const scrollToTopBtn = document.getElementById('scrollToTopBtn'); if (scrollToTopBtn) { window.addEventListener('scroll', throttle(() => { scrollToTopBtn.classList.toggle('show', window.scrollY > 100); }, 200)); scrollToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); }); }
 
-// সার্চ ফাংশনালিটি
 function setupSearchFunctionality() { 
     const searchBtn = document.getElementById('searchBtn'); 
     const searchInput = document.getElementById('searchInput'); 
@@ -1929,7 +1989,6 @@ function setupRealtimeSubscription() {
         .subscribe(); 
 }
 
-// [UPDATED] Realtime Update Handler (Prevents Flickering)
 async function handlePrayerChange(payload) {
     if (document.visibilityState !== 'visible') return; 
     
@@ -1942,7 +2001,6 @@ async function handlePrayerChange(payload) {
     if (eventType === 'INSERT') { 
         if (!container) return;
         
-        // ফান্ডরাইজিং হলে আলাদা লজিক
         if (newRecord.is_fundraising) { 
             fetchFundraisingPosts(); 
             return;
@@ -1950,7 +2008,6 @@ async function handlePrayerChange(payload) {
         
         shuffledPrayerIds.unshift(prayerId);
         
-        // নতুন পোস্টের জন্য ইউজারের নাম/ছবি দরকার, তাই একবার ফেচ করা লাগবে
         const { data: newPrayer } = await supabaseClient
             .from('prayers')
             .select('*, users!author_uid(id, display_name, photo_url)')
@@ -1961,7 +2018,6 @@ async function handlePrayerChange(payload) {
             allFetchedPrayers.set(prayerId, newPrayer); 
             if (isVideoFeedActive && !newPrayer.uploaded_video_url && !newPrayer.youtube_url) return;
             
-            // ফিল্টার লজিক অনুযায়ী রেন্ডার
             if (!filteredUserId || (filteredUserId && newPrayer.author_uid === filteredUserId)) {
                 container.prepend(createPrayerCardElement(newPrayer)); 
             }
@@ -1970,8 +2026,6 @@ async function handlePrayerChange(payload) {
     else if (eventType === 'UPDATE') { 
         const existingCard = document.getElementById(`prayer-${prayerId}`); 
         
-        // নতুন ডাটা সরাসরি payload থেকে নেওয়া (ফাস্ট আপডেট)
-        // ইউজার ইনফো payload এ থাকে না, তাই আগের ক্যাশ থেকে নেওয়া
         const cachedPrayer = allFetchedPrayers.get(prayerId);
         const updatedPrayer = { ...cachedPrayer, ...newRecord }; 
         
@@ -1979,19 +2033,15 @@ async function handlePrayerChange(payload) {
             allFetchedPrayers.set(prayerId, updatedPrayer);
             
             if (existingCard) {
-                // ১. আমিন আপডেট (কেবল সংখ্যা আপডেট, ক্লাস ফ্লিকার রোধ)
                 const ameenCountSpan = existingCard.querySelector('.ameen-count');
                 const ameenBtn = existingCard.querySelector('.ameen-btn');
                 if (ameenCountSpan) ameenCountSpan.innerText = updatedPrayer.ameen_count || 0;
                 
-                // শুধুমাত্র যদি সার্ভার থেকে সম্পূর্ণ অ্যারে আসে, তবেই ক্লাস টগল করুন
-                // নতুবা অপটিমিস্টিক UI ঠিক থাকবে
                 if (currentUser && ameenBtn && updatedPrayer.ameened_by) {
                     const hasAmeened = updatedPrayer.ameened_by.includes(currentUser.id);
                     ameenBtn.classList.toggle('ameened', hasAmeened);
                 }
 
-                // ২. লাভ আপডেট
                 const loveCountSpan = existingCard.querySelector('.love-count');
                 const loveBtn = existingCard.querySelector('.love-btn');
                 if (loveCountSpan) loveCountSpan.innerText = updatedPrayer.love_count || 0;
@@ -2003,14 +2053,12 @@ async function handlePrayerChange(payload) {
                     if(icon) icon.className = hasLoved ? 'fas fa-heart' : 'far fa-heart';
                 }
 
-                // ৩. ভিউ বা কমেন্ট কাউন্ট আপডেট
                 const viewCountSpan = document.getElementById(`view-count-${prayerId}`);
                 if (viewCountSpan) viewCountSpan.innerText = (updatedPrayer.view_count || 0).toLocaleString('bn-BD');
                 
                 const commentCountSpan = existingCard.querySelector('.comment-count-text');
                 if (commentCountSpan) commentCountSpan.innerText = `${updatedPrayer.comment_count || 0} টি কমেন্ট`;
                 
-                // ৪. দোয়া কবুল ব্যাজ আপডেট
                 if (updatedPrayer.is_answered && !existingCard.querySelector('.answered-badge')) {
                     const badge = document.createElement('div');
                     badge.className = 'answered-badge';
@@ -2074,9 +2122,6 @@ function handleCommentChange(payload) {
     }
 }
 
-// ====================================
-// NEW: UPDATE HEADER PROFILE ICON
-// ====================================
 function updateHeaderProfileIcon(photoUrl) {
     const profileTab = document.querySelector('.header-nav-row a[href="/profile.html"]');
     if (!profileTab) return;
@@ -2087,11 +2132,7 @@ function updateHeaderProfileIcon(photoUrl) {
     }
 }
 
-// ====================================
-// NEW: PROFILE IMAGE UPLOAD LOGIC
-// ====================================
 function setupProfileImageUploads() {
-    // বাটন ক্লিক ইভেন্ট
     const coverBtn = document.getElementById('changeCoverBtn');
     const profileBtn = document.getElementById('changeProfilePicBtn');
     const coverInput = document.getElementById('coverPicInput');
