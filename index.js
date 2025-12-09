@@ -1,4 +1,5 @@
 
+
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -390,7 +391,7 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
 }
 
 // ====================================
-// 5. PROFILE PAGE LOGIC (UPDATED)
+// 5. PROFILE PAGE LOGIC (UPDATED WITH COVER & PIC UPLOAD)
 // ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1506,7 +1507,6 @@ async function handleFollow(btn) {
     } catch (error) { alert('দুঃখিত, প্রক্রিয়াটি সম্পন্ন করা যায়নি।'); console.error('Follow/Unfollow error:', error); } finally { setLoading(btn, false); }
 }
 
-// [UPDATED] Global Click Handler to fix Reaction Button Issues
 async function handleGlobalClick(e) {
     // ১. নোটিফিকেশন ডিলিট বাটন
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
@@ -1597,8 +1597,7 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // ১১. === [UPDATED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
-    // আগের জটিল সিলেক্টর বাদ দিয়ে সহজ করা হয়েছে এবং ইভেন্ট প্রোপাগেশন ঠিক করা হয়েছে
+    // ১১. === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
     if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
         const btn = e.target.closest('.action-btn');
         const id = parseInt(btn.dataset.id, 10);
