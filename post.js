@@ -18,25 +18,43 @@ let postType = 'prayer';
 let isPollMode = false; // পোল মোড ট্র্যাকিং
 
 // ====================================
-// AI মডারেশন মডেল লোড (NEW)
+// AI মডারেশন মডেল লোড (FIXED)
 // ====================================
 let nsfwModel = null;
+let isModelLoading = false;
 
 async function loadNSFWModel() {
+    // যদি মডেল অলরেডি লোড থাকে বা লোডিং অবস্থায় থাকে, তাহলে রিটার্ন করুন
+    if (nsfwModel || isModelLoading) return;
+    
+    isModelLoading = true;
     try {
         // মডেল লোড হতে একটু সময় নিতে পারে, ব্যাকগ্রাউন্ডে লোড হবে
         nsfwModel = await nsfwjs.load();
         console.log("NSFW AI Model Loaded Successfully");
     } catch (err) {
         console.error("NSFW Model Load Error:", err);
+    } finally {
+        isModelLoading = false;
     }
 }
 
-// কন্টেন্ট চেক করার ফাংশন (NEW)
+// কন্টেন্ট চেক করার ফাংশন
 async function checkContentSafety(imgElement) {
+    // মডেল যদি লোড না হয়ে থাকে
     if (!nsfwModel) {
-        console.warn("NSFW Model not loaded yet, skipping check.");
-        return true; // মডেল লোড না হলে আপাতত বাইপাস করবে
+        if(isModelLoading) {
+            // লোডিং অবস্থায় থাকলে একটু অপেক্ষা করি
+            console.log("Model loading... waiting.");
+            await new Promise(r => setTimeout(r, 2000)); // ২ সেকেন্ড অপেক্ষা
+            if(!nsfwModel) {
+                console.warn("NSFW Model still loading or failed, bypassing check to allow post.");
+                return true; // ইউজার এক্সপেরিয়েন্স নষ্ট না করতে বাইপাস করা হলো
+            }
+        } else {
+            console.warn("NSFW Model failed to load, bypassing check.");
+            return true; 
+        }
     }
     
     try {
@@ -383,14 +401,9 @@ async function handleNewPost(e) {
         }
     } catch (checkError) {
         console.error("Moderation check failed:", checkError);
-        // মডারেশন ফেইল হলে কী করবেন? আপাতত আমরা আপলোড চালিয়ে যাচ্ছি, কিন্তু আপনি চাইলে আটকাতে পারেন
-        // alert("যাচাইকরণে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।");
-        // setLoading(btn, false);
-        // return;
     }
 
     // --- 3. আসল আপলোড লজিক (আগের কোড) ---
-    // (যদি মডারেশন পাস করে, কোড এখানে আসবে)
     const youtubeUrl = document.getElementById('youtubeLinkInput').value.trim();
     const audioInputFile = document.getElementById('audioUploadInput').files[0];
 

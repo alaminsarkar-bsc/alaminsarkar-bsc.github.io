@@ -1,5 +1,4 @@
 
-
 :root {
     --primary-color: #1877F2;
     --secondary-color: #65676B;
@@ -34,10 +33,10 @@ body {
 }
 
 /* ====================================
-   HEADER DESIGN
+   HEADER DESIGN (FIXED)
    ==================================== */
 #appContainer {
-    display: none; /* JS দিয়ে অথেন্টিকেশন চেক করে অন করা হবে */
+    display: none;
     width: 100%;
     overflow-x: hidden;
 }
@@ -62,7 +61,6 @@ body {
     height: 50px;
     padding: 0 15px;
     background-color: #fff;
-    border-bottom: none; 
     width: 100%;
     box-sizing: border-box;
 }
@@ -74,19 +72,17 @@ body {
     color: var(--primary-color);
     letter-spacing: -0.5px;
     margin-right: auto;
-    display: flex;
-    align-items: center;
 }
 
 .header-actions-top {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .top-icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background-color: var(--icon-bg);
     display: flex;
@@ -98,7 +94,15 @@ body {
     font-size: 18px;
     text-decoration: none;
     transition: background-color 0.2s;
-    position: relative;
+}
+
+/* স্পেশাল ডোনেশন বাটন ডিজাইন */
+#globalDonateBtn {
+    background-color: #fff0f0;
+    border: 1px solid #ffcdd2;
+}
+#globalDonateBtn i {
+    color: #e74c3c;
 }
 
 .header-nav-row {
@@ -122,23 +126,15 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    position: relative;
     color: var(--secondary-color);
     font-size: 24px;
     text-decoration: none;
     border-radius: 8px;
     margin: 0 2px;
-    transition: all 0.2s;
 }
 
-/* শুধুমাত্র আইকন নীল হবে, কোনো বর্ডার থাকবে না */
 .nav-tab.active {
     color: var(--primary-color) !important;
-}
-
-/* আগের নীল বর্ডার রিমুভ করা হয়েছে */
-.nav-tab.active::after {
-    display: none;
 }
 
 .notification-wrapper {
@@ -146,9 +142,7 @@ body {
     flex: 1;
     height: 100%;
 }
-.notification-wrapper .nav-tab {
-    width: 100%;
-}
+.notification-wrapper .nav-tab { width: 100%; }
 
 .notification-badge {
     position: absolute;
@@ -187,11 +181,10 @@ body {
     color: var(--text-color);
     width: calc(100% - 70px); 
 }
-.floating-search-box:focus { outline: none; }
 .floating-search-box.visible { display: block; animation: fadeIn 0.2s ease; }
 
 /* ====================================
-   LAYOUT & FEED
+   LAYOUT & CONTAINERS
    ==================================== */
 .main-view, .profile-view, .post-page-container {
     max-width: 680px;
@@ -200,35 +193,46 @@ body {
     width: 100%;
     box-sizing: border-box;
 }
+
 .feed-container {
-    padding-top: 10px;
+    padding-top: 0 !important;
+}
+
+.feed-container .prayer-card:first-child {
+    border-top: none !important;
+    margin-top: 0 !important;
 }
 
 /* ====================================
-   STORY STYLES & SKELETON
+   STORY SECTION
    ==================================== */
 .story-container {
     background-color: var(--card-bg);
-    padding: 15px 10px;
-    margin-bottom: 10px;
+    padding: 8px 0 !important;
+    margin-bottom: 0 !important;
     display: flex;
-    gap: 8px;
+    gap: 6px !important;
     overflow-x: auto;
     scrollbar-width: none;
-    border-bottom: 1px solid var(--border-color);
-    min-height: 195px; /* ফিক্সড হাইট যাতে লোডিং এর সময় জাম্প না করে */
+    border-bottom: 0.5px solid #e4e6eb !important;
+    min-height: auto;
+    box-shadow: none !important;
 }
 .story-container::-webkit-scrollbar { display: none; }
 
+.story-container .story-item:first-child {
+    margin-left: 5px !important;
+}
+
 .story-item {
-    width: 105px; 
-    height: 175px; 
+    width: 100px !important;
+    height: 170px !important;
     flex-shrink: 0; 
-    border-radius: 12px;
+    border-radius: 10px !important;
     overflow: hidden; 
     position: relative; 
-    background: #f0f2f5; /* ডিফল্ট ব্যাকগ্রাউন্ড */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+    background: #f0f2f5;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; 
     cursor: pointer;
     transition: transform 0.1s;
 }
@@ -295,122 +299,9 @@ body {
     text-align: center;
     text-shadow: none;
 }
-.story-preview.text-story { font-size: 40px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-.story-preview.audio-story i, .story-preview.video-story i {
-    font-size: 40px; background: rgba(0,0,0,0.3); padding: 15px;
-    border-radius: 50%; backdrop-filter: blur(2px);
-}
 
 /* ====================================
-   STORY VIEWER (REAL APP FEEL)
-   ==================================== */
-#storyViewerModal {
-    display: none; 
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000;
-    z-index: 99999 !important; /* সবার উপরে */
-    flex-direction: column;
-    overflow: hidden;
-}
-
-#storyProgressBars {
-    padding: 15px 10px 5px;
-    display: flex;
-    gap: 5px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100001;
-    box-sizing: border-box;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
-}
-
-.progress-bar-container {
-    flex: 1;
-    height: 3px;
-    background-color: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.progress-bar-fill-story {
-    height: 100%;
-    background-color: #fff;
-    width: 0%;
-}
-
-#storyUserInfo {
-    padding: 10px 15px;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: absolute;
-    top: 25px; 
-    left: 0;
-    width: 100%;
-    z-index: 100001;
-    box-sizing: border-box;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-#closeStoryViewerBtn {
-    position: absolute;
-    right: 15px;
-    top: 30px;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    z-index: 100002;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    background: transparent;
-    border: none;
-    padding: 10px;
-}
-
-.story-viewer-media {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    background-color: #000;
-}
-
-#storyMediaElement {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-/* Navigation overlay (Invisible tap areas) */
-#prevStoryBtn, #nextStoryBtn {
-    position: absolute;
-    top: 60px; /* হেডার বাদে */
-    bottom: 0;
-    width: 40%;
-    z-index: 100000;
-    background: transparent;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-#prevStoryBtn { left: 0; }
-#nextStoryBtn { right: 0; }
-
-/* ====================================
-   POST CARDS
+   POST CARDS (GENERAL)
    ==================================== */
 .prayer-card {
     background: var(--card-bg);
@@ -442,7 +333,6 @@ body {
     color: var(--text-color); font-weight: 600;
     text-decoration: none; font-size: 16px;
 }
-.author-name:hover { text-decoration: underline; }
 .post-time { font-size: 12px; color: var(--light-text); margin-top: 2px; }
 
 .card-body { padding: 0 16px 10px; font-size: 15px; color: var(--text-color); }
@@ -450,7 +340,7 @@ body {
     font-size: 16px; font-weight: 600; margin-bottom: 5px; color: var(--text-color);
 }
 .prayer-details { white-space: pre-wrap; line-height: 1.5; }
-.prayer-details.collapsed { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.prayer-details.collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
 .read-more-btn {
     color: var(--light-text); font-weight: 600; cursor: pointer;
     margin-top: 5px; background: none; border: none; padding: 0; font-size: 15px;
@@ -489,7 +379,6 @@ body {
 .actions-menu-trigger {
     padding: 8px; cursor: pointer; color: var(--light-text); border-radius: 50%;
 }
-.actions-menu-trigger:hover { background-color: #f0f2f5; }
 .dropdown-menu {
     display: none; position: absolute; right: 10px; top: 45px;
     background-color: white; border-radius: 8px;
@@ -504,38 +393,201 @@ body {
 }
 .dropdown-menu button:hover { background-color: #f0f2f5; }
 
-/* Fundraising Specifics */
-.fundraising-header {
-    background: #fff; padding: 10px 16px; font-weight: bold;
-    border-bottom: 1px solid #eee; display: flex; align-items: center;
-    gap: 8px; color: var(--text-color);
+/* ====================================
+   FUNDRAISING CARD
+   ==================================== */
+.fundraising-card {
+    padding: 0 !important;
+    margin: 0 0 10px 0 !important;
+    width: 100% !important;
+    background: white;
+    border-radius: 0 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    border: none !important;
+    overflow: hidden;
 }
+
+.fundraising-hero {
+    position: relative;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 250px;
+    max-height: 500px;
+    background-color: #f0f2f5;
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block;
+}
+
 .fundraising-image {
-    width: calc(100% + 32px); margin-left: -16px; display: block;
-    max-height: 350px; object-fit: cover;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    display: block;
+    border: none !important;
+    margin: 0 !important;
 }
-.fundraising-progress { margin-top: 10px; }
-.fundraising-progress .progress-bar-container {
-    background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px;
+
+.fundraising-badge {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(231, 76, 60, 0.95);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-.fundraising-progress .progress-bar-fill {
-    background: var(--success-color); height: 100%;
+
+.fundraising-body {
+    padding: 15px 15px 5px 15px !important;
 }
-.donate-btn {
-    background: #e4e6eb !important; color: black !important;
-    margin-right: 5px; flex: none; padding: 0 20px;
+
+.fundraising-title {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.organizer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+    background: #f8f9fa;
+    padding: 6px 10px;
+    border-radius: 6px;
+    width: fit-content;
+}
+.org-icon { color: var(--primary-color); }
+
+.fundraising-stats-box {
+    background: #f8fbfd;
+    border: 1px solid #e1f0ff;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 15px;
+}
+
+.stats-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.stat-label { display: block; font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; }
+.stat-value { font-size: 16px; font-weight: 700; color: #333; }
+.stat-value.highlight { color: var(--success-color); }
+.text-right { text-align: right; }
+
+.fundraising-stats-box .progress-bar-container {
+    background: #e9ecef;
+    height: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 5px 0;
+}
+
+.fundraising-stats-box .progress-bar-fill {
+    background: linear-gradient(90deg, #2ecc71, #27ae60);
+    height: 100%;
+    border-radius: 10px;
+    position: relative;
+}
+
+.percentage-text { text-align: center; font-size: 11px; color: #666; margin-top: 5px; font-weight: 500; }
+
+.fundraising-actions {
+    padding: 10px 15px 15px 15px !important;
+    gap: 10px;
+    border-top: none !important;
+}
+
+.donate-btn-modern {
+    flex: 2;
+    background: linear-gradient(135deg, #1877F2, #165dc2);
+    color: white !important;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
+}
+
+.fundraising-actions .share-btn {
+    flex: 1; border: 1px solid #ddd; background: white; color: #555;
+    font-weight: 600; border-radius: 8px;
 }
 
 /* ====================================
-   MODALS & AUTH
+   POLL SYSTEM
+   ==================================== */
+.poll-section-wrapper {
+    margin-bottom: 20px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 5px;
+}
+.poll-toggle-btn {
+    background: #f0f2f5;
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    color: #333;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.poll-toggle-btn.active {
+    background: #e7f3ff;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.poll-input-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.poll-option-input { margin-bottom: 0 !important; }
+
+.poll-container { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; padding: 0 5px; }
+.poll-option-btn {
+    width: 100%; padding: 12px 15px; background: #fff; border: 1px solid #ccc;
+    border-radius: 8px; text-align: left; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; color: var(--text-color);
+}
+.poll-option-btn:hover { background: #f0f2f5; border-color: var(--primary-color); }
+
+.poll-result-bar {
+    position: relative; height: 42px; border-radius: 8px; background: #f0f2f5;
+    overflow: hidden; border: 1px solid #e4e6eb;
+}
+.poll-result-bar.selected { border-color: var(--primary-color); background: #f0f8ff; }
+.poll-result-bar .fill {
+    height: 100%; background: rgba(24, 119, 242, 0.2);
+    transition: width 0.5s ease-out; border-radius: 8px 0 0 8px;
+}
+.poll-result-bar.selected .fill { background: rgba(24, 119, 242, 0.4); }
+.poll-result-bar .label {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 15px; font-size: 15px; font-weight: 500; color: var(--text-color); z-index: 2;
+}
+.poll-meta { font-size: 12px; color: var(--light-text); text-align: right; margin-top: 5px; padding-right: 5px; }
+
+/* ====================================
+   MODALS, AUTH & DONATION FIXES
    ==================================== */
 #loginPage {
-    display: none;
-    position: fixed; z-index: 3000; left: 0; top: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(3px);
-    align-items: center; justify-content: center;
+    display: none; position: fixed; z-index: 3000; left: 0; top: 0;
+    width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px); align-items: center; justify-content: center;
 }
 .login-box {
     background-color: #fff; padding: 30px; border-radius: 12px;
@@ -548,7 +600,6 @@ body {
     to { transform: scale(1); opacity: 1; }
 }
 .login-box h1 { font-size: 28px; color: var(--primary-color); margin: 0 0 10px 0; }
-.login-box p { color: var(--text-color); font-size: 16px; line-height: 1.4; margin-bottom: 20px; }
 #googleSignInBtn, .facebook-btn, .phone-login-btn, .btn-full-width {
     width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold;
     cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
@@ -560,12 +611,8 @@ body {
     width: 100%; padding: 12px; border: 1px solid var(--border-color);
     border-radius: 6px; font-size: 16px; margin-bottom: 10px; box-sizing: border-box;
 }
-.text-btn {
-    background: none; border: none; color: var(--primary-color);
-    font-size: 14px; cursor: pointer; margin-top: 15px; text-decoration: none;
-}
 
-/* General Modal */
+/* Modal General */
 .modal {
     display: none; position: fixed; inset: 0; z-index: 2000;
     background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
@@ -575,6 +622,7 @@ body {
     background: white; width: 90%; max-width: 500px; padding: 20px;
     border-radius: 10px; position: relative;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    max-height: 90vh; overflow-y: auto;
 }
 .modal-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -591,35 +639,225 @@ body {
 .form-group textarea, .form-group select, .form-group input {
     width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;
 }
-.modal-footer { text-align: right; padding-top: 10px; }
-.modal-footer button {
-    background-color: var(--primary-color); color: white; padding: 10px 20px;
-    border: none; border-radius: 6px; font-size: 15px; cursor: pointer; width: 100%;
-}
 
-/* Payment */
+/* --- Donation Modal Styling (FIXED) --- */
 .payment-methods {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px;
-}
-.pay-option {
-    border: 1px solid var(--border-color); border-radius: 6px;
-    padding: 10px; text-align: center; cursor: pointer;
-    transition: all 0.2s; background: white;
-}
-.pay-option:hover, .pay-option.selected {
-    border-color: var(--primary-color); background-color: #e7f3ff;
-}
-.pay-option img {
-    width: 100%; max-width: 50px; height: 30px; object-fit: contain;
-    display: block; margin: 0 auto 5px;
-}
-.pay-option span { font-size: 11px; font-weight: 600; color: var(--text-color); }
-.payment-info pre {
-    background: #f0f2f5; padding: 15px; border-radius: 6px;
-    white-space: pre-wrap; border: 1px solid #ddd; font-family: monospace;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
-/* Profile */
+.pay-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: #fff;
+}
+
+.pay-option:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+.pay-option.selected {
+    border-color: var(--primary-color);
+    background-color: #e7f3ff;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+.pay-option img {
+    width: 100%;
+    max-width: 50px;
+    height: 30px;
+    object-fit: contain;
+    margin-bottom: 8px;
+}
+
+.pay-option span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Campaign Payment Rows (Clean List) */
+.pay-row-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #eee;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.pay-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pay-info-left img {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+
+.pay-number {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 2px;
+}
+
+.pay-type {
+    font-size: 11px;
+    color: #666;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.copy-btn-small {
+    background: white;
+    border: 1px solid #ddd;
+    color: var(--primary-color);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.copy-btn-small:active {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(0.9);
+}
+
+.other-info-box {
+    background: #fff8e1;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 15px;
+    border: 1px solid #ffe082;
+    color: #856404;
+    line-height: 1.5;
+}
+
+.donation-submit-section {
+    border-top: 1px solid #eee;
+    margin-top: 20px;
+    padding-top: 15px;
+    text-align: center;
+}
+
+/* Notification Modal */
+.notification-modal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #fff; z-index: 1001;
+}
+.notification-modal.active { display: block; }
+.notification-modal-content { height: 100%; display: flex; flex-direction: column; }
+.notification-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 15px; border-bottom: 1px solid var(--border-color);
+}
+.notification-modal-header .header-actions {
+    display: flex; align-items: center; gap: 10px;
+}
+.delete-notif-btn {
+    background: none; border: none; color: #999; cursor: pointer; padding: 8px;
+    font-size: 16px; transition: color 0.2s; margin-left: auto;
+}
+.delete-notif-btn:hover { color: var(--danger-color); }
+.clear-all-btn {
+    background: none; border: none; color: var(--danger-color);
+    font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 10px;
+}
+.notification-item {
+    display: flex; align-items: center; padding: 10px 15px;
+    cursor: pointer; border-bottom: 1px solid #f0f2f5;
+}
+.notification-item.unread { background-color: #e7f3ff; }
+.notification-content p { margin: 0; font-size: 14px; line-height: 1.4; }
+.notification-content small { color: var(--primary-color); font-size: 12px; }
+
+/* Notification Toggle Switch */
+.notif-settings-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 15px; background: #f8f9fa; border-bottom: 1px solid #eee;
+}
+.notif-toggle-label { font-size: 14px; font-weight: 600; color: var(--text-color); }
+.switch { position: relative; display: inline-block; width: 40px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 24px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--primary-color); }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* Swipeable Notification */
+.notification-item-container {
+    position: relative; overflow: hidden; border-bottom: 1px solid #f0f2f5;
+    background: white; height: 80px;
+}
+.swipe-actions {
+    position: absolute; top: 0; bottom: 0; width: 100%; display: flex;
+    justify-content: space-between; align-items: center; z-index: 1;
+}
+.action-left {
+    background-color: #2ecc71; color: white; width: 50%; height: 100%;
+    display: flex; align-items: center; padding-left: 20px; font-weight: bold;
+    transform: translateX(-100%); transition: transform 0.2s;
+}
+.action-right {
+    background-color: #e74c3c; color: white; width: 50%; height: 100%;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 20px;
+    font-weight: bold; transform: translateX(100%); transition: transform 0.2s;
+}
+.notification-content-wrapper {
+    position: relative; z-index: 2; background: white; width: 100%; height: 100%;
+    display: flex; align-items: center; padding: 10px 15px; transition: transform 0.2s ease-out; box-sizing: border-box;
+}
+.notification-content-wrapper.unread { background-color: #e7f3ff; border-left: 4px solid var(--primary-color); }
+
+/* Undo Toast */
+#undoToast {
+    visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+    text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 10000;
+    left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+#undoToast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+#undoBtn {
+    background: none; border: none; color: #4da6ff; font-weight: bold;
+    cursor: pointer; text-transform: uppercase; margin-left: 15px;
+}
+@keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+@keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+/* ====================================
+   PROFILE & OTHER
+   ==================================== */
 .profile-header {
     background: white; padding: 20px; text-align: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 10px;
@@ -649,7 +887,7 @@ body {
 }
 .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 
-/* Comments */
+/* Comment Structure */
 .comment-wrapper { margin-bottom: 10px; }
 .comment-wrapper.is-reply { margin-left: 45px; border-left: 2px solid #eee; padding-left: 10px; }
 .comment-item { display: flex; gap: 8px; position: relative; }
@@ -662,14 +900,6 @@ body {
     font-size: 12px; color: var(--light-text); margin-top: 2px;
     display: flex; gap: 10px; padding-left: 12px;
 }
-.comment-meta button {
-    background: none; border: none; padding: 0; font-size: 12px;
-    font-weight: bold; cursor: pointer; color: var(--light-text);
-}
-#replyingToContainer {
-    font-size: 13px; padding: 8px; background-color: #f0f2f5;
-    margin-bottom: 5px; display: none; justify-content: space-between; border-radius: 4px;
-}
 #commentForm { margin-top: 10px; display: flex; gap: 10px; }
 #commentInput {
     width: 100%; border: none; background-color: #f0f2f5;
@@ -677,54 +907,17 @@ body {
 }
 #commentInput:focus { outline: none; background-color: #e4e6eb; }
 
-/* Utilities */
-.loader {
-    width: 20px; height: 20px; border: 2px solid #fff;
-    border-bottom-color: transparent; border-radius: 50%;
-    display: inline-block; animation: rotation 1s linear infinite;
-}
-@keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* IMPROVED SKELETON LOADER */
-.skeleton-card, .skeleton-story {
-    background: white; 
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-.skeleton-card {
-    padding: 15px; margin-bottom: 10px;
-    border-top: 1px solid #eee; border-bottom: 1px solid #eee;
-}
-.skeleton-story {
-    width: 105px; height: 175px; 
-    flex-shrink: 0;
-    background: #f0f2f5;
-    margin-right: 8px;
-}
-
-.skeleton-line, .skeleton-avatar, .skeleton-block {
-    background: #f0f2f5;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
-}
-/* Shimmer Animation */
+/* Skeleton */
+.skeleton-card, .skeleton-story { background: white; border-radius: 8px; overflow: hidden; position: relative; }
+.skeleton-card { padding: 15px; margin-bottom: 10px; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+.skeleton-story { width: 100px; height: 170px; flex-shrink: 0; background: #f0f2f5; margin-right: 6px; }
+.skeleton-line, .skeleton-avatar, .skeleton-block { background: #f0f2f5; margin-bottom: 10px; border-radius: 4px; position: relative; overflow: hidden; }
 .skeleton-line::after, .skeleton-avatar::after, .skeleton-block::after, .skeleton-story::after {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-    transform: translateX(-100%);
-    animation: shimmer 1.5s infinite;
+    transform: translateX(-100%); animation: shimmer 1.5s infinite;
 }
 @keyframes shimmer { 100% { transform: translateX(100%); } }
-
-.skeleton-header { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
-.skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; margin-bottom: 0; }
-.skeleton-author-info { flex: 1; }
-.skeleton-line { height: 12px; }
 
 .scroll-to-top-btn {
     position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px;
@@ -735,784 +928,237 @@ body {
 }
 .scroll-to-top-btn.show { display: flex; }
 
-/* Notification Modal */
-.notification-modal {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #fff; z-index: 1001;
-}
-.notification-modal.active { display: block; }
-.notification-modal-content { height: 100%; display: flex; flex-direction: column; }
-.notification-modal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 15px; border-bottom: 1px solid var(--border-color);
-}
-.notification-item {
-    display: flex; align-items: center; padding: 10px 15px;
-    cursor: pointer; border-bottom: 1px solid #f0f2f5;
-}
-.notification-item.unread { background-color: #e7f3ff; }
-.notification-content p { margin: 0; font-size: 14px; line-height: 1.4; }
-.notification-content small { color: var(--primary-color); font-size: 12px; }
-
-/* Loader for White Screen Fix */
-.initial-loader {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 5000;
-    text-align: center;
-}
-
-
-
-/* ====================================
-   POST PAGE FIXES (Add to end of style.css)
-   ==================================== */
-
-/* কন্টেইনার এবং ফর্ম বডি */
-.post-page-container {
-    max-width: 600px;
-    margin: 20px auto;
-    padding: 0 15px;
-    box-sizing: border-box;
-}
-
-.form-wrapper {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* ইনপুট ফিল্ড ডিজাইন */
-.input-group {
-    margin-bottom: 20px;
-}
-
-.input-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: var(--secondary-color);
-    font-size: 14px;
-}
-
-.post-input {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px;
-    background: #f8f9fa;
-    transition: all 0.2s;
-    box-sizing: border-box;
-}
-
-.post-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: white;
-    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.1);
-}
-
-textarea.post-input {
-    resize: none;
-    min-height: 120px;
-    font-family: inherit;
-}
-
-/* মিডিয়া বাটন (ছবি/ভিডিও/অডিও) গ্রিড */
-.media-upload-section {
-    margin: 25px 0;
-}
-
-.section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--secondary-color);
-    margin-bottom: 12px;
-}
-
-.media-buttons-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-}
-
-.media-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #f0f2f5;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 15px 5px;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: var(--text-color);
-    font-size: 12px;
-    font-weight: 500;
-    text-align: center;
-}
-
-.media-btn i {
-    font-size: 20px;
-    margin-bottom: 5px;
-}
-
-/* বাটনের কালার */
-.image-btn i { color: #45bd62; }
-.video-btn i { color: #f5533d; }
-.audio-btn i { color: #f7b928; }
-.record-btn i { color: #e44d62; }
-
-.media-btn:active {
-    background: #e4e6eb;
-    transform: scale(0.98);
-}
-
-/* প্রিভিউ বক্স ডিজাইন */
-.media-preview-box {
-    background: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 15px;
-    position: relative;
-    animation: fadeIn 0.3s ease;
-}
-
-.image-wrapper img, .video-wrapper video {
-    width: 100%;
-    border-radius: 8px;
-    max-height: 300px;
-    object-fit: contain;
-    background: black;
-    display: block;
-}
-
-.preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-/* রিমুভ বাটন ডিজাইন */
-.remove-media-btn {
-    border: none;
-    cursor: pointer;
-}
-
-.remove-media-btn.icon-only {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.6);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    z-index: 10;
-}
-
-.remove-media-btn.text-only {
-    background: none;
-    color: var(--danger-color);
-    font-weight: bold;
-    font-size: 13px;
-}
-
-.custom-audio-player {
-    width: 100%;
-    height: 40px;
-}
-
-/* অডিও রেকর্ডিং স্ট্যাটাস */
-.recording-box {
-    background: #ffe5e5;
-    border: 1px solid #ffcccc;
-    border-radius: 10px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.recording-status {
-    margin: 0;
-    font-weight: 600;
-    color: #d63031;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.pulse { animation: pulse 1.5s infinite; }
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-.stop-recording-btn {
-    background: #d63031;
-    color: white;
-    border: none;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-/* ইউটিউব লিংক ইনপুট */
-.youtube-input-wrapper {
-    position: relative;
-}
-.youtube-input-wrapper i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #ff0000;
-    font-size: 18px;
-}
-.post-input.pl-40 { padding-left: 45px; }
-
-/* ফান্ডরাইজিং সেকশন */
-.fundraising-section {
-    background: #f0f8ff;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #bde0fe;
-    margin-bottom: 20px;
-}
-
-/* কাস্টম চেকবক্স */
-.checkbox-container {
-    display: block;
-    position: relative;
-    padding-left: 30px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    font-size: 15px;
-    user-select: none;
-    color: var(--text-color);
-}
-.checkbox-container input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-.checkmark {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 20px;
-    width: 20px;
-    background-color: #eee;
-    border-radius: 4px;
-}
-.checkbox-container:hover input ~ .checkmark { background-color: #ccc; }
-.checkbox-container input:checked ~ .checkmark { background-color: var(--primary-color); }
-.checkmark:after { content: ""; position: absolute; display: none; }
-.checkbox-container input:checked ~ .checkmark:after { display: block; }
-.checkbox-container .checkmark:after {
-    left: 7px;
-    top: 3px;
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 3px 3px 0;
-    transform: rotate(45deg);
-}
-
-/* সাবমিট বাটন */
-.submit-btn-full {
-    width: 100%;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 10px;
-    box-shadow: 0 4px 6px rgba(24, 119, 242, 0.2);
-    transition: background 0.2s;
-}
-.submit-btn-full:hover { background-color: #166fe5; }
-.submit-btn-full:disabled { background-color: #b0c4de; cursor: not-allowed; }
-
-/* প্রোগ্রেস বার */
-.progress-container {
-    margin-bottom: 15px;
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-}
-.progress-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
-.progress-bar { width: 100%; background: #e9ecef; height: 6px; border-radius: 3px; }
-.progress-bar-fill { height: 100%; background: var(--success-color); width: 0%; border-radius: 3px; transition: width 0.3s; }
-
-/* ====================================
-   IMAGE VIEWER MODAL FIX (Add to style.css)
-   ==================================== */
+/* Image Viewer Modal */
 .image-modal {
-    display: none; /* ডিফল্টভাবে লুকিয়ে রাখা */
-    position: fixed;
-    z-index: 5000; /* সবকিছুর উপরে */
-    padding-top: 0;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: rgba(0, 0, 0, 0.9);
-    align-items: center;
-    justify-content: center;
+    display: none; position: fixed; z-index: 5000;
+    padding-top: 0; left: 0; top: 0; width: 100%; height: 100%;
+    overflow: hidden; background-color: rgba(0, 0, 0, 0.9);
+    align-items: center; justify-content: center;
 }
-
 .image-modal-content {
-    margin: auto;
-    display: block;
-    max-width: 90%;
-    max-height: 80vh;
-    object-fit: contain;
-    animation: zoom 0.3s;
+    margin: auto; display: block; max-width: 90%; max-height: 80vh;
+    object-fit: contain; animation: zoom 0.3s;
 }
-
 .close-image-modal {
-    position: absolute;
-    top: 15px;
-    right: 35px;
-    color: #f1f1f1;
-    font-size: 40px;
-    font-weight: bold;
-    transition: 0.3s;
-    cursor: pointer;
-    z-index: 5001;
+    position: absolute; top: 15px; right: 35px; color: #f1f1f1;
+    font-size: 40px; font-weight: bold; transition: 0.3s;
+    cursor: pointer; z-index: 5001;
+}
+@keyframes zoom { from {transform:scale(0)} to {transform:scale(1)} }
+
+/* ADVANCED STORY EDITOR */
+#storyViewerModal {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh; background-color: #000 !important;
+    z-index: 99999 !important; flex-direction: column; overflow: hidden;
+}
+.story-viewer-media {
+    width: 100% !important; height: 100% !important;
+    display: flex !important; align-items: center !important;
+    justify-content: center !important; position: relative;
+}
+.story-viewer-media img, .story-viewer-media video {
+    width: 100% !important; height: auto !important;
+    max-height: 100vh !important; object-fit: contain !important;
+}
+#storyProgressBars {
+    padding: 15px 10px 5px; display: flex; gap: 5px; position: absolute;
+    top: 0; left: 0; width: 100%; z-index: 100001; box-sizing: border-box;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent) !important;
+    padding-top: 10px !important;
+}
+.progress-bar-container {
+    flex: 1; height: 3px; background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px; overflow: hidden;
+}
+.progress-bar-fill-story { height: 100%; background-color: #fff; width: 0%; }
+#storyUserInfo {
+    padding: 10px 15px; color: white; display: flex; align-items: center;
+    gap: 10px; position: absolute; top: 30px !important; left: 0;
+    width: 100%; z-index: 100001; box-sizing: border-box;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+#closeStoryViewerBtn {
+    position: absolute; right: 10px !important; top: 30px !important;
+    color: white; font-size: 28px; cursor: pointer; z-index: 100002;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5); background: transparent; border: none; padding: 5px;
+}
+#prevStoryBtn, #nextStoryBtn {
+    position: absolute; top: 60px; bottom: 0; width: 40%;
+    z-index: 100000; background: transparent; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+#prevStoryBtn { left: 0; }
+#nextStoryBtn { right: 0; }
+
+/* Editor Modal */
+.story-editor-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%; background-color: #000 !important;
+    z-index: 10000 !important; display: flex; flex-direction: column; padding: 0 !important;
+}
+.editor-container {
+    width: 100%; height: 100%; max-width: 500px; background: #000;
+    position: relative; display: flex; flex-direction: column; margin: 0 auto;
+}
+.editor-top-bar {
+    position: absolute; top: 0; left: 0; right: 0; padding: 15px;
+    z-index: 20; display: flex; justify-content: space-between; align-items: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+}
+.editor-canvas-area {
+    flex: 1; width: 100%; position: relative; background: #111;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.story-canvas {
+    width: 100%; height: 100%; background-size: cover; background-position: center;
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; color: white;
+}
+.editor-bottom-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 20px;
+    z-index: 30; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    display: flex; flex-direction: column; gap: 10px;
+}
+.editor-btn.primary {
+    background: white; color: black; border: none; padding: 12px;
+    border-radius: 30px; font-weight: 700; font-size: 15px; cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1;
+}
+.editor-tab-btn.active { background: #333; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+.draggable-text {
+    font-size: 28px; font-weight: 700; line-height: 1.4; outline: none;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.5); font-family: 'Hind Siliguri', sans-serif;
+    min-height: 40px; cursor: text;
+}
+#liveCameraFeed { transform: scaleX(-1); }
+
+/* Post Creation */
+.form-wrapper { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.post-input {
+    width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 16px; background: #f8f9fa; transition: all 0.2s; box-sizing: border-box;
+}
+.media-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #f0f2f5; border: 1px solid #ddd; border-radius: 10px;
+    padding: 15px 5px; cursor: pointer; transition: all 0.2s; color: var(--text-color);
+    font-size: 12px; font-weight: 500; text-align: center;
+}
+.submit-btn-full {
+    width: 100%; background-color: var(--primary-color); color: white; border: none;
+    padding: 14px; font-size: 16px; font-weight: 700; border-radius: 8px;
+    cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(24, 119, 242, 0.2);
 }
 
-.close-image-modal:hover,
-.close-image-modal:focus {
-    color: #bbb;
-    text-decoration: none;
-    cursor: pointer;
+/* Payment Dynamic Rows */
+.payment-dynamic-row {
+    display: flex; align-items: center; background: #fff; border: 1px solid #ddd;
+    border-radius: 8px; padding: 10px; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.pay-row-left { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+.pay-logo-icon { width: 30px; height: 30px; object-fit: contain; }
+.pay-method-name { font-size: 10px; font-weight: bold; color: #666; text-transform: uppercase; }
+.pay-row-inputs { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.pay-number-input { padding: 8px !important; font-size: 14px !important; margin: 0 !important; }
+.pay-type-select { padding: 5px; border: 1px solid #eee; border-radius: 4px; font-size: 12px; background: #f9f9f9; }
+.remove-pay-row {
+    background: #ffe5e5; color: var(--danger-color); border: none;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
 }
 
-@keyframes zoom {
-    from {transform:scale(0)}
-    to {transform:scale(1)}
+/* Desktop Overrides */
+@media (min-width: 680px) {
+    .fundraising-card {
+        border-radius: 10px !important;
+        border: 1px solid var(--border-color) !important;
+        margin-bottom: 20px !important;
+    }
+    .fundraising-hero { border-bottom: 1px solid #eee; height: 300px !important; }
 }
 
-/* ====================================
-   MODERN FUNDRAISING CARD DESIGN
-   ==================================== */
-.fundraising-card {
-    border: none !important;
-    border-radius: 12px !important;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    margin-bottom: 15px;
-    background: white;
+/* ==================================================
+   1. HEADER DONATION BUTTON FIX
+   ================================================== */
+#globalDonateBtn {
+    background-color: #fff0f0;
+    border: 1px solid #ffcdd2;
+    transition: all 0.2s;
+}
+#globalDonateBtn i {
+    color: #e74c3c;
+}
+#globalDonateBtn:active {
+    transform: scale(0.95);
+    background-color: #ffebee;
 }
 
-.fundraising-hero {
-    position: relative;
-    width: 100%;
-    height: 200px;
-    background-color: #f0f2f5;
-    overflow: hidden;
+/* ==================================================
+   2. DONATION MODAL GRID FIX
+   ================================================== */
+.payment-methods {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* ৩টি কলাম */
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
-.fundraising-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.fundraising-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(231, 76, 60, 0.95);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 2;
+.pay-option {
     display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.fundraising-body {
-    padding: 15px 15px 5px 15px !important;
-}
-
-.fundraising-title {
-    font-size: 18px;
-    color: #2c3e50;
-    margin-bottom: 8px;
-    line-height: 1.4;
-}
-
-.organizer-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 12px;
-    background: #f8f9fa;
-    padding: 6px 10px;
-    border-radius: 6px;
-    width: fit-content;
-}
-
-.org-icon {
-    color: var(--primary-color);
-}
-
-.fundraising-stats-box {
-    background: #f8fbfd;
-    border: 1px solid #e1f0ff;
-    border-radius: 10px;
-    padding: 12px;
-    margin-top: 15px;
-}
-
-.stats-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.stat-label {
-    display: block;
-    font-size: 11px;
-    color: #888;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: #333;
-}
-
-.stat-value.highlight {
-    color: var(--success-color);
-}
-
-.text-right {
-    text-align: right;
-}
-
-/* প্রোগ্রেস বার আপডেট */
-.fundraising-stats-box .progress-bar-container {
-    background: #e9ecef;
-    height: 10px;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 5px 0;
-}
-
-.fundraising-stats-box .progress-bar-fill {
-    background: linear-gradient(90deg, #2ecc71, #27ae60);
-    height: 100%;
-    border-radius: 10px;
-    position: relative;
-}
-
-/* শাইনি ইফেক্ট */
-.fundraising-stats-box .progress-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        45deg, 
-        rgba(255,255,255,0.2) 25%, 
-        transparent 25%, 
-        transparent 50%, 
-        rgba(255,255,255,0.2) 50%, 
-        rgba(255,255,255,0.2) 75%, 
-        transparent 75%, 
-        transparent
-    );
-    background-size: 20px 20px;
-    opacity: 0.3;
-}
-
-.percentage-text {
-    text-align: center;
-    font-size: 11px;
-    color: #666;
-    margin-top: 5px;
-    font-weight: 500;
-}
-
-/* বাটন ডিজাইন */
-.fundraising-actions {
-    padding: 10px 15px 15px 15px !important;
-    gap: 10px;
-    border-top: none !important;
-}
-
-.donate-btn-modern {
-    flex: 2;
-    background: linear-gradient(135deg, #1877F2, #165dc2);
-    color: white !important;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 15px;
-    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3);
-    transition: transform 0.2s;
-}
-
-.donate-btn-modern:active {
-    transform: scale(0.98);
-}
-
-.fundraising-actions .share-btn {
-    flex: 1;
     border: 1px solid #ddd;
-    background: white;
-    color: #555;
-    font-weight: 600;
-    border-radius: 8px;
+    border-radius: 10px;
+    padding: 15px 10px;
+    cursor: pointer;
+    background-color: #fff;
+    transition: all 0.2s;
 }
 
-/* ====================================
-   UPDATED CSS FOR CAMPAIGN CARD (Full Width & Read More)
-   ==================================== */
-
-/* কার্ডের বেসিক স্ট্রাকচার */
-.fundraising-card {
-    border: none !important;
-    border-radius: 0px !important; /* মোবাইল ভিউতে ফেসবুকের মতো এজ-টু-এজ */
-    background: white;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+.pay-option:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-/* হিরো সেকশন (ইমেজ কন্টেইনার) - ফুল উইডথ ফিক্স */
-.fundraising-hero {
-    position: relative;
+.pay-option.selected {
+    border-color: var(--primary-color);
+    background-color: #e7f3ff;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+.pay-option img {
     width: 100%;
-    height: 220px; /* উচ্চতা একটু বাড়ানো হলো */
-    background-color: #f0f2f5;
-    overflow: hidden;
-    margin: 0; /* কোনো মার্জিন থাকবে না */
-    padding: 0; /* কোনো প্যাডিং থাকবে না */
-    display: block;
-}
-
-/* ইমেজ স্টাইল - একদম ফিট হবে */
-.fundraising-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block; /* গ্যাপ রিমুভ করার জন্য */
-    border: none;
-}
-
-/* ব্যাজ পজিশনিং */
-.fundraising-badge {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background: rgba(231, 76, 60, 0.95);
-    color: white;
-    padding: 6px 14px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 2;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* বডি প্যাডিং */
-.fundraising-body {
-    padding: 15px !important;
-}
-
-/* আরও পড়ুন বাটন ডিজাইন */
-.read-more-btn {
-    color: var(--light-text);
-    font-weight: 600;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: 15px;
-    margin-top: 5px;
-    display: inline-block;
-}
-
-.read-more-btn:hover {
-    text-decoration: underline;
-}
-
-/* ডিটেইলস টেক্সট কোলাপস লজিক */
-.prayer-details.collapsed {
-    display: -webkit-box;
-    -webkit-line-clamp: 4; /* ৪ লাইনের পর কাটবে */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ডেক্সটপ বা বড় স্ক্রিনের জন্য একটু রাউন্ডেড কর্নার */
-@media (min-width: 600px) {
-    .fundraising-card {
-        border-radius: 12px !important;
-        border: 1px solid var(--border-color) !important;
-    }
-}
-
-/* ====================================
-   DYNAMIC PAYMENT ROWS (Add to style.css)
-   ==================================== */
-.payment-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.method-select {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-}
-
-.add-method-btn {
-    background: var(--success-color);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 600;
-}
-
-.dynamic-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.payment-dynamic-row {
-    display: flex;
-    align-items: center;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    gap: 10px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.pay-row-left {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 50px;
-}
-
-.pay-logo-icon {
-    width: 30px;
+    max-width: 50px;
     height: 30px;
     object-fit: contain;
+    margin-bottom: 8px;
 }
 
-.pay-method-name {
-    font-size: 10px;
-    font-weight: bold;
-    color: #666;
-    text-transform: uppercase;
-}
-
-.pay-row-inputs {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.pay-number-input {
-    padding: 8px !important;
-    font-size: 14px !important;
-    margin: 0 !important;
-}
-
-.pay-type-select {
-    padding: 5px;
-    border: 1px solid #eee;
-    border-radius: 4px;
+.pay-option span {
     font-size: 12px;
-    background: #f9f9f9;
+    font-weight: 600;
+    color: var(--text-color);
 }
 
-.remove-pay-row {
-    background: #ffe5e5;
-    color: var(--danger-color);
-    border: none;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ====================================
-   DONATION MODAL DYNAMIC STYLES
-   ==================================== */
+/* Campaign Donation List Style */
 .pay-row-display {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #f8f9fa;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 8px;
     border: 1px solid #eee;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
 }
 
 .pay-info-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .pay-info-left img {
@@ -1521,29 +1167,13 @@ textarea.post-input {
     object-fit: contain;
 }
 
-.pay-number {
-    font-weight: 700;
-    font-size: 15px;
-    color: #2c3e50;
-}
-
-.pay-type {
-    font-size: 11px;
-    color: #666;
-    background: #e9ecef;
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: inline-block;
-    margin-top: 2px;
-}
-
 .copy-btn-small {
     background: white;
     border: 1px solid #ddd;
     color: var(--primary-color);
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1552,236 +1182,24 @@ textarea.post-input {
 }
 
 .copy-btn-small:active {
-    transform: scale(0.9);
     background: var(--primary-color);
     color: white;
+    transform: scale(0.9);
 }
-
-.donation-submit-section {
-    border-top: 1px solid #eee;
-    margin-top: 15px;
-    padding-top: 10px;
-}
-
-.other-info-box {
-    background: #fff8e1;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    margin-bottom: 10px;
-    border: 1px solid #ffe082;
-    color: #856404;
-}
-
-আলহামদুলিল্লাহ। নোটিফিকেশন ডিলিট করার ফিচারটি (সিঙ্গেল ডিলিট এবং সব ডিলিট) যুক্ত করার জন্য আমি কোড আপডেট করছি।
-
-আপনাকে **৩টি** কাজ করতে হবে:
-১. `style.css` এ একটু কোড যোগ করা।
-২. `index.html` এ নোটিফিকেশন মডালের হেডারে একটি বাটন যোগ করা।
-৩. `script.js` সম্পূর্ণ রিপ্লেস করা (আমি আপডেট করে দিচ্ছি)।
-
-### ১. style.css আপডেট
-আপনার `style.css` ফাইলের একদম শেষে নিচের কোডটুকু যোগ করে দিন:
-
-```css
-/* Notification Delete Buttons */
-.delete-notif-btn {
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 8px;
-    font-size: 16px;
-    transition: color 0.2s;
-    margin-left: 5px;
-}
-.delete-notif-btn:hover {
-    color: var(--danger-color);
-}
-
-.clear-all-btn {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 10px;
-}
-.notification-modal-header .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-
-/* ====================================
-   FUNDRAISING IMAGE FULL WIDTH FIX
-   ==================================== */
-
-/* ১. মূল কার্ডের প্যাডিং রিমুভ করা */
-.fundraising-card {
-    padding: 0 !important; /* কার্ডের বডিতে কোনো প্যাডিং থাকবে না */
-    margin: 0 0 10px 0 !important; /* মোবাইল ভিউতে সাইডের মার্জিন রিমুভ */
-    width: 100%;
-    background: white;
-    border-radius: 0px !important; /* মোবাইলে এজ-টু-এজ দেখানোর জন্য */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    border: none !important;
-}
-
-/* ২. হিরো সেকশন (ইমেজ কন্টেইনার) */
-.fundraising-hero {
-    width: 100% !important;
-    height: 250px; /* হাইট একটু বাড়ানো হলো যাতে ইমেজ ভালো বোঝা যায় */
-    position: relative;
-    display: block;
-    margin: 0 !important;
-    padding: 0 !important;
-    background-color: #f0f2f5;
-    overflow: hidden;
-}
-
-/* ৩. ইমেজ স্টাইল */
-.fundraising-image {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover; /* ইমেজ ফেটে না গিয়ে বক্স ফিল করবে */
-    display: block;
-    border: none;
-}
-
-/* ৪. ব্যাজ (সহায়তা প্রয়োজন) পজিশন ফিক্স */
-.fundraising-badge {
-    top: 15px;
-    left: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-/* ৫. কার্ডের ভেতরের টেক্সট এরিয়া প্যাডিং */
-.fundraising-body {
-    padding: 15px 15px 5px 15px !important;
-}
-
-/* ৬. অ্যাকশন বাটন এরিয়া */
-.fundraising-actions {
-    padding: 10px 15px 15px 15px !important;
-}
-
-/* ৭. শুধুমাত্র বড় স্ক্রিনে (Desktop) সাইডে একটু গ্যাপ ও রাউন্ডেড কর্নার থাকবে */
-@media (min-width: 680px) {
-    .fundraising-card {
-        border-radius: 10px !important;
-        border: 1px solid var(--border-color) !important;
-        margin-bottom: 15px !important;
-        overflow: hidden; /* ইমেজ যেন বর্ডার রেডিয়াসের বাইরে না যায় */
-    }
-    .fundraising-hero {
-        height: 300px; /* ডেস্কটপে ইমেজ আরও বড় হবে */
-    }
-}
-
-
-/* ====================================
-   STORY & FEED GAP FIX
-   ==================================== */
-
-/* ১. স্টোরি কন্টেইনারের নিচের ফাঁকা জায়গা রিমুভ এবং বর্ডার চিকন করা */
-.story-container {
-    margin-bottom: 0 !important; /* নিচের গ্যাপ রিমুভ */
-    border-bottom: 0.5px solid #e4e6eb !important; /* বর্ডার ১px থেকে কমিয়ে ০.৫px করা হলো */
-    padding-bottom: 10px; /* ভেতরের স্পেসিং ঠিক রাখা */
-    box-shadow: none !important; /* শ্যাডো থাকলে রিমুভ করা, যাতে একদম ফ্ল্যাট মনে হয় */
-}
-
-/* ২. ফিড কন্টেইনারের উপরের ফাঁকা জায়গা রিমুভ */
-.feed-container {
-    padding-top: 0 !important; /* প্রথম পোস্টের উপরের গ্যাপ রিমুভ */
-}
-
-/* ৩. প্রথম পোস্টের উপরের বর্ডার রিমুভ (অপশনাল, যাতে ডাবল বর্ডার না দেখায়) */
-.feed-container .prayer-card:first-child {
-    border-top: none !important;
-    margin-top: 0 !important;
-}
-
 
 /* ==================================================
-   NEW ADDITIONS (Paste at the bottom of style.css)
+   3. FACEBOOK STYLE STORY EDITOR (FULL UI)
    ================================================== */
 
-/* ১. স্টোরি এবং ফিডের মাঝখানের গ্যাপ ফিক্স এবং বর্ডার চিকন করা */
-.story-container {
-    margin-bottom: 0 !important;
-    border-bottom: 0.5px solid #e4e6eb !important; /* চিকন বর্ডার */
-    padding-bottom: 10px;
-    box-shadow: none !important;
-}
-
-.feed-container {
-    padding-top: 0 !important;
-}
-
-.feed-container .prayer-card:first-child {
-    border-top: none !important;
-    margin-top: 0 !important;
-}
-
-/* ২. নোটিফিকেশন ডিলিট এবং ক্লিয়ার বাটন ডিজাইন */
-.notification-modal-header .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.delete-notif-btn {
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 8px;
-    font-size: 16px;
-    transition: color 0.2s;
-    margin-left: 5px;
-}
-
-.delete-notif-btn:hover {
-    color: var(--danger-color);
-}
-
-.clear-all-btn {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-
-
-/* ====================================
-   PROFESSIONAL STORY EDITOR STYLES
-   (Paste at the bottom of style.css)
-   ==================================== */
-
-/* ১. মডাল কন্টেইনার (কালো ব্যাকগ্রাউন্ড) */
+/* Main Editor Modal (Fullscreen Black) */
 .story-editor-modal {
-    background-color: #000 !important;
-    padding: 0 !important;
-    align-items: flex-start !important;
-    display: none; /* JS দিয়ে ফ্লেক্স করা হবে */
-}
-
-.story-editor-modal .modal-content {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    max-width: 100%;
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0;
+    background-color: #000;
+    z-index: 99999;
     display: flex;
     flex-direction: column;
 }
@@ -1789,1463 +1207,648 @@ textarea.post-input {
 .editor-container {
     width: 100%;
     height: 100%;
+    position: relative;
     display: flex;
     flex-direction: column;
-    position: relative;
+    margin: 0 auto;
+    max-width: 600px;
+    background-color: #18191a;
 }
 
-/* ২. টপ বার (ক্লোজ বাটন) */
+/* Top Toolbar */
 .editor-top-bar {
-    padding: 15px;
-    display: flex;
-    justify-content: flex-start;
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 30;
     width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 100;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
 }
 
-.icon-btn {
-    background: rgba(0, 0, 0, 0.3);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.2);
-    width: 40px;
-    height: 40px;
+.editor-tools-right {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.editor-icon-btn {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
     cursor: pointer;
     backdrop-filter: blur(5px);
-}
-
-/* ৩. ক্যানভাস এরিয়া (মাঝখানের অংশ) */
-.editor-canvas-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    background-color: #111;
-}
-
-.story-canvas {
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* ডিফল্ট গ্রেডিয়েন্ট */
-    transition: background 0.3s ease;
-}
-
-.canvas-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.2);
-    pointer-events: none;
-    z-index: 1;
-}
-
-.canvas-content {
-    z-index: 2;
-    width: 85%;
-    pointer-events: none; /* টেক্সট এডিট করার সময় বাদে ক্লিক পাস করবে */
-}
-
-/* ড্রাগেবল এবং এডিটেবল টেক্সট */
-.draggable-text {
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1.4;
-    outline: none;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    margin-bottom: 15px;
-    font-family: 'Hind Siliguri', sans-serif;
-    cursor: text;
-    pointer-events: auto; /* লেখার জন্য */
-    min-height: 40px;
-}
-
-.draggable-text[contenteditable]:empty::before {
-    content: attr(data-placeholder);
-    color: rgba(255, 255, 255, 0.6);
-    pointer-events: none;
-    display: block; /* For Firefox */
-}
-
-.draggable-source {
-    font-size: 16px;
-    font-style: italic;
-    opacity: 0.9;
-    outline: none;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    cursor: text;
-    pointer-events: auto;
-}
-
-.watermark {
-    position: absolute;
-    bottom: 100px;
-    font-size: 12px;
-    opacity: 0.6;
-    z-index: 2;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* ৪. ডানপাশের টুলস (Sidebar) */
-.editor-sidebar {
-    position: absolute;
-    right: 20px;
-    top: 15%;
-    z-index: 25;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-}
-
-.tool-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    opacity: 0.9;
-    transition: opacity 0.2s;
-}
-
-.tool-item:hover {
-    opacity: 1;
-}
-
-.tool-icon {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: rgba(30, 30, 30, 0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 20px;
-    margin-bottom: 5px;
-    backdrop-filter: blur(10px);
     transition: transform 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-.tool-item:active .tool-icon {
+.editor-icon-btn:active {
     transform: scale(0.9);
 }
 
-.tool-item span {
+.close-editor {
+    background: transparent;
+    font-size: 28px;
+    border: none;
     color: white;
-    font-size: 11px;
-    font-weight: 600;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
 }
 
-/* ৫. নিচের অ্যাকশন বার (Bottom Bar) */
-.editor-bottom-bar {
-    padding: 20px;
+/* Main Canvas Area */
+.editor-canvas-wrapper {
+    flex: 1;
+    position: relative;
+    background: #111;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editor-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Media Layer (Image/Video) */
+#editorMediaLayer {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-size: cover;
+    background-position: center;
+    background-color: #000;
+}
+
+.editor-media {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Upload Options (Cards) */
+.upload-prompt {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    width: 100%;
+    height: 100%;
+    background: #18191a;
+}
+
+.story-type-card {
+    width: 100px;
+    height: 120px;
+    background: #242526;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    background: linear-gradient(to top, #000 40%, transparent);
-    z-index: 30;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid #3e4042;
+}
+
+.story-type-card:active { transform: scale(0.95); }
+
+.st-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 20px;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.story-type-card span {
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Drawing & Draggable Elements */
+#drawingCanvas {
+    z-index: 10;
+    pointer-events: none;
+    touch-action: none;
+}
+#drawingCanvas.active {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+#elementsLayer {
+    z-index: 20;
+    pointer-events: none;
+}
+
+.story-element {
+    position: absolute;
+    display: inline-block;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    padding: 5px;
+    border: 1px dashed transparent;
+}
+
+.story-element.active {
+    border-color: rgba(255,255,255,0.5);
+}
+
+.story-text-element {
+    color: white;
+    font-weight: bold;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    padding: 5px 15px;
+    border-radius: 8px;
+    font-size: 24px;
+    text-align: center;
+    min-width: 50px;
+    line-height: 1.2;
+}
+
+/* Bottom Bar */
+.editor-bottom-bar {
     position: absolute;
     bottom: 0;
     left: 0;
-    right: 0;
-}
-
-/* কালার প্যালেট */
-.color-palette {
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    z-index: 100;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     gap: 15px;
-    overflow-x: auto;
-    padding-bottom: 10px;
-    scrollbar-width: none; /* Firefox */
 }
-.color-palette::-webkit-scrollbar { display: none; }
 
-.c-dot {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: 2px solid white;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    flex-shrink: 0;
-    transition: transform 0.2s;
-}
-.c-dot:active { transform: scale(0.9); }
-
-/* অ্যাকশন বাটনস */
-.action-buttons-row {
+.editor-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 10px;
+    width: 100%;
 }
 
 .editor-btn {
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-weight: 700;
-    font-size: 15px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
     border: none;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: transform 0.2s;
-}
-
-.editor-btn:active { transform: scale(0.95); }
-
-.editor-btn.secondary {
-    background: rgba(255,255,255,0.15);
-    color: white;
-    backdrop-filter: blur(5px);
+    transition: transform 0.1s;
 }
 
 .editor-btn.primary {
     background: white;
     color: black;
-    padding: 12px 30px;
-}
-
-/* ====================================
-   POLL SYSTEM STYLES
-   (Paste at the bottom of style.css)
-   ==================================== */
-
-/* পোস্ট পেজে পোল অপশন */
-.poll-section-wrapper {
-    margin-bottom: 20px;
-    background: #fff;
-    border-radius: 8px;
-    padding: 5px;
-}
-
-.poll-toggle-btn {
-    background: #f0f2f5;
-    border: 1px solid #ddd;
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    font-weight: 600;
-    color: #333;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-.poll-toggle-btn:hover { background: #e4e6eb; }
-.poll-toggle-btn.active {
-    background: #e7f3ff;
-    color: var(--primary-color);
-    border-color: var(--primary-color);
+    gap: 5px;
+    margin-left: auto;
 }
 
-.poll-input-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-.poll-option-input {
-    margin-bottom: 0 !important;
-}
-
-/* ফিডে পোল কার্ড ডিজাইন */
-.poll-container {
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 5px;
-}
-
-/* ভোট দেওয়ার বাটন */
-.poll-option-btn {
-    width: 100%;
-    padding: 12px 15px;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    text-align: left;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: var(--text-color);
-    position: relative;
-    overflow: hidden;
-}
-.poll-option-btn:hover {
-    background: #f0f2f5;
-    border-color: var(--primary-color);
-}
-
-/* ভোটের ফলাফল (বার) */
-.poll-result-bar {
-    position: relative;
-    height: 42px;
-    border-radius: 8px;
-    background: #f0f2f5;
-    overflow: hidden;
-    border: 1px solid #e4e6eb;
-}
-
-.poll-result-bar.selected {
-    border-color: var(--primary-color);
-    background: #f0f8ff;
-}
-
-.poll-result-bar .fill {
-    height: 100%;
-    background: rgba(24, 119, 242, 0.2); /* Primary color with low opacity */
-    transition: width 0.5s ease-out;
-    border-radius: 8px 0 0 8px;
-}
-
-.poll-result-bar.selected .fill {
-    background: rgba(24, 119, 242, 0.4);
-}
-
-.poll-result-bar .label {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 15px;
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--text-color);
-    z-index: 2;
-}
-
-.poll-meta {
-    font-size: 12px;
-    color: var(--light-text);
-    text-align: right;
-    margin-top: 5px;
-    padding-right: 5px;
-}
-
-/* ====================================
-   PROFESSIONAL STORY EDITOR & VIEWER STYLES
-   ==================================== */
-
-/* 1. Fullscreen Editor Modal */
-.story-editor-modal {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100%; height: 100%;
-    background-color: #000 !important; /* কালো ব্যাকগ্রাউন্ড */
-    z-index: 10000 !important; /* সবকিছুর উপরে */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
-}
-
-.editor-container {
-    width: 100%;
-    height: 100%;
-    max-width: 500px; /* মোবাইলের সাইজ */
-    background: #000;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-/* 2. Top Bar (Close & Tabs) */
-.editor-top-bar {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 20;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-}
-
-.icon-btn {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
+.editor-btn.secondary {
+    background: rgba(255,255,255,0.2);
     color: white;
-    font-size: 20px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
     backdrop-filter: blur(5px);
 }
 
-.editor-tabs-center {
+/* Color Palette */
+.editor-color-palette {
     display: flex;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 20px;
-    padding: 4px;
-    backdrop-filter: blur(10px);
-}
-
-.editor-tab-btn {
-    background: transparent;
-    border: none;
-    color: #ccc;
-    padding: 6px 15px;
-    font-size: 14px;
-    font-weight: 600;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.editor-tab-btn.active {
-    background: #333;
-    color: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-
-/* 3. Main Canvas Area */
-.editor-canvas-area {
-    flex: 1;
-    width: 100%;
-    position: relative;
-    background: #1a1a1a;
-    overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-}
-
-.story-canvas {
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: white;
-    /* ডিফল্ট গ্রেডিয়েন্ট */
-    background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
-}
-
-.draggable-text {
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1.5;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    width: 80%;
-    outline: none;
-    z-index: 10;
-    font-family: 'Hind Siliguri', sans-serif;
-    min-height: 50px;
-}
-
-.draggable-text[contenteditable]:empty::before {
-    content: attr(data-placeholder);
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.watermark {
-    position: absolute;
-    bottom: 20px;
-    font-size: 12px;
-    opacity: 0.5;
-    font-weight: bold;
-    letter-spacing: 1px;
-    pointer-events: none;
-}
-
-/* Media Placeholder UI */
-.media-placeholder-content {
-    width: 100%; height: 100%;
-    display: flex;
-    align-items: center; justify-content: center;
-    background: #111;
-}
-
-.media-upload-options {
-    display: flex;
-    gap: 30px;
-}
-
-.upload-trigger-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #999;
-    cursor: pointer;
-}
-
-.upload-icon-circle {
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    background: #333;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    color: white;
-    margin-bottom: 10px;
-    transition: transform 0.2s;
-    border: 1px solid #444;
-}
-
-.upload-trigger-btn:active .upload-icon-circle {
-    transform: scale(0.9);
-    background: var(--primary-color);
-}
-
-/* 4. Sidebar Tools */
-.editor-sidebar {
-    position: absolute;
-    right: 15px;
-    top: 20%;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    z-index: 20;
-}
-
-.tool-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-}
-
-.tool-icon {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 4px;
-    backdrop-filter: blur(5px);
-}
-
-.tool-item span {
-    font-size: 10px;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    font-weight: 500;
-}
-
-/* 5. Bottom Action Bar */
-.editor-bottom-bar {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    padding: 15px;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.story-caption-input {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255,255,255,0.3);
-    padding: 10px 15px;
-    border-radius: 20px;
-    color: white;
-    font-size: 14px;
-    backdrop-filter: blur(5px);
-}
-.story-caption-input::placeholder { color: rgba(255,255,255,0.7); }
-.story-caption-input:focus { outline: none; background: rgba(255,255,255,0.3); }
-
-.color-palette {
-    display: flex;
-    gap: 10px;
+    gap: 12px;
     overflow-x: auto;
     padding: 5px 0;
     justify-content: center;
 }
 
-.c-dot {
-    width: 28px; height: 28px;
+.color-dot {
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    border: 2px solid #fff;
+    border: 2px solid white;
+    cursor: pointer;
     flex-shrink: 0;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-.editor-btn.primary {
-    background: white;
-    color: black;
-    border: none;
-    padding: 12px;
-    border-radius: 30px;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(255,255,255,0.2);
-    display: flex; align-items: center; gap: 8px;
-}
-
-.editor-btn.primary:active { transform: scale(0.98); opacity: 0.9; }
-
-/* ====================================
-   STORY VIEWER OVERRIDE (For new logic)
-   ==================================== */
-#storyViewerModal {
-    background: #000 !important;
-    z-index: 20000 !important;
-}
-
-#storyProgressBars {
-    padding-top: 10px;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-}
-
-#storyUserInfo {
-    top: 30px;
-}
-
-/* Reply Input in Viewer */
-.story-reply-container {
-    position: absolute;
-    bottom: 10px; left: 10px; right: 10px;
-    display: flex; gap: 10px;
-    z-index: 100005;
-}
-
-.story-reply-input {
-    flex: 1;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.5);
-    border-radius: 25px;
-    padding: 10px 15px;
-    color: white;
-}
-.story-reply-input::placeholder { color: rgba(255,255,255,0.7); }
-
-.story-send-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-/* ====================================
-   FUNDRAISING IMAGE FULL WIDTH FIX (FINAL)
-   ==================================== */
-
-/* ১. কার্ডের বেসিক সেটিং (মোবাইলের জন্য) */
-.fundraising-card {
-    padding: 0 !important;
-    margin: 0 0 10px 0 !important; /* বামে-ডানে কোনো মার্জিন থাকবে না */
-    width: 100% !important;
-    background: white;
-    border-radius: 0 !important; /* মোবাইলে কোনো রাউন্ডেড কর্নার থাকবে না */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    border: none !important; /* বর্ডার রিমুভ */
-    overflow: hidden;
-}
-
-/* ২. ইমেজের কন্টেইনার (হিরো সেকশন) */
-.fundraising-hero {
-    width: 100% !important;
-    height: auto !important; /* অটো হাইট যাতে ইমেজ কেটে না যায় */
-    min-height: 250px; /* নূন্যতম উচ্চতা */
-    max-height: 500px; /* সর্বোচ্চ উচ্চতা */
-    position: relative;
-    margin: 0 !important;
-    padding: 0 !important;
-    background-color: #f0f2f5;
-    display: block;
-}
-
-/* ৩. আসল ইমেজ স্টাইল */
-.fundraising-image {
-    width: 100% !important; /* ১০০% উইডথ বা স্ক্রিন জোড়া */
-    height: 100% !important;
-    object-fit: cover; /* ইমেজ ফেটে না গিয়ে পুরো বক্স ফিল করবে */
-    display: block;
-    border: none !important;
-    margin: 0 !important;
-}
-
-/* ৪. ডেস্কটপ বা বড় স্ক্রিনের জন্য ফিক্স (বর্ডার ও রাউন্ড শেপ) */
-@media (min-width: 600px) {
-    .fundraising-card {
-        border-radius: 10px !important; /* ডেস্কটপে রাউন্ড হবে */
-        border: 1px solid #ced0d4 !important; /* ডেস্কটপে হালকা বর্ডার */
-        margin-bottom: 20px !important;
-        width: 100% !important;
-        box-sizing: border-box;
-    }
-    
-    .fundraising-hero {
-        border-bottom: 1px solid #eee; /* ইমেজের নিচে হালকা দাগ */
-    }
-}
-
-/* ৫. টেক্সট ও বাটনের প্যাডিং ঠিক করা */
-.fundraising-body, 
-.fundraising-actions {
-    padding: 12px 16px !important; /* কন্টেন্ট সাইড থেকে একটু সরে থাকবে */
-}
-
-/* ====================================
-   STORY BORDER & GAP FIXES (FINAL)
-   ==================================== */
-
-/* ১. হোম পেজের স্টোরি লিস্ট (Preview List) */
-.story-container {
-    padding: 8px 0 !important; /* উপরে-নিচে গ্যাপ কমানো হয়েছে, দুই পাশে ০ */
-    margin-bottom: 0 !important;
-    border-bottom: 1px solid #eee !important;
-    min-height: auto !important; /* ফিক্সড হাইট রিমুভ */
-    gap: 6px !important; /* কার্ডগুলোর মাঝখানের গ্যাপ কমানো হয়েছে */
-}
-
-/* প্রথম কার্ডের বাম পাশের গ্যাপ রিমুভ */
-.story-container .story-item:first-child {
-    margin-left: 5px !important;
-}
-
-/* স্টোরি কার্ডের সাইজ এবং শ্যাডো এডজাস্টমেন্ট */
-.story-item {
-    width: 100px !important; /* প্রস্থ সামান্য কমানো হয়েছে যাতে বেশি স্টোরি দেখা যায় */
-    height: 170px !important; /* উচ্চতা ঠিক রাখা হয়েছে */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; /* শ্যাডো হালকা করা হয়েছে */
-    border-radius: 10px !important; /* বর্ডার রেডিয়াস সামান্য কমানো হয়েছে */
-}
-
-/* ২. ফুল স্ক্রিন স্টোরি ভিউয়ার (Modal) */
-#storyViewerModal {
-    background-color: #000 !important;
-}
-
-.story-viewer-media {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-/* ছবি এবং ভিডিও যেন স্ক্রিনের দুই পাশে লেগে থাকে */
-.story-viewer-media img, 
-.story-viewer-media video {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 100vh !important;
-    object-fit: contain !important; /* ছবি যেন কেটে না যায় */
-}
-
-/* আপনি যদি চান ছবি পুরো স্ক্রিন জুড়ে থাকবে (একটু কেটে গেলেও), 
-   তাহলে নিচের কোডটুকু ব্যবহার করতে পারেন (Optional): */
-/*
-.story-viewer-media img, 
-.story-viewer-media video {
-    object-fit: cover !important; 
-}
-*/
-
-/* টপ প্রোগ্রেস বার এরিয়া (History Card Top) */
-#storyProgressBars {
-    padding-top: 10px !important; /* আইফোনের নচ বা টপ বারের জন্য সেফ স্পেস */
-    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent) !important;
-}
-
-/* ইউজার ইনফো (নাম ও ছবি) */
-#storyUserInfo {
-    top: 25px !important;
-    padding-left: 10px !important;
-}
-
-/* ক্লোজ বাটন পজিশন */
-#closeStoryViewerBtn {
-    top: 25px !important;
-    right: 10px !important;
-    padding: 5px !important;
-}
-
-/* ==================================================
-   নতুন কোড: আপনার style.css ফাইলের শেষে পেস্ট করুন
-   ================================================== */
-
-/* ১. নোটিফিকেশন ডিলিট এবং ক্লিয়ার বাটন ডিজাইন */
-.notification-modal-header .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.delete-notif-btn {
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 8px;
-    font-size: 16px;
-    transition: color 0.2s;
-    margin-left: auto; /* বাটনটিকে ডানপাশে ঠেলে দেবে */
-}
-
-.delete-notif-btn:hover {
-    color: var(--danger-color);
-}
-
-.clear-all-btn {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-/* ২. স্টোরি এবং ফিডের মাঝখানের গ্যাপ ফিক্স */
-.story-container {
-    padding: 8px 0 !important;
-    margin-bottom: 0 !important;
-    border-bottom: 0.5px solid #e4e6eb !important;
-    gap: 6px !important;
-}
-
-.story-container .story-item:first-child {
-    margin-left: 5px !important;
-}
-
-.feed-container {
-    padding-top: 0 !important;
-}
-
-.feed-container .prayer-card:first-child {
-    border-top: none !important;
-    margin-top: 0 !important;
-}
-
-/* ৩. ফান্ডরাইজিং কার্ড ফুল উইডথ ফিক্স (মোবাইলের জন্য) */
-.fundraising-card {
-    padding: 0 !important;
-    margin: 0 0 10px 0 !important;
-    width: 100% !important;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.fundraising-hero {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 250px;
-    margin: 0 !important;
-    padding: 0 !important;
-    display: block;
-    background-color: #f0f2f5;
-}
-
-.fundraising-image {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover;
-    display: block;
-    border: none !important;
-    margin: 0 !important;
-}
-
-.fundraising-body, 
-.fundraising-actions {
-    padding: 12px 16px !important;
-}
-
-/* বড় স্ক্রিনে ফান্ডরাইজিং কার্ডের ডিজাইন */
-@media (min-width: 600px) {
-    .fundraising-card {
-        border-radius: 10px !important;
-        border: 1px solid #ced0d4 !important;
-        margin-bottom: 20px !important;
-    }
-}
-
-/* ৪. পোল সিস্টেম ডিজাইন */
-.poll-container { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; padding: 0 5px; }
-.poll-option-btn {
-    width: 100%; padding: 12px 15px; background: #fff; border: 1px solid #ccc;
-    border-radius: 8px; text-align: left; font-size: 15px; font-weight: 500;
-    cursor: pointer; transition: all 0.2s; color: var(--text-color);
-}
-.poll-option-btn:hover { background: #f0f2f5; border-color: var(--primary-color); }
-.poll-result-bar {
-    position: relative; height: 42px; border-radius: 8px; background: #f0f2f5;
-    overflow: hidden; border: 1px solid #e4e6eb;
-}
-.poll-result-bar.selected { border-color: var(--primary-color); background: #f0f8ff; }
-.poll-result-bar .fill {
-    height: 100%; background: rgba(24, 119, 242, 0.2);
-    transition: width 0.5s ease-out; border-radius: 8px 0 0 8px;
-}
-.poll-result-bar.selected .fill { background: rgba(24, 119, 242, 0.4); }
-.poll-result-bar .label {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 15px; font-size: 15px; font-weight: 500; color: var(--text-color); z-index: 2;
-}
-.poll-meta { font-size: 12px; color: var(--light-text); text-align: right; margin-top: 5px; padding-right: 5px; }
-
-/* ৫. নতুন স্টোরি এডিটর ও ভিউয়ার ফিক্স */
-.story-editor-modal {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #000 !important; z-index: 10000 !important;
-    display: flex; flex-direction: column;
-}
-.editor-container { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; }
-.editor-canvas-area { flex: 1; position: relative; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.story-canvas { width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
-.draggable-text { 
-    font-size: 28px; font-weight: 700; color: white; text-align: center; 
-    outline: none; width: 80%; font-family: 'Hind Siliguri', sans-serif;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-.editor-top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; z-index: 20; }
-.editor-bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px; z-index: 20; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; flex-direction: column; gap: 10px; }
-.editor-btn.primary { width: 100%; padding: 12px; border-radius: 30px; background: white; border: none; font-weight: bold; cursor: pointer; }
-.color-palette { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
-.c-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
-
-/* স্টোরি ভিউয়ার ইমেজের জন্য */
-.story-viewer-media img, .story-viewer-media video {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 100vh !important;
-    object-fit: contain !important;
-}
-
-/* ====================================
-   PRO STORY EDITOR STYLES (NEW)
-   ==================================== */
-
-/* ১. রেকর্ড বাটন এবং প্রোগ্রেস রিং এনিমেশন */
-#recordControls {
-    position: relative;
-    z-index: 50;
-    margin-bottom: 20px;
-}
-
-#recordBtn {
-    cursor: pointer;
-    transition: transform 0.1s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-#recordBtn:active {
-    transform: scale(0.95);
-}
-
-.progress-ring circle {
-    transition: stroke-dashoffset 0.1s linear;
-    transform-origin: 50% 50%;
-}
-
-/* ২. লাইভ ক্যামেরা এবং প্রিভিউ */
-#liveCameraFeed {
-    background: #000;
-}
-
-#editorPreview {
-    position: relative;
-    overflow: hidden;
-}
-
-/* ৩. ড্র্যাগেবল টেক্সট স্টাইল */
-.draggable-text {
-    font-family: 'Hind Siliguri', sans-serif; /* বাংলা ফন্টের জন্য */
-    text-align: center;
-    min-width: 100px;
-    padding: 5px;
-    border: 1px dashed transparent; /* ফোকাস করলে বর্ডার দেখাবে */
-    transition: border 0.2s;
-    cursor: move;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.draggable-text:focus {
-    border-color: rgba(255, 255, 255, 0.5);
-    outline: none;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-}
-
-/* ৪. এডিটর বাটনগুলো */
-.editor-btn.secondary {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(5px);
-    padding: 10px 15px;
-    border-radius: 20px;
-    font-size: 13px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    width: auto;
-    min-width: 70px;
-}
-
-.editor-btn.secondary i {
-    font-size: 18px;
-    margin-bottom: 2px;
-}
-
-.editor-btn.secondary:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-/* ৫. টেক্সট ওভারলে লেয়ার */
-#textOverlayLayer {
-    z-index: 10;
-    touch-action: none; /* মোবাইল ড্র্যাগিং স্মুথ করার জন্য */
-}
-
-/* ৬. মিউজিক আপলোড ইনপুট */
-#musicUpload {
-    display: none;
-}
-
-/* ৭. পাবলিশ বাটন ফিক্স */
-#publishStoryBtn {
-    background: #1877F2;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 15px rgba(24, 119, 242, 0.4);
-}
-
-/* ====================================
-   ADVANCED STORY EDITOR STYLES (FULLSCREEN)
-   (Paste this at the bottom of your style.css)
-   ==================================== */
-
-/* Modal & Container */
-.story-editor-modal {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    width: 100%; height: 100%;
-    background-color: #000 !important;
-    z-index: 10000 !important;
-    display: flex; flex-direction: column;
-    padding: 0 !important;
-}
-
-.editor-container {
-    width: 100%; height: 100%;
-    max-width: 500px;
-    background: #000;
-    position: relative;
-    display: flex; flex-direction: column;
-    margin: 0 auto;
-}
-
-/* Top Bar & Tabs */
-.editor-top-bar {
-    position: absolute; top: 0; left: 0; right: 0;
-    padding: 15px; z-index: 20;
-    display: flex; justify-content: space-between; align-items: center;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-}
-
-.editor-top-actions {
-    display: flex; align-items: center; gap: 10px;
-}
-
-.icon-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    border: none; color: white; font-size: 18px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; backdrop-filter: blur(5px);
-}
-
-.editor-tabs-center {
-    display: flex; background: rgba(0, 0, 0, 0.5);
-    border-radius: 20px; padding: 4px;
-    backdrop-filter: blur(10px);
-}
-
-.editor-tab-btn {
-    background: transparent; border: none;
-    color: #ccc; padding: 6px 15px;
-    font-size: 14px; font-weight: 600;
-    border-radius: 16px; cursor: pointer;
-    transition: all 0.3s;
-}
-
-.editor-tab-btn.active {
-    background: #333; color: white;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-
-/* Canvas Area */
-.editor-canvas-area {
-    flex: 1; width: 100%; position: relative;
-    background: #111; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-}
-
-.story-canvas {
-    width: 100%; height: 100%;
-    background-size: cover; background-position: center;
-    position: relative;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; color: white;
-}
-
-.canvas-content { width: 85%; z-index: 2; }
-
-.draggable-text {
-    font-size: 28px; font-weight: 700; line-height: 1.4;
-    outline: none; text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    font-family: 'Hind Siliguri', sans-serif; min-height: 40px;
-    cursor: text;
-}
-.draggable-text[contenteditable]:empty::before {
-    content: attr(data-placeholder); color: rgba(255, 255, 255, 0.6);
-}
-
-.watermark {
-    position: absolute; bottom: 100px; font-size: 12px;
-    opacity: 0.5; font-weight: bold; pointer-events: none;
-}
-
-/* Media Mode & Camera */
-#mediaCanvas { background: black; }
-#liveCameraFeed { transform: scaleX(-1); /* Selfie Mirror Effect */ }
-
-.media-placeholder-content {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    background: #111;
-}
-
-.media-upload-options { display: flex; gap: 40px; }
-
-.upload-trigger-btn {
-    display: flex; flex-direction: column; align-items: center;
-    color: #ccc; background: none; border: none; cursor: pointer;
-}
-
-.upload-icon-circle {
-    width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; color: white; margin-bottom: 10px;
     transition: transform 0.2s;
 }
-.upload-trigger-btn:active .upload-icon-circle {
-    transform: scale(0.9); background: var(--primary-color);
+
+.color-dot.active {
+    transform: scale(1.2);
+    border-color: #1877F2;
 }
 
-/* Sidebar Tools */
-.editor-sidebar {
-    position: absolute; right: 15px; top: 20%;
-    display: flex; flex-direction: column; gap: 20px; z-index: 25;
-}
-.tool-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-.tool-icon {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.2);
-    color: white; display: flex; align-items: center; justify-content: center;
-    font-size: 18px; margin-bottom: 4px; backdrop-filter: blur(5px);
-}
-.tool-item span { font-size: 10px; color: white; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-
-/* Bottom Bar & Controls */
-.editor-bottom-bar {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 20px; z-index: 30;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-    display: flex; flex-direction: column; gap: 10px;
-}
-
-.story-caption-input {
-    width: 100%; background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255,255,255,0.3); padding: 10px 15px;
-    border-radius: 20px; color: white; font-size: 14px;
-    backdrop-filter: blur(5px);
-}
-.story-caption-input::placeholder { color: rgba(255,255,255,0.7); }
-.story-caption-input:focus { outline: none; background: rgba(255,255,255,0.3); }
-
-/* Recording Ring (Gauge Bar) */
-.record-btn-ring {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: transparent; border: none; position: relative;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: transform 0.1s;
-}
-.record-btn-ring:active { transform: scale(0.95); }
-
-.record-inner-dot {
-    width: 60px; height: 60px; background: #ff4757;
-    border-radius: 50%; transition: all 0.3s;
-    border: 4px solid white; box-sizing: border-box;
-}
-
-/* Active Recording State */
-.record-btn-ring.recording .record-inner-dot {
-    width: 30px; height: 30px; border-radius: 6px; background: #ff4757;
-}
-
-.progress-ring {
-    position: absolute; top: 0; left: 0;
-    transform: rotate(-90deg); pointer-events: none;
-}
-.progress-ring__circle {
-    transition: stroke-dashoffset 0.1s linear;
-    transform-origin: 50% 50%;
-    stroke-dasharray: 226; /* 2 * pi * 36 */
-    stroke-dashoffset: 226; /* Hidden initially */
-}
-
-/* Buttons & Palette */
-.action-buttons-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.editor-btn {
-    padding: 12px; border-radius: 30px; font-weight: 700; font-size: 15px;
-    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.editor-btn.primary { background: white; color: black; flex: 1; }
-.editor-btn.secondary {
-    background: rgba(255,255,255,0.2); color: white; width: auto; padding: 12px 20px;
-}
-
-.color-palette { display: flex; gap: 10px; justify-content: center; padding-bottom: 10px; }
-.c-dot {
-    width: 28px; height: 28px; border-radius: 50%; border: 2px solid white;
-    flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-/* Viewer Fixes */
-#storyViewerModal { background: #000 !important; z-index: 20000 !important; }
-.story-viewer-media { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-.story-viewer-media img, .story-viewer-media video { width: 100%; height: auto; max-height: 100vh; object-fit: contain; }
-#storyProgressBars { padding-top: 10px !important; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent) !important; }
-#storyUserInfo { top: 30px !important; padding-left: 10px !important; }
-#closeStoryViewerBtn { top: 30px !important; right: 10px !important; }
-
-/* ====================================
-   VOICE COMMENTS STYLES
-   ==================================== */
-
-/* ইনপুট বারের ভয়েস রেকর্ড বাটন */
-.voice-comment-btn {
-    background: none;
-    border: none;
-    color: var(--secondary-color);
-    font-size: 20px;
-    cursor: pointer;
-    padding: 5px 10px;
-    transition: color 0.2s;
-}
-
-.voice-comment-btn:hover {
-    color: var(--primary-color);
-}
-
-/* রেকর্ডিং চলাকালীন এনিমেশন */
-.pulse-animation {
-    animation: pulse-red 1s infinite;
-}
-
-@keyframes pulse-red {
-    0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.1); }
-    100% { opacity: 1; transform: scale(1); }
-}
-
-/* কমেন্টের ভেতরে অডিও প্লেয়ার ডিজাইন */
-.comment-audio-player {
-    width: 100%;
-    height: 35px;
-    margin-top: 5px;
-    border-radius: 20px;
-    outline: none;
-}
-
-
-
-/* ====================================
-   CUSTOM VOICE NOTE STYLES (NEW)
-   ==================================== */
-
-/* ভয়েস নোটের বাইরের আবরণ */
-.voice-note-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #e4e6eb; /* মেসেঞ্জারের মতো কালার */
-    padding: 10px 15px;
-    border-radius: 20px;
-    margin-top: 8px;
-    width: fit-content;
-    min-width: 220px;
-    max-width: 100%;
-    border: 1px solid #dcdcdc;
-    transition: background 0.2s;
-}
-
-.comment-wrapper.is-reply .voice-note-wrapper {
-    background: #f0f2f5; /* রিপ্লাই হলে একটু ভিন্ন কালার */
-}
-
-/* প্লে/পজ বাটন */
-.voice-play-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    flex-shrink: 0;
-    transition: transform 0.1s;
-}
-
-.voice-play-btn:active {
-    transform: scale(0.9);
-}
-
-/* প্রোগ্রেস বার এরিয়া */
-.voice-progress-container {
-    flex: 1;
+/* Video Trimmer UI */
+.video-trimmer-ui {
+    background: rgba(0,0,0,0.6);
+    padding: 10px;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 4px;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-/* প্রোগ্রেস বার ব্যাকগ্রাউন্ড */
-.voice-progress-track {
+.trimmer-track {
     width: 100%;
-    height: 4px;
-    background: #ccc;
-    border-radius: 2px;
+    height: 40px;
+    background: #444;
+    border-radius: 4px;
     position: relative;
-    overflow: hidden;
+    margin-bottom: 5px;
 }
 
-/* প্রোগ্রেস ফিল (যতটুকু প্লে হয়েছে) */
-.voice-progress-fill {
+.trim-handle {
+    width: 15px;
     height: 100%;
-    background: var(--primary-color);
-    width: 0%;
-    border-radius: 2px;
-    transition: width 0.1s linear;
+    background: #fff;
+    position: absolute;
+    top: 0;
+    cursor: col-resize;
+    z-index: 2;
+}
+.trim-handle.left { left: 0; border-radius: 4px 0 0 4px; }
+.trim-handle.right { right: 0; border-radius: 0 4px 4px 0; }
+
+.trim-fill {
+    position: absolute;
+    left: 15px;
+    right: 15px;
+    top: 2px;
+    bottom: 2px;
+    border-top: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    background: rgba(255,255,255,0.1);
 }
 
-/* সময় (Time Duration) */
-.voice-duration {
-    font-size: 11px;
-    color: #65676B;
+.trim-time {
+    color: white;
+    font-size: 12px;
     font-weight: 500;
 }
 
-/* ====================================
-   COMMENT SKELETON LOADER
-   ==================================== */
-.skeleton-comment-wrapper {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 0 10px;
-    animation: fadeIn 0.3s ease;
-}
-
-.skeleton-comment-avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: #f0f2f5;
-    flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
-}
-
-.skeleton-comment-block {
-    flex: 1;
+/* Text Input Overlay */
+.text-input-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    align-items: center;
+    justify-content: center;
 }
 
-.skeleton-comment-bubble {
-    height: 40px;
-    width: 80%;
-    background: #f0f2f5;
-    border-radius: 18px;
-    position: relative;
+#storyTextInput {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    text-align: center;
+    width: 90%;
+    outline: none;
+    font-family: inherit;
+    resize: none;
     overflow: hidden;
 }
 
-.skeleton-comment-meta {
-    height: 10px;
-    width: 40%;
-    background: #f0f2f5;
-    border-radius: 4px;
-    margin-left: 10px;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Shimmer Animation (আগের এনিমেশন রিইউজ করা হচ্ছে) */
-.skeleton-comment-avatar::after, 
-.skeleton-comment-bubble::after,
-.skeleton-comment-meta::after {
-    content: "";
+.text-tools-top {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-    transform: translateX(-100%);
-    animation: shimmer 1.5s infinite;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 15px;
 }
 
-@keyframes shimmer {
-    100% { transform: translateX(100%); }
+.text-tool-btn {
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
 }
+.text-tool-btn.primary {
+    background: white;
+    color: black;
+    border: none;
+}
+
+/* Sticker Picker */
+.sticker-picker {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: #222;
+    border-radius: 20px 20px 0 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp { from {transform: translateY(100%);} to {transform: translateY(0);} }
+
+.sticker-header {
+    padding: 15px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    color: white;
+    font-weight: bold;
+}
+
+.sticker-grid {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.sticker-item {
+    font-size: 35px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+/* Camera Shutter */
+.camera-shutter-container {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 4px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#captureBtn {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: #ff4757;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+#captureBtn:active { transform: scale(0.9); }
+
+/* =======================================================
+   FACEBOOK STYLE STORY EDITOR & VIEWER CSS
+   (Add this to the end of style.css)
+   ======================================================= */
+
+/* --- 1. EDITOR MODAL WRAPPER --- */
+.story-editor-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #000; z-index: 9999;
+    display: none; flex-direction: column;
+}
+
+.editor-screen {
+    width: 100%; height: 100%; position: relative;
+    display: flex; flex-direction: column; background: #000;
+}
+
+/* --- 2. CAPTURE SCREEN (CAMERA) --- */
+.editor-header-controls {
+    position: absolute; top: 10px; left: 0; width: 100%;
+    padding: 10px 15px; z-index: 20;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.header-title { color: white; font-weight: bold; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+.icon-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: none;
+    color: white; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px); transition: transform 0.1s;
+}
+.icon-btn:active { transform: scale(0.9); }
+
+.camera-viewfinder {
+    flex: 1; width: 100%; position: relative;
+    background: #111; overflow: hidden; border-radius: 12px 12px 0 0;
+    display: flex; align-items: center; justify-content: center;
+}
+
+#liveCamera {
+    width: 100%; height: 100%; object-fit: cover;
+    transform: scaleX(-1); /* Selfie Mirror Effect */
+}
+
+/* Bottom Capture Controls */
+.capture-bottom-bar {
+    height: 140px; background: #000;
+    display: flex; align-items: center; justify-content: space-around;
+    padding-bottom: 20px; position: relative; z-index: 20;
+}
+
+.shutter-container {
+    width: 80px; height: 80px; border: 4px solid white;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.shutter-btn {
+    width: 65px; height: 65px; background: white;
+    border-radius: 50%; border: none; cursor: pointer;
+    transition: all 0.1s;
+}
+.shutter-btn:active { transform: scale(0.9); background: #ff4757; }
+
+.gallery-picker-btn, .camera-flip-btn {
+    width: 45px; height: 45px;
+    background: rgba(255,255,255,0.2); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 22px; cursor: pointer;
+}
+
+.camera-modes {
+    position: absolute; bottom: 130px; width: 100%;
+    display: flex; justify-content: center; gap: 20px; z-index: 20;
+}
+.mode-text {
+    color: rgba(255,255,255,0.6); font-weight: bold; font-size: 13px;
+    padding: 6px 12px; border-radius: 20px; cursor: pointer; text-transform: uppercase;
+}
+.mode-text.active { color: white; background: rgba(0,0,0,0.5); }
+
+
+/* --- 3. EDIT SCREEN (CANVAS & TOOLS) --- */
+.editor-top-bar {
+    position: absolute; top: 0; left: 0; width: 100%;
+    padding: 15px; z-index: 50; display: flex; justify-content: space-between;
+}
+.editor-tools-right { display: flex; flex-direction: column; gap: 15px; }
+
+.editor-canvas-wrapper {
+    flex: 1; position: relative; width: 100%; height: 100%;
+    background: #111; overflow: hidden;
+    margin-top: 0; margin-bottom: 80px; /* Space for bottom bar */
+}
+
+/* Canvas Layers */
+.layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.media-layer { z-index: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+.media-layer img, .media-layer video { width: 100%; height: 100%; object-fit: contain; }
+
+.drawing-canvas { z-index: 5; pointer-events: none; touch-action: none; }
+.drawing-canvas.active { pointer-events: auto; cursor: crosshair; }
+
+.elements-layer { z-index: 10; pointer-events: none; overflow: hidden; }
+
+/* Draggable Items */
+.draggable-item {
+    position: absolute; display: inline-block;
+    padding: 5px; cursor: move;
+    pointer-events: auto; touch-action: none; user-select: none;
+    font-family: -apple-system, sans-serif; font-weight: bold;
+    text-align: center; max-width: 80%;
+}
+.draggable-item.active { border: 1px dashed rgba(255,255,255,0.8); }
+.draggable-text { text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.2; white-space: pre-wrap; font-size: 24px; color: white; }
+.draggable-sticker { font-size: 60px; }
+
+/* Bottom Action Bar */
+.editor-bottom-bar {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    height: 80px; background: #000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; z-index: 50;
+}
+.save-story-btn {
+    background: rgba(255,255,255,0.2); color: white;
+    padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer;
+}
+.share-story-btn {
+    background: #1877F2; color: white; border: none;
+    padding: 10px 25px; border-radius: 20px; font-weight: bold;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+}
+
+/* --- 4. OVERLAYS (Text, Stickers, Colors) --- */
+.text-input-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+    z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#storyTextInput {
+    background: transparent; border: none; outline: none;
+    color: white; font-size: 32px; font-weight: bold; text-align: center;
+    width: 90%; height: 50%; resize: none; overflow: hidden; font-family: inherit;
+}
+.text-tools-header {
+    position: absolute; top: 20px; width: 100%; padding: 0 20px;
+    display: flex; justify-content: space-between;
+}
+.done-btn { color: white; font-weight: bold; background: none; border: none; font-size: 18px; cursor: pointer; }
+
+/* Color Palette Scroll */
+.text-color-slider, .color-palette-scroll {
+    position: absolute; bottom: 100px; display: flex; gap: 15px; overflow-x: auto; padding: 10px; width: 100%; justify-content: center;
+}
+.color-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid white; cursor: pointer; flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+.color-dot.active { transform: scale(1.2); border-color: #1877F2; }
+
+/* Sticker Picker */
+.sticker-picker {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 50%;
+    background: #222; border-radius: 20px 20px 0 0; z-index: 100;
+    display: flex; flex-direction: column; animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp { from {transform: translateY(100%);} to {transform: translateY(0);} }
+
+.sticker-header {
+    padding: 15px; border-bottom: 1px solid #333; display: flex;
+    justify-content: space-between; color: white; font-weight: bold;
+}
+.sticker-grid {
+    padding: 15px; display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 15px; overflow-y: auto;
+}
+.sticker-item { font-size: 40px; text-align: center; cursor: pointer; }
+
+/* --- 5. STORY VIEWER --- */
+.story-viewer-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 10000; display: flex; flex-direction: column;
+}
+
+.progress-bar-wrapper {
+    position: absolute; top: 10px; left: 5px; right: 5px;
+    display: flex; gap: 4px; z-index: 20;
+}
+.progress-bar-container {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden;
+}
+.progress-bar-fill-story { height: 100%; background: #fff; width: 0%; transition: width linear; }
+
+.story-header-info {
+    position: absolute; top: 25px; left: 15px; z-index: 20;
+    display: flex; align-items: center; gap: 10px; color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5); font-weight: bold;
+}
+.close-viewer-btn {
+    position: absolute; top: 20px; right: 15px; z-index: 25;
+    background: none; border: none; color: white; font-size: 30px; cursor: pointer; text-shadow: 0 1px 2px black;
+}
+
+.story-viewer-media {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+}
+.story-viewer-media img, .story-viewer-media video {
+    width: 100%; height: 100%; object-fit: contain; max-height: 100vh;
+}
+.viewer-overlay-item {
+    position: absolute; pointer-events: none; color: white; font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.nav-area { position: absolute; top: 60px; bottom: 0; width: 35%; z-index: 15; }
+.nav-area.left { left: 0; }
+.nav-area.right { right: 0; }
