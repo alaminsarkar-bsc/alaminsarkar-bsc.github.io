@@ -3449,22 +3449,28 @@ textarea.post-input {
     }
 }
 
-
 /* ====================================
-   HEADER PROFILE IMAGE STYLE
+   HEADER PROFILE IMAGE STYLE (BLUE RING)
    (Paste at the bottom of style.css)
    ==================================== */
+
 .header-profile-img {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     object-fit: cover;
-    border: 1px solid #ddd;
+
+    /* ছবির এবং রিংয়ের মাঝে সাদা গ্যাপ */
+    border: 2px solid #ffffff;
+
+    /* নীল রঙের রিং (Shadow দিয়ে তৈরি) */
+    box-shadow: 0 0 0 2px var(--primary-color);
+    
+    /* এনিমেশন ইফেক্ট (অপশনাল) */
+    transition: all 0.2s ease;
 }
 
-/* যখন প্রোফাইল ট্যাব অ্যাক্টিভ থাকবে তখন বর্ডার নীল হবে */
-.nav-tab.active .header-profile-img {
-    border: 2px solid var(--primary-color);
-    width: 26px; /* বর্ডার বাড়লে সাইজ একটু কমানো হলো যাতে লেআউট ঠিক থাকে */
-    height: 26px;
+/* হোভার করলে রিংটি একটু উজ্জ্বল হবে */
+.nav-tab:hover .header-profile-img {
+    box-shadow: 0 0 0 3px var(--primary-color);
 }
