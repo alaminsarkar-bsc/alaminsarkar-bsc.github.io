@@ -214,6 +214,7 @@ async function loadOriginalPost(postId) {
 async function loadComments(postId) {
     const commentList = document.getElementById('commentList');
     
+    // ১. লোডিং শুরু: স্কেলেটন লোডার দেখানো হচ্ছে
     renderCommentSkeleton(commentList);
 
     try {
@@ -225,8 +226,10 @@ async function loadComments(postId) {
 
         if (error) throw error;
         
+        // ২. ডেটা আসার পর রেন্ডার
         renderComments(commentList, data);
         
+        // হেডার কাউন্ট আপডেট
         const headerCount = document.querySelector('.comment-count-header');
         if(headerCount) headerCount.textContent = `সকল কমেন্ট (${data.length})`;
 
@@ -236,6 +239,7 @@ async function loadComments(postId) {
     }
 }
 
+// স্কেলেটন জেনারেটর ফাংশন
 function renderCommentSkeleton(container) {
     const skeletonHTML = Array(6).fill('').map(() => `
         <div class="skeleton-comment-wrapper">
@@ -306,6 +310,9 @@ function createCommentNode(comment, isReply = false) {
         menuItems = `<button class="action-report" data-id="${comment.id}"><i class="fas fa-flag"></i> রিপোর্ট</button>`;
     }
 
+    // ====================================
+    // CUSTOM VOICE PLAYER HTML
+    // ====================================
     let audioPlayerHTML = '';
     if (comment.audio_url) {
         const uniqueId = `audio-${comment.id}`;
@@ -362,6 +369,7 @@ function createCommentNode(comment, isReply = false) {
         });
     }
 
+    // টাইম লোডিং ফিক্স
     if (comment.audio_url) {
         setTimeout(() => {
             const audioEl = wrapper.querySelector('audio');
@@ -471,6 +479,7 @@ async function handleCommentSubmit(e) {
         let audioUrl = null;
 
         if (audioBlob) {
+            console.log("Uploading audio...");
             const fileName = `comment_audio_${currentUser.id}_${Date.now()}.webm`;
             const { data: uploadData, error: uploadError } = await supabaseClient.storage
                 .from('comment_audios')
@@ -487,7 +496,6 @@ async function handleCommentSubmit(e) {
 
         if (!text && audioUrl) text = null; 
 
-        // [UPDATED] Insert and Process Mentions
         const { data, error } = await supabaseClient
             .from('comments')
             .insert([{
@@ -501,11 +509,6 @@ async function handleCommentSubmit(e) {
             .single();
 
         if (error) throw error;
-
-        // --- NEW: Process Mentions in Comment ---
-        if (text) {
-            await processMentionsAndNotify(text, currentPrayerIdForComment, 'comment');
-        }
 
         input.value = '';
         input.style.height = 'auto';
@@ -541,7 +544,6 @@ async function handleCommentSubmit(e) {
 
         resetReplyState();
 
-        // Notify Post Author (if not self)
         const prayer = allFetchedPrayers.get(currentPrayerIdForComment);
         if (prayer && prayer.author_uid !== currentUser.id) {
              const notifText = audioUrl ? `${currentUser.profile.display_name} আপনার পোস্টে একটি ভয়েস কমেন্ট করেছেন।` : `${currentUser.profile.display_name} আপনার পোস্টে কমেন্ট করেছেন।`;

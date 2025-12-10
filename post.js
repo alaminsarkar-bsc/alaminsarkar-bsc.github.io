@@ -1,3 +1,4 @@
+
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -15,7 +16,7 @@ let postType = 'prayer';
 let isPollMode = false; // পোল মোড ট্র্যাকিং
 
 // ====================================
-// AI মডারেশন মডেল লোড
+// AI মডারেশন মডেল লোড (NEW)
 // ====================================
 let nsfwModel = null;
 
@@ -29,7 +30,7 @@ async function loadNSFWModel() {
     }
 }
 
-// কন্টেন্ট চেক করার ফাংশন
+// কন্টেন্ট চেক করার ফাংশন (NEW)
 async function checkContentSafety(imgElement) {
     if (!nsfwModel) {
         console.warn("NSFW Model not loaded yet, skipping check.");
@@ -334,13 +335,16 @@ async function handleNewPost(e) {
     }
     if (isPollMode && !details) details = title;
 
-    // --- 2. AI MODERATION CHECK ---
+    // --- 2. AI MODERATION CHECK (NEW) ---
+    // ফাইলগুলো ধরা
     const imageFile = document.getElementById('imageUploadInput').files[0];
     const videoFile = document.getElementById('videoUploadInput').files[0];
     
+    // চেকিং শুরু করার আগে লোডিং দেখান
     setLoading(btn, true);
 
     try {
+        // ১. ছবি চেক করা
         if (imageFile) {
             console.log("Checking image safety...");
             const img = new Image();
@@ -351,13 +355,15 @@ async function handleNewPost(e) {
             if (!isSafe) {
                 alert("দুঃখিত! আপনার ছবিতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
                 setLoading(btn, false);
-                return; 
+                return; // এখানেই প্রসেস বন্ধ
             }
         }
 
+        // ২. ভিডিও চেক করা (থাম্বনেইল এর মাধ্যমে)
         if (videoFile) {
             console.log("Checking video safety...");
             try {
+                // ভিডিও থেকে থাম্বনেইল তৈরি
                 const thumbnailBlob = await generateVideoThumbnailFromFile(videoFile);
                 const thumbImg = new Image();
                 thumbImg.src = URL.createObjectURL(thumbnailBlob);
@@ -367,7 +373,7 @@ async function handleNewPost(e) {
                 if (!isSafe) {
                     alert("দুঃখিত! আপনার ভিডিওতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
                     setLoading(btn, false);
-                    return; 
+                    return; // আপলোড বন্ধ
                 }
             } catch (thumbErr) {
                 console.warn("Thumbnail check skipped due to error:", thumbErr);
@@ -375,9 +381,14 @@ async function handleNewPost(e) {
         }
     } catch (checkError) {
         console.error("Moderation check failed:", checkError);
+        // মডারেশন ফেইল হলে কী করবেন? আপাতত আমরা আপলোড চালিয়ে যাচ্ছি, কিন্তু আপনি চাইলে আটকাতে পারেন
+        // alert("যাচাইকরণে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।");
+        // setLoading(btn, false);
+        // return;
     }
 
-    // --- 3. আসল আপলোড লজিক ---
+    // --- 3. আসল আপলোড লজিক (আগের কোড) ---
+    // (যদি মডারেশন পাস করে, কোড এখানে আসবে)
     const youtubeUrl = document.getElementById('youtubeLinkInput').value.trim();
     const audioInputFile = document.getElementById('audioUploadInput').files[0];
 
@@ -482,20 +493,10 @@ async function handleNewPost(e) {
             postData.status = 'active';
         }
 
-        // [UPDATED] Insert and retrieve ID for mentions
-        const { data: newPostData, error: insertError } = await supabaseClient
-            .from('prayers')
-            .insert([postData])
-            .select()
-            .single();
+        const { error: insertError } = await supabaseClient.from('prayers').insert([postData]);
 
         if (insertError) throw insertError;
         
-        // --- PROCESS MENTIONS ---
-        if (newPostData) {
-            await processMentionsAndNotify(details, newPostData.id, 'post');
-        }
-
         alert("সফলভাবে পোস্ট করা হয়েছে!");
         window.location.href = '/index.html';
 
