@@ -117,6 +117,19 @@
             <emoji-picker></emoji-picker>
         </div>
 
+        <!-- [NEW] মেসেজ ডিলিট মডাল (লং প্রেস করলে আসবে) -->
+        <div id="deleteOptionsModal" class="modal-overlay" style="display: none;">
+            <div class="modal-box">
+                <h3 style="margin-bottom: 15px; font-size: 16px; color: #333;">Delete Message?</h3>
+                <div class="modal-actions">
+                    <button id="deleteForMeBtn" class="modal-btn">Delete for me</button>
+                    <!-- Delete for everyone শুধু নিজের মেসেজে দেখাবে -->
+                    <button id="deleteForEveryoneBtn" class="modal-btn danger" style="display: none;">Delete for everyone</button>
+                    <button id="cancelDeleteBtn" class="modal-btn cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <!-- চ্যাট ফুটার (ইনপুট, ছবি, ইমোজি এবং মাইক বাটন) -->
         <footer class="chat-footer-area">
             <div class="footer-actions-left">
@@ -160,7 +173,7 @@
     <!-- ইমেজ কমপ্রেশন লাইব্রেরি -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     
-    <!-- ইমোজি পিকার লাইব্রেরি (নতুন যোগ করা হয়েছে) -->
+    <!-- ইমোজি পিকার লাইব্রেরি -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
 
     <!-- মেইন লজিক ফাইল -->

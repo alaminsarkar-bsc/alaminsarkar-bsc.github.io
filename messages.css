@@ -14,12 +14,16 @@ body {
     overflow: hidden; /* পুরো পেজ স্ক্রল বন্ধ */
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* লং প্রেসের সময় অটোমেটিক টেক্সট সিলেক্ট হওয়া বন্ধ করার জন্য */
+    -webkit-user-select: none; 
+    user-select: none;
+    -webkit-touch-callout: none; /* iOS এ লং প্রেসে ডিফল্ট মেনু বন্ধ করতে */
 }
 
 /* ============================
    LAYOUT FIXES (Full Width)
    ============================ */
-/* পুরো কন্টেইনার যেন স্ক্রিনের বাইরে না যায় বা ছোট না হয় */
 .view-container {
     width: 100vw;
     max-width: 100%;
@@ -95,7 +99,7 @@ body {
 
 /* [FIXED] Message Body - Full Width & Padding Fix */
 .message-body {
-    padding: 70px 0 80px 0; /* ডানে-বামে প্যাডিং ০ */
+    padding: 70px 0 80px 0; 
     height: calc(100vh - 140px);
     overflow-y: auto; 
     overflow-x: hidden;
@@ -133,6 +137,10 @@ body {
     line-height: 1.4; 
     position: relative; 
     word-wrap: break-word; 
+    
+    /* টেক্সট কপি করার পারমিশন (বাবলের ভেতরে) */
+    user-select: text; 
+    -webkit-user-select: text;
 }
 
 .message-row.sent .bubble { background-color: var(--messenger-blue); color: white; border-bottom-right-radius: 4px; }
@@ -201,16 +209,15 @@ body {
 .preview-content img { max-height: 200px; border-radius: 8px; border: 1px solid #eee; }
 #closePreviewBtn { position: absolute; top: -10px; right: -10px; background: #333; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
 
-/* [NEW] Emoji Picker Styles */
+/* Emoji Picker Styles */
 .emoji-picker-popup {
     position: fixed;
-    bottom: 70px; /* ফুটারের ঠিক উপরে */
+    bottom: 70px;
     right: 10px;
     z-index: 200;
     box-shadow: 0 5px 20px rgba(0,0,0,0.2);
     border-radius: 10px;
     background: white;
-    /* মোবাইল ভিউতে সাইজ ঠিক রাখার জন্য */
     max-width: 90vw;
 }
 emoji-picker {
@@ -239,7 +246,26 @@ emoji-picker {
 .rec-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
 .rec-btn.send { background: white; color: #ea4335; }
 
-/* Full Screen Modal */
+/* [NEW] Delete Message Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-box {
+    background: white; width: 80%; max-width: 300px;
+    padding: 20px; border-radius: 12px; text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+.modal-actions { display: flex; flex-direction: column; gap: 10px; }
+.modal-btn {
+    padding: 12px; border: none; background: #f0f2f5;
+    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.modal-btn.danger { color: red; background: #fff0f0; }
+.modal-btn.cancel { background: white; border: 1px solid #ddd; }
+
+/* Full Screen Image */
 .fs-image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; align-items: center; justify-content: center; }
 .fs-modal-content { max-width: 100%; max-height: 100vh; object-fit: contain; }
 .fs-close-btn { position: absolute; top: 20px; right: 20px; font-size: 40px; color: #fff; cursor: pointer; }

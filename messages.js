@@ -19,6 +19,10 @@ let audioChunks = [];
 let recordingInterval = null;
 let isRecording = false;
 
+// লং প্রেস ভ্যারিয়েবল (ডিলিট ফিচারের জন্য)
+let pressTimer;
+let selectedMessageId = null;
+
 // ==========================
 // ১. অ্যাপ লোডিং এবং অথেন্টিকেশন
 // ==========================
@@ -151,11 +155,13 @@ async function openChat(partnerId) {
 async function loadMessages(partnerId) {
     const container = document.getElementById('messageContainer');
     
+    // [UPDATED] ডিলিটেড মেসেজ ফিল্টার করা (Delete for me)
     const { data: messages, error } = await supabaseClient
         .from('messages')
         .select('*')
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .or(`sender_id.eq.${partnerId},receiver_id.eq.${partnerId}`)
+        .not('deleted_by', 'cs', `{"${currentUser.id}"}`) // এই লাইনটি আমার ডিলিট করা মেসেজ লুকাবে
         .order('created_at', { ascending: true });
 
     container.innerHTML = ''; 
@@ -221,7 +227,8 @@ async function sendMessage() {
         receiver_id: partnerId, 
         content: text || null, 
         image_url: imageUrl, 
-        is_read: false 
+        is_read: false,
+        deleted_by: [] // ডিফল্ট খালি অ্যারে
     };
     
     try {
@@ -233,7 +240,7 @@ async function sendMessage() {
         const empty = document.querySelector('.empty-chat-placeholder');
         if(empty) empty.remove();
         
-        // ইমোজি পিকার খোলা থাকলে বন্ধ করা
+        // ইমোজি পিকার বন্ধ করা
         document.getElementById('emojiPickerContainer').style.display = 'none';
 
     } catch (err) {
@@ -260,7 +267,8 @@ async function sendLikeEmoji(partnerId) {
             sender_id: currentUser.id, 
             receiver_id: partnerId, 
             content: '👍', 
-            is_read: false 
+            is_read: false,
+            deleted_by: []
         }]);
     } catch (e) {}
 }
@@ -350,7 +358,8 @@ async function sendRecording() {
                 receiver_id: activeChatUserId, 
                 audio_url: audioUrl,
                 content: null,
-                is_read: false 
+                is_read: false,
+                deleted_by: []
             }]);
         } else {
             alert("Audio send failed.");
@@ -364,33 +373,57 @@ async function sendRecording() {
 }
 
 // ==========================
-// ৬. রিয়েলটাইম (Realtime)
+// ৬. রিয়েলটাইম (Realtime) - ডিলিট হ্যান্ডলিং সহ
 // ==========================
 function setupRealtimeChat(partnerId) {
     if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
     
+    // [UPDATED] Listen to ALL events (*), not just INSERT
     realtimeSubscription = supabaseClient.channel('chat-room')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-            const msg = payload.new;
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
             
-            if ((msg.sender_id === partnerId && msg.receiver_id === currentUser.id) || 
-                (msg.sender_id === currentUser.id && msg.receiver_id === partnerId)) {
-                
-                const emptyPlaceholder = document.querySelector('.empty-chat-placeholder');
-                if(emptyPlaceholder) emptyPlaceholder.remove();
-                
-                appendMessageToUI(msg);
-                scrollToBottom(true);
-                
-                if (msg.sender_id === partnerId) markAsSeen(partnerId);
+            const eventType = payload.eventType;
+            const newMsg = payload.new;
+            const oldMsg = payload.old;
+
+            // ১. নতুন মেসেজ আসলে
+            if (eventType === 'INSERT') {
+                if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
+                    (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
+                    
+                    const emptyPlaceholder = document.querySelector('.empty-chat-placeholder');
+                    if(emptyPlaceholder) emptyPlaceholder.remove();
+                    
+                    appendMessageToUI(newMsg);
+                    scrollToBottom(true);
+                    
+                    if (newMsg.sender_id === partnerId) markAsSeen(partnerId);
+                }
+            } 
+            // ২. মেসেজ ডিলিট হলে (Delete for Everyone)
+            else if (eventType === 'DELETE') {
+                const el = document.getElementById(`msg-${oldMsg.id}`);
+                if (el) el.remove();
             }
+            // ৩. মেসেজ আপডেট হলে (Delete for Me)
+            else if (eventType === 'UPDATE') {
+                // যদি deleted_by অ্যারেতে আমার আইডি যোগ হয়, তাহলে রিমুভ করব
+                if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
+                    const el = document.getElementById(`msg-${newMsg.id}`);
+                    if (el) el.remove();
+                }
+            }
+
         }).subscribe();
 }
 
 // ==========================
-// ৭. UI হেল্পার ও রেন্ডারিং
+// ৭. UI হেল্পার ও রেন্ডারিং (লং প্রেস সহ)
 // ==========================
 function appendMessageToUI(msg) {
+    // যদি আমি ডিলিট করে থাকি, তবে রেন্ডার করব না
+    if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
+
     const container = document.getElementById('messageContainer');
     const isMe = msg.sender_id === currentUser.id;
     let contentHTML = '';
@@ -417,15 +450,95 @@ function appendMessageToUI(msg) {
     const bubbleClass = (msg.content === '👍' || (!msg.content && msg.image_url)) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
+    // [UPDATED] লং প্রেস ইভেন্ট হ্যান্ডলার এবং মেসেজ আইডি যোগ করা হয়েছে
     const html = `
-        <div class="message-row ${isMe ? 'sent' : 'received'}">
+        <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
             ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar">` : ''}
-            <div class="message-content ${bubbleClass}" style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}">
+            <div class="message-content ${bubbleClass}" 
+                 style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}"
+                 onmousedown="handleMessagePressStart(this, '${msg.id}', ${isMe})" 
+                 ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe})" 
+                 onmouseup="handleMessagePressEnd()" 
+                 ontouchend="handleMessagePressEnd()">
                 ${contentHTML}
             </div>
         </div>`;
     
     container.insertAdjacentHTML('beforeend', html);
+}
+
+// [NEW] লং প্রেস হ্যান্ডলার ফাংশন
+function handleMessagePressStart(el, msgId, isMyMessage) {
+    selectedMessageId = msgId;
+    // ৮০০ মিলিসেকেন্ড চেপে ধরে রাখলে মেনু আসবে
+    pressTimer = setTimeout(() => {
+        showDeleteOptions(isMyMessage);
+    }, 800); 
+}
+
+function handleMessagePressEnd() {
+    clearTimeout(pressTimer);
+}
+
+function showDeleteOptions(isMyMessage) {
+    const modal = document.getElementById('deleteOptionsModal');
+    const deleteForEveryoneBtn = document.getElementById('deleteForEveryoneBtn');
+    
+    // "Delete for everyone" শুধু নিজের পাঠানো মেসেজের জন্য দেখাবে
+    if (isMyMessage) {
+        deleteForEveryoneBtn.style.display = 'block';
+    } else {
+        deleteForEveryoneBtn.style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// [NEW] মেসেজ ডিলিট ফাংশন
+async function deleteMessageForMe() {
+    if (!selectedMessageId || !currentUser) return;
+    
+    try {
+        // বর্তমান deleted_by অ্যারে আনা
+        const { data } = await supabaseClient.from('messages').select('deleted_by').eq('id', selectedMessageId).single();
+        let currentDeletedBy = data?.deleted_by || [];
+        
+        // যদি আমি আগেই ডিলিট না করে থাকি
+        if (!currentDeletedBy.includes(currentUser.id)) {
+            currentDeletedBy.push(currentUser.id);
+            
+            // অ্যারে আপডেট করা
+            await supabaseClient.from('messages').update({ deleted_by: currentDeletedBy }).eq('id', selectedMessageId);
+            
+            // UI থেকে সাথে সাথে সরানো (Realtime এর অপেক্ষা না করে)
+            const el = document.getElementById(`msg-${selectedMessageId}`);
+            if(el) el.remove();
+        }
+        closeDeleteModal();
+    } catch (e) {
+        console.error("Delete for me error:", e);
+        alert("Failed to delete.");
+    }
+}
+
+async function deleteMessageForEveryone() {
+    if (!selectedMessageId) return;
+    if(!confirm("Are you sure you want to delete this message for everyone?")) return;
+
+    try {
+        // সরাসরি রেকর্ড ডিলিট করা (Hard Delete)
+        await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
+        // Realtime Listener স্বয়ংক্রিয়ভাবে UI আপডেট করবে
+        closeDeleteModal();
+    } catch (e) {
+        console.error("Delete everyone error:", e);
+        alert("Failed to delete.");
+    }
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteOptionsModal').style.display = 'none';
+    selectedMessageId = null;
 }
 
 function scrollToBottom(smooth = false) { 
@@ -459,6 +572,7 @@ async function markAsSeen(partnerId) {
 // ৮. ইভেন্ট লিসেনার
 // ==========================
 function setupEventListeners() {
+    // ব্যাক বাটন
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
@@ -466,11 +580,13 @@ function setupEventListeners() {
         loadChatList(); 
     });
     
+    // টেক্সট ইনপুট
     const input = document.getElementById('messageInput');
     input.addEventListener('input', toggleSendButton);
     input.addEventListener('keyup', (e) => { if (e.key === 'Enter') sendMessage(); });
     document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
     
+    // ইমেজ আপলোড
     const triggerFile = () => document.getElementById('chatImageInput').click();
     document.getElementById('galleryTriggerBtn').addEventListener('click', triggerFile);
     
@@ -490,38 +606,41 @@ function setupEventListeners() {
     
     document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
     
+    // অডিও রেকর্ডিং
     document.getElementById('micTriggerBtn').addEventListener('click', startRecording);
     document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
     document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
     
+    // ফুল স্ক্রিন ক্লোজ
     document.querySelector('.fs-close-btn').addEventListener('click', () => { 
         document.getElementById('fullScreenImageModal').style.display = 'none'; 
     });
 
-    // [NEW] ইমোজি পিকার লজিক
+    // [UPDATED] ইমোজি পিকার লজিক
     const emojiBtn = document.getElementById('emojiTriggerBtn');
     const pickerContainer = document.getElementById('emojiPickerContainer');
     
-    // বাটন চাপলে পপআপ খুলবে/বন্ধ হবে
     emojiBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // বাবলিং বন্ধ করা
-        const isVisible = pickerContainer.style.display === 'block';
-        pickerContainer.style.display = isVisible ? 'none' : 'block';
+        e.stopPropagation();
+        pickerContainer.style.display = pickerContainer.style.display === 'none' ? 'block' : 'none';
     });
 
-    // ইমোজি সিলেক্ট করলে ইনপুটে বসবে
     document.querySelector('emoji-picker').addEventListener('emoji-click', event => {
         input.value += event.detail.unicode;
         toggleSendButton();
-        input.focus(); // ফোকাস ইনপুটে ফেরত আনা
+        input.focus();
     });
 
-    // অন্য কোথাও ক্লিক করলে ইমোজি প্যানেল বন্ধ হবে
     document.addEventListener('click', (e) => {
         if (!pickerContainer.contains(e.target) && !emojiBtn.contains(e.target)) {
             pickerContainer.style.display = 'none';
         }
     });
+
+    // [NEW] ডিলিট মডাল লিসেনার
+    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
+    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
+    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
 }
 
 function closeImagePreview() {
