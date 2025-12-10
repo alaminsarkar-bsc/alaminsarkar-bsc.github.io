@@ -13,9 +13,12 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="iPray">
     
+    <!-- CSS Links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA Settings -->
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -29,7 +32,7 @@
     <!-- Offline Indicator -->
     <div id="offlineIndicator" class="offline-indicator" style="display: none;"></div>
 
-    <!-- Admin Links -->
+    <!-- Admin Links (Visible only to Admins) -->
     <a href="/admin.html" id="adminLink" style="display: none; position: fixed; top: 110px; right: 20px; z-index: 1000; background: #2c3e50; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
         <i class="fas fa-shield-alt"></i> Admin
     </a>
@@ -67,24 +70,32 @@
             <div class="header-top-row">
                 <a href="/index.html" class="logo-link">iPray</a>
                 
-                <!-- Search Box -->
+                <!-- Search Box (Floating) -->
                 <input type="search" id="searchInput" class="floating-search-box" placeholder="খুঁজুন...">
 
                 <div class="header-actions-top">
                     
-                    <!-- NEW: Islamic Page Link (Book Icon) -->
+                    <!-- Islamic Page Link -->
                     <a href="islamic.html" class="top-icon-btn" title="কুরআন, হাদিস ও নামাজের সময়">
                         <i class="fas fa-book-open" style="color: #8e44ad;"></i>
                     </a>
 
-                    <!-- Create Story Button (Opens New Editor) -->
+                    <!-- NEW: Messenger Link -->
+                    <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার">
+                        <i class="fab fa-facebook-messenger" style="color: #0084ff;"></i>
+                    </a>
+
+                    <!-- Create Story Button -->
                     <button id="createStoryBtn" class="top-icon-btn" title="স্টোরি তৈরি করুন">
                         <i class="fas fa-plus" style="color: #27ae60;"></i>
                     </button>
 
+                    <!-- Search Button -->
                     <button id="searchBtn" class="top-icon-btn" title="খুঁজুন">
                         <i class="fas fa-search"></i>
                     </button>
+                    
+                    <!-- Global Donate Button -->
                     <button id="globalDonateBtn" class="top-icon-btn" title="সাপোর্ট">
                         <i class="fas fa-hand-holding-heart" style="color: #e74c3c;"></i>
                     </button>
@@ -96,9 +107,15 @@
                 <a href="/index.html" class="nav-tab active" id="homeTabBtn">
                     <i class="fas fa-home"></i>
                 </a>
+                
+                <!-- NEW: Shorts Video Button (SVG Icon) -->
                 <button id="videoFeedBtn" class="nav-tab">
-                    <i class="fas fa-film"></i>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: auto;">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M17.77 10.32L16.57 9.82L18 9.06C19.78 8.12 20.46 5.91 19.52 4.13C18.58 2.35 16.37 1.67 14.59 2.61L6.09 6.94C4.31 7.88 3.63 10.09 4.57 11.87C5.03 12.75 5.82 13.33 6.74 13.56L7.94 14.06L6.5 14.82C4.72 15.76 4.04 17.97 4.98 19.75C5.92 21.53 8.13 22.21 9.91 21.27L18.41 16.94C20.19 16 20.87 13.79 19.93 12.01C19.47 11.13 18.69 10.55 17.77 10.32ZM10 14.65V9.35L15 12L10 14.65Z" />
+                    </svg>
                 </button>
+
+                <!-- Feed Toggle Button -->
                 <button id="feedToggleBtn" class="nav-tab">
                     <i class="fas fa-users"></i>
                 </button>
@@ -108,6 +125,7 @@
                     <i class="fas fa-plus-circle" style="font-size: 28px; color: var(--text-color);"></i>
                 </a>
 
+                <!-- Notification Button -->
                 <div class="notification-wrapper">
                     <button id="notificationBtn" class="nav-tab">
                         <i class="fas fa-bell"></i>
@@ -115,6 +133,7 @@
                     </button>
                 </div>
                 
+                <!-- Profile Button -->
                 <a href="/profile.html" class="nav-tab">
                     <i class="fas fa-user-circle"></i>
                 </a>
@@ -122,7 +141,9 @@
         </div>
         <!-- HEADER END -->
 
+        <!-- MAIN CONTENT -->
         <main id="main-content" class="main-view">
+            
             <!-- Story Skeleton -->
             <div id="storySkeletonContainer" class="story-container">
                 <div class="skeleton-story"></div>
@@ -131,7 +152,7 @@
                 <div class="skeleton-story"></div>
             </div>
 
-            <!-- Real Story Container (Database Driven) -->
+            <!-- Real Story Container -->
             <div id="storyContainer" class="story-container" style="display: none;"></div>
             
             <!-- Feed Skeleton -->
@@ -153,21 +174,20 @@
             <!-- Posts Feed -->
             <div class="feed-container" id="feedContainer"></div>
             
+            <!-- Loading Indicator -->
             <div id="loadingIndicator" style="text-align: center; padding: 20px; display: none; color: var(--light-text);">
                 <div class="loader" style="border-color: #999; border-bottom-color: transparent;"></div>
             </div>
         </main>
     </div>
 
-    <!-- ================= MODALS ================= -->
+    <!-- ================= MODALS SECTION ================= -->
 
-    <!-- ==============================================
-         NEW: ADVANCED PROFESSIONAL STORY EDITOR MODAL
-         ============================================== -->
+    <!-- 1. ADVANCED PROFESSIONAL STORY EDITOR MODAL -->
     <div id="storyCreateModal" class="story-editor-modal" style="display: none;">
         <div class="editor-container">
             
-            <!-- 1. Top Bar (Close & Tabs) -->
+            <!-- Top Bar -->
             <div class="editor-top-bar">
                 <button class="icon-btn close-editor" id="closeStoryEditorBtn">
                     <i class="fas fa-times"></i>
@@ -179,7 +199,6 @@
                     <button class="editor-tab-btn" data-mode="media" id="tabMediaBtn">মিডিয়া</button>
                 </div>
 
-                <!-- Top Right Tools (Initially hidden, shown based on mode) -->
                 <div class="editor-top-actions">
                     <button class="icon-btn" id="storyMuteBtn" style="display:none;" title="সাউন্ড মিউট/আনমিউট">
                         <i class="fas fa-microphone"></i>
@@ -187,10 +206,10 @@
                 </div>
             </div>
 
-            <!-- 2. Main Canvas Area -->
+            <!-- Main Canvas Area -->
             <div class="editor-canvas-area">
                 
-                <!-- MODE 1: TEXT CANVAS -->
+                <!-- TEXT CANVAS -->
                 <div id="textCanvas" class="story-canvas" style="display: flex;">
                     <div class="canvas-content">
                         <div id="storyTextInput" class="draggable-text" contenteditable="true" spellcheck="false" data-placeholder="এখানে লিখুন..."></div>
@@ -198,39 +217,34 @@
                     <div class="watermark"><i class="fas fa-praying-hands"></i> iPray</div>
                 </div>
 
-                <!-- MODE 2: MEDIA CANVAS (Video/Image/Camera) -->
+                <!-- MEDIA CANVAS -->
                 <div id="mediaCanvas" class="story-canvas" style="display: none; background: #000;">
                     
-                    <!-- Live Camera Feed -->
                     <video id="liveCameraFeed" autoplay muted playsinline style="display:none; width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
                     
-                    <!-- Uploaded/Recorded Preview -->
                     <img id="storyImgPreview" style="display: none; width: 100%; height: 100%; object-fit: contain;">
                     <video id="storyVidPreview" style="display: none; width: 100%; height: 100%; object-fit: contain;" playsinline loop></video>
                     
-                    <!-- Placeholder UI (Initial State) -->
+                    <!-- Placeholder UI -->
                     <div id="mediaPlaceholder" class="media-placeholder-content">
                         <div class="media-upload-options">
-                            <!-- Gallery Button -->
                             <label for="storyFileUpload" class="upload-trigger-btn">
                                 <div class="upload-icon-circle"><i class="fas fa-images"></i></div>
                                 <span>গ্যালারি</span>
                             </label>
                             
-                            <!-- Camera Trigger Button (Starts Camera) -->
                             <button id="openCameraBtn" class="upload-trigger-btn" style="background:none; border:none;">
                                 <div class="upload-icon-circle"><i class="fas fa-camera"></i></div>
                                 <span>ক্যামেরা চালু করুন</span>
                             </button>
 
-                            <!-- Hidden Inputs -->
                             <input type="file" id="storyFileUpload" accept="image/*,video/*" hidden>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. Sidebar Tools (Changes based on Tab) -->
+            <!-- Sidebar Tools -->
             <div class="editor-sidebar" id="textModeTools">
                 <div class="tool-item" id="storyBgColorBtn">
                     <div class="tool-icon" style="background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%); border: none;"></div>
@@ -242,10 +256,10 @@
                 </div>
             </div>
 
-            <!-- 4. Bottom Action Bar & Recording Controls -->
+            <!-- Bottom Action Bar -->
             <div class="editor-bottom-bar">
                 
-                <!-- Color Palette (Hidden initially) -->
+                <!-- Color Palette -->
                 <div class="color-palette" id="storyColorPalette" style="display: none;">
                     <div class="c-dot" style="background: #ffffff;" data-color="#ffffff"></div>
                     <div class="c-dot" style="background: #000000;" data-color="#000000"></div>
@@ -255,12 +269,12 @@
                     <div class="c-dot" style="background: #ffa502;" data-color="#ffa502"></div>
                 </div>
 
-                <!-- Caption Box (Only for Media Mode) -->
+                <!-- Caption Box -->
                 <div id="mediaCaptionContainer" style="display: none; width: 100%; margin-bottom: 10px;">
                     <input type="text" id="storyCaptionInput" placeholder="ক্যাপশন লিখুন..." class="story-caption-input">
                 </div>
 
-                <!-- Recording Button with Ring (Only Visible when Camera is Active) -->
+                <!-- Recording Button -->
                 <div id="recordingArea" style="display:none; justify-content:center; margin-bottom: 15px;">
                     <button id="recordBtn" class="record-btn-ring">
                         <svg class="progress-ring" width="80" height="80">
@@ -271,7 +285,6 @@
                 </div>
 
                 <div class="action-buttons-row">
-                    <!-- Reset/Change Media Button (Hidden initially) -->
                     <button id="resetMediaBtn" class="editor-btn secondary" style="display:none;">
                         <i class="fas fa-trash"></i> বাতিল
                     </button>
@@ -281,13 +294,10 @@
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
-    <!-- END OF ADVANCED STORY EDITOR MODAL -->
 
-
-    <!-- Edit Post Modal -->
+    <!-- 2. Edit Post Modal -->
     <div id="editPrayerModal" class="modal">
         <div class="modal-content">
             <form id="editPrayerForm">
@@ -317,7 +327,7 @@
         </div>
     </div>
 
-    <!-- Report Modal -->
+    <!-- 3. Report Modal -->
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -350,7 +360,7 @@
         </div>
     </div>
 
-    <!-- Campaign Donation Modal (For specific campaigns) -->
+    <!-- 4. Campaign Donation Modal -->
     <div id="donationModal" class="modal">
         <div class="modal-content" style="max-width: 450px;">
             <div class="modal-header">
@@ -358,12 +368,12 @@
                 <span class="close-btn" onclick="document.getElementById('donationModal').style.display='none'">&times;</span>
             </div>
             <div class="modal-body" id="donationDetailsBody">
-                <!-- JS will populate this dynamically -->
+                <!-- JS will populate this -->
             </div>
         </div>
     </div>
 
-    <!-- General Donation Modal (For Global Donate Button) -->
+    <!-- 5. General Donation Modal -->
     <div id="generalDonationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -378,11 +388,8 @@
                 <!-- Donate Tab -->
                 <div id="donateTabContent">
                     <p style="text-align:center; color:#666; margin-bottom:15px;">পেমেন্ট মেথড নির্বাচন করুন:</p>
-                    <div id="adminPaymentMethods" class="payment-methods">
-                        <!-- Dynamic Payment Methods will load here -->
-                    </div>
+                    <div id="adminPaymentMethods" class="payment-methods"></div>
                     
-                    <!-- Input Form (Hidden initially) -->
                     <div id="genPaymentForm" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
                         <div class="number-display">
                             <b><span id="genMethodName"></span></b> নাম্বারে টাকা পাঠান: 
@@ -415,7 +422,7 @@
         </div>
     </div>
 
-    <!-- Notification Modal with Clear All -->
+    <!-- 6. Notification Modal -->
     <div id="notificationModal" class="notification-modal">
         <div class="notification-modal-content">
             <div class="notification-modal-header">
@@ -430,27 +437,23 @@
         </div>
     </div>
 
-    <!-- Story Viewer (For Viewing Stories) -->
+    <!-- 7. Story Viewer Modal -->
     <div id="storyViewerModal" style="display: none;">
         <div id="storyProgressBars"></div>
         <div id="storyUserInfo"></div>
         <button id="closeStoryViewerBtn">&times;</button>
-        <div class="story-viewer-media">
-            <!-- Media will be injected here via JS -->
-        </div>
+        <div class="story-viewer-media"></div>
         
-        <!-- Navigation Areas -->
         <div id="prevStoryBtn"></div>
         <div id="nextStoryBtn"></div>
         
-        <!-- Story Reply (Optional Future Feature) -->
         <div class="story-reply-container" style="display:none;">
             <input type="text" placeholder="রিপ্লাই দিন..." class="story-reply-input">
             <button class="story-send-btn"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
-    <!-- Image Viewer Modal -->
+    <!-- 8. Image Viewer Modal -->
     <div id="image-view-modal" class="image-modal">
         <span class="close-image-modal">&times;</span>
         <img class="image-modal-content" id="modal-image">

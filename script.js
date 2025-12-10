@@ -1,3 +1,4 @@
+
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -11,7 +12,7 @@ let allFetchedPrayers = new Map();
 let isVideoFeedActive = false;
 const ADMIN_USERS = ['bm15.telecom@gmail.com', 'alaminsarkar.bsc@gmail.com'];
 
-// Feed &Pagination State
+// Feed & Pagination State
 let currentPage = 0;
 const prayersPerPage = 8; 
 let isLoadingMore = false;
@@ -24,6 +25,7 @@ let currentFeedType = 'for_you';
 let savedPostIds = new Set();
 let filteredUserId = null;
 let feedObserver = null;
+let shortsObserver = null; // Shorts Video Observer
 
 // Donation Variables
 let activeDonationCampaignId = null;
@@ -32,27 +34,27 @@ let adminPaymentNumbers = {};
 // Video Tracking
 const viewedVideosSession = new Set();
 
-// NEW: User Reaction Cache
+// User Reaction Cache
 let userLovedPrayers = new Set();
 let userAmeenedPrayers = new Set();
 
 // ====================================
-// 2. STORY EDITOR STATE (ADVANCED)
+// 2. STORY EDITOR STATE
 // ====================================
 let storyGroups = []; 
 let storyEditorState = {
-    mode: 'text', // 'text' | 'media'
-    mediaFile: null,      // Uploaded file
-    mediaBlob: null,      // Recorded video blob
+    mode: 'text', 
+    mediaFile: null,      
+    mediaBlob: null,      
     bgColor: 'linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%)',
     textColor: '#ffffff',
     isRecording: false,
-    isMuted: false,       // Mute state
-    recordingTimer: null, // JS Interval
+    isMuted: false,       
+    recordingTimer: null, 
     mediaRecorder: null,
     recordedChunks: [],
     stream: null,
-    maxDuration: 30       // 30 Seconds limit
+    maxDuration: 30       
 };
 
 let storyViewerState = {
@@ -304,7 +306,6 @@ async function handleUserLoggedIn(user) {
                 display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                 photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
             }]).select().single();
-            // Note: Fixed potential undefined error here by checking error in next step if needed
             if (error) throw error;
             profile = newProfile;
         } else if (error) throw error;
@@ -316,14 +317,11 @@ async function handleUserLoggedIn(user) {
         }
         
         currentUser = { ...user, profile };
-        
-        // [UPDATED] হেডারে প্রোফাইল ছবি আপডেট করা
         updateHeaderProfileIcon(profile.photo_url);
 
-        // [FIXED] ফেচ ইউজার রিয়্যাকশনস যোগ করা হয়েছে
         await Promise.all([
             fetchSavedPostIds(),
-            fetchUserReactions() // NEW: Fetch user's reaction history
+            fetchUserReactions() 
         ]);
 
         const pageId = document.body.id;
@@ -345,11 +343,8 @@ async function handleUserLoggedIn(user) {
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
-    // [FIXED] রিয়্যাকশন ক্যাশে ক্লিয়ার করা হয়েছে
     userLovedPrayers.clear();
     userAmeenedPrayers.clear();
-    
-    // [UPDATED] হেডারের ছবি রিসেট করা
     updateHeaderProfileIcon(null);
 
     const pageId = document.body.id;
@@ -393,39 +388,19 @@ async function fetchSavedPostIds() {
     } catch (error) { console.error("Saved posts error:", error); }
 }
 
-// [FIXED] NEW FUNCTION: Fetch user's reaction history
 async function fetchUserReactions() {
     if (!currentUser) return;
-    
     try {
-        // Get all prayers where user has loved
-        const { data: lovedPrayers, error: loveError } = await supabaseClient
-            .from('prayers')
-            .select('id')
-            .contains('loved_by', [currentUser.id]);
-        
+        const { data: lovedPrayers, error: loveError } = await supabaseClient.from('prayers').select('id').contains('loved_by', [currentUser.id]);
         if (loveError) throw loveError;
         
-        // Get all prayers where user has ameened
-        const { data: ameenedPrayers, error: ameenError } = await supabaseClient
-            .from('prayers')
-            .select('id')
-            .contains('ameened_by', [currentUser.id]);
-        
+        const { data: ameenedPrayers, error: ameenError } = await supabaseClient.from('prayers').select('id').contains('ameened_by', [currentUser.id]);
         if (ameenError) throw ameenError;
         
-        // Store in global variables
         userLovedPrayers = new Set(lovedPrayers?.map(p => p.id) || []);
         userAmeenedPrayers = new Set(ameenedPrayers?.map(p => p.id) || []);
         
-        console.log('User reactions loaded:', {
-            loved: userLovedPrayers.size,
-            ameened: userAmeenedPrayers.size
-        });
-        
-    } catch (error) {
-        console.error("Error fetching user reactions:", error);
-    }
+    } catch (error) { console.error("Error fetching user reactions:", error); }
 }
 
 async function createNotification(userId, actorId, type, content, targetUrl) { 
@@ -436,32 +411,22 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
 }
 
 // ====================================
-// 5. PROFILE PAGE LOGIC (UPDATED WITH COVER & PIC UPLOAD)
+// 5. PROFILE PAGE LOGIC
 // ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
     let userId = urlParams.get('id');
 
-    if (!userId && currentUser) {
-        userId = currentUser.id;
-    } else if (!userId && !currentUser) {
-        showLoginModal();
-        return;
-    }
+    if (!userId && currentUser) { userId = currentUser.id; } 
+    else if (!userId && !currentUser) { showLoginModal(); return; }
 
     filteredUserId = userId; 
     const myPostsContainer = document.getElementById('myPostsContainer');
-    
     document.getElementById('profileName').textContent = 'লোড হচ্ছে...';
     showSkeletonLoader(true, 'myPostsContainer');
 
     try {
-        const { data: userProfile, error } = await supabaseClient
-            .from('users')
-            .select('*, cover_photo_url') 
-            .eq('id', userId)
-            .single();
-            
+        const { data: userProfile, error } = await supabaseClient.from('users').select('*, cover_photo_url').eq('id', userId).single();
         if (error) throw error;
         if (!userProfile) throw new Error("ব্যবহারকারী পাওয়া যায়নি।");
 
@@ -472,7 +437,6 @@ async function initProfilePage() {
         if (userProfile.photo_url) {
             avatarEl.innerHTML = `<img src="${userProfile.photo_url}" style="width:100%;height:100%;object-fit:cover;">`;
         } else {
-            avatarEl.textContent = (userProfile.display_name || 'U').charAt(0).toUpperCase();
             avatarEl.style.backgroundColor = generateAvatarColor(userProfile.display_name);
             avatarEl.innerHTML = (userProfile.display_name || 'U').charAt(0).toUpperCase();
         }
@@ -481,9 +445,7 @@ async function initProfilePage() {
         if (userProfile.cover_photo_url) {
             coverEl.src = userProfile.cover_photo_url;
             coverEl.style.display = 'block';
-        } else {
-            coverEl.style.display = 'none';
-        }
+        } else { coverEl.style.display = 'none'; }
 
         const [postsCount, followersCount, followingCount] = await Promise.all([
             supabaseClient.from('prayers').select('*', { count: 'exact', head: true }).eq('author_uid', userId).eq('status', 'active'),
@@ -498,38 +460,25 @@ async function initProfilePage() {
         const editBtn = document.getElementById('editProfileBtn');
         const followBtn = document.getElementById('followBtn');
         const signOutBtn = document.getElementById('signOutBtn');
-        
         const changeCoverBtn = document.getElementById('changeCoverBtn');
         const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
         
-        editBtn.style.display = 'none';
-        followBtn.style.display = 'none';
-        signOutBtn.style.display = 'none';
+        editBtn.style.display = 'none'; followBtn.style.display = 'none'; signOutBtn.style.display = 'none';
         if(changeCoverBtn) changeCoverBtn.style.display = 'none';
         if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'none';
 
         if (currentUser && currentUser.id === userId) {
-            editBtn.style.display = 'inline-block';
-            signOutBtn.style.display = 'inline-block';
+            editBtn.style.display = 'inline-block'; signOutBtn.style.display = 'inline-block';
             if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; 
             if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'flex';
-            
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'inline-block');
-            
             setupProfileImageUploads(); 
         } else {
-            followBtn.style.display = 'inline-block';
-            followBtn.dataset.userId = userId;
-            
+            followBtn.style.display = 'inline-block'; followBtn.dataset.userId = userId;
             if (currentUser) {
                 const { data: isFollowing } = await supabaseClient.from('followers').select('id').eq('follower_id', currentUser.id).eq('following_id', userId).single();
-                if (isFollowing) {
-                    followBtn.textContent = 'আনফলো';
-                    followBtn.classList.add('following');
-                } else {
-                    followBtn.textContent = 'অনুসরণ করুন';
-                    followBtn.classList.remove('following');
-                }
+                if (isFollowing) { followBtn.textContent = 'আনফলো'; followBtn.classList.add('following'); } 
+                else { followBtn.textContent = 'অনুসরণ করুন'; followBtn.classList.remove('following'); }
             }
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'none');
         }
@@ -539,10 +488,7 @@ async function initProfilePage() {
             const { data: warnings } = await supabaseClient.from('user_warnings').select('*').eq('user_id', userId).order('created_at', { ascending: false });
             if (warnings && warnings.length > 0) {
                 const list = document.getElementById('warnings-list');
-                list.innerHTML = warnings.map(w => `
-                    <div style="background: white; padding: 10px; border-radius: 5px; border-left: 3px solid red; font-size: 14px;">
-                        <strong>কারণ:</strong> ${w.reason}<br><small style="color: #666;">তারিখ: ${new Date(w.created_at).toLocaleDateString()}</small>
-                    </div>`).join('');
+                list.innerHTML = warnings.map(w => `<div style="background: white; padding: 10px; border-radius: 5px; border-left: 3px solid red; font-size: 14px;"><strong>কারণ:</strong> ${w.reason}<br><small style="color: #666;">তারিখ: ${new Date(w.created_at).toLocaleDateString()}</small></div>`).join('');
                 warningsSection.style.display = 'block';
             } else { warningsSection.style.display = 'none'; }
         } else { warningsSection.style.display = 'none'; }
@@ -565,14 +511,11 @@ function setupProfileTabs(userId) {
         newTab.addEventListener('click', (e) => {
             document.querySelectorAll('.profile-tabs .tab-btn').forEach(t => t.classList.remove('active'));
             e.target.classList.add('active');
-            
             const tabName = e.target.dataset.tab; 
             const container = document.getElementById('myPostsContainer');
             container.innerHTML = '';
             showSkeletonLoader(true, 'myPostsContainer');
-            
-            currentPage = 0;
-            noMorePrayers = false;
+            currentPage = 0; noMorePrayers = false;
             fetchAndRenderPrayers(container, tabName, userId, true);
         });
     });
@@ -596,18 +539,14 @@ async function loadNotifications() {
 function renderNotifications(notifications) { 
     const list = document.getElementById('notification-list-modal'); 
     if (!list) return; 
-    if (!notifications || notifications.length === 0) { 
-        list.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--light-text);">কোনো নোটিফিকেশন নেই।</p>'; 
-        return; 
-    } 
+    if (!notifications || notifications.length === 0) { list.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--light-text);">কোনো নোটিফিকেশন নেই।</p>'; return; } 
     list.innerHTML = notifications.map(n => ` 
         <div class="notification-item ${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-url="${n.target_url}" data-type="${n.type}"> 
             <div class="avatar" style="background-color: ${generateAvatarColor(n.actor?.display_name || '?')}"> 
                 ${n.actor?.photo_url ? `<img src="${n.actor.photo_url}" alt="">` : (n.actor?.display_name?.charAt(0) || '?')} 
             </div> 
             <div class="notification-content" style="flex: 1;"> 
-                <p>${n.content}</p> 
-                <small>${timeAgo(n.created_at)}</small> 
+                <p>${n.content}</p> <small>${timeAgo(n.created_at)}</small> 
             </div>
             <button class="delete-notif-btn" data-id="${n.id}" title="ডিলিট করুন"><i class="fas fa-trash-alt"></i></button>
         </div> 
@@ -616,40 +555,13 @@ function renderNotifications(notifications) {
 
 function updateNotificationBadge(count) { 
     const badge = document.getElementById('notification-badge'); 
-    if (badge) { 
-        badge.textContent = count > 9 ? '9+' : count; 
-        badge.style.display = count > 0 ? 'block' : 'none'; 
-    } 
+    if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count > 0 ? 'block' : 'none'; } 
 }
 
-async function markNotificationAsRead(notificationId) { 
-    try { await supabaseClient.from('notifications').update({ is_read: true }).eq('id', notificationId); loadNotifications(); } catch (error) { console.error('Mark read error:', error); } 
-}
-
-async function markAllAsRead() { 
-    try { await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false); loadNotifications(); } catch (error) { console.error('Mark all read error:', error); } 
-}
-
-async function deleteNotification(notificationId) {
-    if(!confirm("আপনি কি এই নোটিফিকেশনটি ডিলিট করতে চান?")) return;
-    try {
-        const { error } = await supabaseClient.from('notifications').delete().eq('id', notificationId);
-        if(error) throw error;
-        const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-        if(item) item.remove();
-        loadNotifications(); 
-    } catch (error) { console.error("Delete notification error:", error); alert("ডিলিট করতে সমস্যা হয়েছে।"); }
-}
-
-async function clearAllNotifications() {
-    if(!confirm("আপনি কি সব নোটিফিকেশন মুছে ফেলতে চান?")) return;
-    try {
-        const { error } = await supabaseClient.from('notifications').delete().eq('user_id', currentUser.id);
-        if(error) throw error;
-        loadNotifications();
-        alert("সব নোটিফিকেশন মুছে ফেলা হয়েছে।");
-    } catch (error) { console.error("Clear all error:", error); alert("সব ডিলিট করতে সমস্যা হয়েছে।"); }
-}
+async function markNotificationAsRead(notificationId) { try { await supabaseClient.from('notifications').update({ is_read: true }).eq('id', notificationId); loadNotifications(); } catch (error) { console.error('Mark read error:', error); } }
+async function markAllAsRead() { try { await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false); loadNotifications(); } catch (error) { console.error('Mark all read error:', error); } }
+async function deleteNotification(notificationId) { if(!confirm("আপনি কি এই নোটিফিকেশনটি ডিলিট করতে চান?")) return; try { const { error } = await supabaseClient.from('notifications').delete().eq('id', notificationId); if(error) throw error; const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`); if(item) item.remove(); loadNotifications(); } catch (error) { console.error("Delete notification error:", error); alert("ডিলিট করতে সমস্যা হয়েছে।"); } }
+async function clearAllNotifications() { if(!confirm("আপনি কি সব নোটিফিকেশন মুছে ফেলতে চান?")) return; try { const { error } = await supabaseClient.from('notifications').delete().eq('user_id', currentUser.id); if(error) throw error; loadNotifications(); alert("সব নোটিফিকেশন মুছে ফেলা হয়েছে।"); } catch (error) { console.error("Clear all error:", error); alert("সব ডিলিট করতে সমস্যা হয়েছে।"); } }
 
 // ====================================
 // 7. NAVIGATION LOGIC
@@ -660,20 +572,10 @@ function setupNavigationLogic() {
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
 
-            // ১. যদি এটি পোস্ট করার বাটন বা প্রোফাইল পেজের লিংক হয়, তবে স্বাভাবিক কাজ করতে দিন
-            if (link.id === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) {
-                return; 
-            }
+            if (link.id === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) { return; }
+            if (!isHomePage && (href === '/index.html' || href === './index.html' || href === 'index.html')) { return; }
 
-            // ২. ফিক্স: যদি আমরা প্রোফাইল পেজে থাকি এবং ইউজার ব্যাক/হোম বাটনে ক্লিক করে
-            // তাহলে জাভাস্ক্রিপ্ট আটকাতে বারণ করা হচ্ছে, যাতে index.html এ চলে যায়।
-            if (!isHomePage && (href === '/index.html' || href === './index.html' || href === 'index.html')) {
-                return; 
-            }
-
-            // ৩. শুধুমাত্র হোম পেজেই ফিড সুইচ করার জন্য ডিফল্ট একশন আটকানো হবে
             e.preventDefault();
-            
             document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
             link.classList.add('active');
             
@@ -698,14 +600,9 @@ function handleFollowingFeedSwitch() {
 }
 
 function refreshFeed() { 
-    currentPage = 0; 
-    noMorePrayers = false; 
-    allFetchedPrayers.clear(); 
+    currentPage = 0; noMorePrayers = false; allFetchedPrayers.clear(); 
     const container = document.getElementById('feedContainer'); 
-    if (container) { 
-        container.innerHTML = ''; 
-        fetchAndRenderPrayers(container, 'active', null, true); 
-    } 
+    if (container) { container.innerHTML = ''; fetchAndRenderPrayers(container, 'active', null, true); } 
 }
 
 // ====================================
@@ -742,7 +639,6 @@ function switchEditorTab(mode) {
         document.getElementById('textCanvas').style.display = 'flex';
         document.getElementById('mediaCanvas').style.display = 'none';
         document.getElementById('textModeTools').style.display = 'flex';
-        
         document.getElementById('recordingArea').style.display = 'none';
         document.getElementById('storyMuteBtn').style.display = 'none';
         stopCamera();
@@ -751,7 +647,6 @@ function switchEditorTab(mode) {
         document.getElementById('textCanvas').style.display = 'none';
         document.getElementById('mediaCanvas').style.display = 'flex';
         document.getElementById('textModeTools').style.display = 'none';
-        
         document.getElementById('mediaPlaceholder').style.display = 'flex';
         document.getElementById('liveCameraFeed').style.display = 'none';
         document.getElementById('recordingArea').style.display = 'none';
@@ -782,10 +677,7 @@ function stopCamera() {
     document.getElementById('liveCameraFeed').style.display = 'none';
 }
 
-function toggleRecording() {
-    if (storyEditorState.isRecording) stopRecording();
-    else startRecording();
-}
+function toggleRecording() { if (storyEditorState.isRecording) stopRecording(); else startRecording(); }
 
 function startRecording() {
     if (!storyEditorState.stream) return;
@@ -811,19 +703,10 @@ function startRecording() {
         document.getElementById('resetMediaBtn').style.display = 'flex'; 
     };
     storyEditorState.mediaRecorder.start();
-    const circle = document.querySelector('.progress-ring__circle');
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI; 
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    circle.style.strokeDashoffset = circumference;
     let startTime = Date.now();
     const maxTime = storyEditorState.maxDuration * 1000; 
     storyEditorState.recordingTimer = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = elapsed / maxTime;
-        const offset = circumference - (progress * circumference);
-        circle.style.strokeDashoffset = offset;
-        if (elapsed >= maxTime) stopRecording();
+        if (Date.now() - startTime >= maxTime) stopRecording();
     }, 100);
 }
 
@@ -833,8 +716,6 @@ function stopRecording() {
     clearInterval(storyEditorState.recordingTimer);
     if (storyEditorState.mediaRecorder) storyEditorState.mediaRecorder.stop();
     document.getElementById('recordBtn').classList.remove('recording');
-    const circle = document.querySelector('.progress-ring__circle');
-    circle.style.strokeDashoffset = 226; 
 }
 
 function toggleMute() {
@@ -883,9 +764,7 @@ function resetEditorState() {
     resetMediaState();
 }
 
-function closeStoryEditor() {
-    stopCamera(); stopRecording(); document.getElementById('storyCreateModal').style.display = 'none';
-}
+function closeStoryEditor() { stopCamera(); stopRecording(); document.getElementById('storyCreateModal').style.display = 'none'; }
 
 async function publishProStory() {
     const btn = document.getElementById('publishStoryBtn');
@@ -1019,18 +898,9 @@ async function initHomePage() {
 
 async function fetchFundraisingPosts() {
     try {
-        const { data, error } = await supabaseClient
-            .from('prayers')
-            .select('*, users!author_uid(id, display_name, photo_url)')
-            .eq('status', 'active')
-            .eq('is_fundraising', true)
-            .order('created_at', { ascending: false });
-        
+        const { data, error } = await supabaseClient.from('prayers').select('*, users!author_uid(id, display_name, photo_url)').eq('status', 'active').eq('is_fundraising', true).order('created_at', { ascending: false });
         if (error) throw error;
-        if (data && data.length > 0) { 
-            fundraisingPosts = data; 
-            data.forEach(campaign => allFetchedPrayers.set(campaign.id, campaign)); 
-        }
+        if (data && data.length > 0) { fundraisingPosts = data; data.forEach(campaign => allFetchedPrayers.set(campaign.id, campaign)); }
     } catch (err) { console.error("Fundraising fetch error:", err); }
 }
 
@@ -1161,10 +1031,18 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
     }
 };
 
-const fetchMyPosts = (tab, userId) => { const container = document.getElementById('myPostsContainer'); if (!container) return; fetchAndRenderPrayers(container, tab, userId); };
-
 const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
     if (!container) return;
+
+    // SHORTS LOGIC: Toggle container class for full screen video
+    if (isVideoFeedActive) {
+        container.classList.add('shorts-feed-container');
+        container.classList.remove('feed-container');
+    } else {
+        container.classList.remove('shorts-feed-container');
+        container.classList.add('feed-container');
+    }
+
     let prayersToRender = [...prayerList];
     if (document.body.id === 'home-page' && currentFeedType === 'for_you' && !filteredUserId && !isVideoFeedActive && fundraisingPosts.length > 0) {
         const injectionIndex = 4; 
@@ -1176,19 +1054,171 @@ const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
     }
     if (!shouldAppend) container.innerHTML = '';
     const fragment = document.createDocumentFragment();
+    
     prayersToRender.forEach(prayer => {
-        if (!shouldAppend && document.getElementById(`prayer-${prayer.id}`)) return;
+        if (!shouldAppend && document.getElementById(isVideoFeedActive ? `short-${prayer.id}` : `prayer-${prayer.id}`)) return;
         let card;
-        if (prayer.is_fundraising) { card = createFundraisingCardElement(prayer); } else if (prayer.is_poll) { card = createPollCardElement(prayer); } else { card = createPrayerCardElement(prayer); }
+        
+        // --- SHORTS VS NORMAL CARD LOGIC ---
+        if (isVideoFeedActive && prayer.uploaded_video_url) {
+            card = createShortsCardElement(prayer);
+        } else {
+            if (prayer.is_fundraising) { card = createFundraisingCardElement(prayer); } 
+            else if (prayer.is_poll) { card = createPollCardElement(prayer); } 
+            else { card = createPrayerCardElement(prayer); }
+        }
+        
         if (card) fragment.appendChild(card);
     });
+    
     const trigger = document.getElementById('infinite-scroll-trigger');
     if (trigger && shouldAppend) { container.insertBefore(fragment, trigger); } else { container.appendChild(fragment); }
+
+    // Init Shorts Observer if video feed active
+    if (isVideoFeedActive) {
+        setupShortsObserver();
+    }
 };
 
 // ====================================
-// 11. CARD CREATION & INTERACTION
+// 11. SHORTS & CARD CREATION
 // ====================================
+
+function createShortsCardElement(prayer) {
+    const card = document.createElement('div');
+    card.className = 'short-card';
+    card.id = `short-${prayer.id}`;
+
+    const author = prayer.users || {};
+    const authorName = author.display_name || 'Unknown';
+    const authorPhoto = author.photo_url || './images/default-avatar.png';
+    
+    let hasLoved = false;
+    if (currentUser) {
+        if (prayer.loved_by && Array.isArray(prayer.loved_by)) {
+            hasLoved = prayer.loved_by.includes(currentUser.id);
+        } else {
+            hasLoved = userLovedPrayers.has(prayer.id);
+        }
+    }
+
+    card.innerHTML = `
+        <video src="${prayer.uploaded_video_url}" class="short-video" loop playsinline preload="metadata"></video>
+        <div class="short-overlay"></div>
+        
+        <!-- ডাবল ট্যাপের জন্য হার্ট কন্টেইনার -->
+        <div class="heart-container"></div>
+
+        <div class="short-actions">
+            <button class="short-action-btn love-btn ${hasLoved ? 'loved' : ''}" data-id="${prayer.id}" onclick="handleReaction(${prayer.id}, 'love', this)">
+                <i class="${hasLoved ? 'fas' : 'far'} fa-heart" style="${hasLoved ? 'color: #e44d62;' : ''}"></i>
+                <span class="love-count">${prayer.love_count || 0}</span>
+            </button>
+            <a href="comments.html?postId=${prayer.id}" class="short-action-btn">
+                <i class="fas fa-comment-dots"></i>
+                <span>${prayer.comment_count || 0}</span>
+            </a>
+            <button class="short-action-btn share-btn" data-id="${prayer.id}" data-title="${prayer.title}">
+                <i class="fas fa-share"></i>
+                <span>Share</span>
+            </button>
+        </div>
+        <div class="short-info">
+            <div class="short-username">
+                <img src="${authorPhoto}" style="width:35px; height:35px; border-radius:50%; border:1px solid white;">
+                ${authorName}
+            </div>
+            <div class="short-caption">${linkifyText(prayer.title || '')}</div>
+        </div>
+    `;
+
+    const video = card.querySelector('video');
+    let lastTap = 0;
+
+    // ভিডিওতে ক্লিক হ্যান্ডলার (সিঙ্গেল ট্যাপ = প্লে/পজ, ডাবল ট্যাপ = লাভ)
+    card.addEventListener('click', (e) => {
+        // বাটন বা লিংকে ক্লিক করলে কিছু হবে না
+        if (e.target.closest('button') || e.target.closest('a')) return;
+
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+
+        if (tapLength < 300 && tapLength > 0) {
+            // === ডাবল ট্যাপ ডিটেক্টেড ===
+            
+            // ১. লাভ রিয়্যাকশন ট্রিগার করা (যদি অলরেডি লাভ দেওয়া না থাকে)
+            const loveBtn = card.querySelector('.love-btn');
+            if (!loveBtn.classList.contains('loved')) {
+                handleReaction(prayer.id, 'love', loveBtn);
+            }
+
+            // ২. হার্ট এনিমেশন দেখানো
+            showHeartAnimation(e.clientX, e.clientY, card);
+            
+            e.preventDefault(); // ডিফল্ট জুম আটকানো
+        } else {
+            // === সিঙ্গেল ট্যাপ (প্লে/পজ) ===
+            // ডাবল ট্যাপের জন্য একটু অপেক্ষা করা
+            setTimeout(() => {
+                if (new Date().getTime() - lastTap >= 300) {
+                    if (video.paused) video.play();
+                    else video.pause();
+                }
+            }, 300);
+        }
+        lastTap = currentTime;
+    });
+
+    return card;
+}
+
+// হার্ট এনিমেশন ফাংশন (script.js এর শেষে বা যেকোনো জায়গায় পেস্ট করুন)
+function showHeartAnimation(x, y, container) {
+    const heart = document.createElement('i');
+    heart.className = 'fas fa-heart heart-animation';
+    
+    // কার্ডের সাপেক্ষে পজিশন ঠিক করা
+    const rect = container.getBoundingClientRect();
+    const relativeX = x - rect.left;
+    const relativeY = y - rect.top;
+
+    heart.style.left = `${relativeX}px`;
+    heart.style.top = `${relativeY}px`;
+
+    container.appendChild(heart);
+
+    // এনিমেশন শেষ হলে এলিমেন্ট রিমুভ করা
+    setTimeout(() => {
+        heart.remove();
+    }, 800);
+}
+
+function setupShortsObserver() {
+    if (shortsObserver) shortsObserver.disconnect();
+
+    const options = {
+        root: document.querySelector('.shorts-feed-container'),
+        threshold: 0.6 
+    };
+
+    shortsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            if (!video) return;
+
+            if (entry.isIntersecting) {
+                video.currentTime = 0; 
+                video.play().catch(e => console.log("Auto-play blocked"));
+            } else {
+                video.pause();
+            }
+        });
+    }, options);
+
+    document.querySelectorAll('.short-card').forEach(card => {
+        shortsObserver.observe(card);
+    });
+}
 
 function createPollCardElement(prayer) {
     const card = document.createElement('div'); card.className = 'prayer-card poll-card'; card.id = `prayer-${prayer.id}`;
@@ -1241,23 +1271,12 @@ const createPrayerCardElement = (prayer) => {
     const profileLinkClass = isAnonymous ? '' : 'profile-link-trigger'; 
     const avatar = isAnonymous ? '<i class="fas fa-user-secret"></i>' : (authorPhotoURL ? `<img src="${authorPhotoURL}" alt="${authorName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (authorName.charAt(0) || '?')); const avatarStyle = isAnonymous ? 'background-color: #888;' : `background-color: ${generateAvatarColor(authorName)}`;
     
-    // [FIXED] Check user reaction state - প্রথমে prayer object থেকে চেক, তারপর ক্যাশ থেকে
     let hasLoved = false, hasAmeened = false; 
     if (currentUser) { 
-        // প্রথমে prayer object এর loved_by/ameened_by array থেকে চেক
-        if (prayer.loved_by && Array.isArray(prayer.loved_by)) {
-            hasLoved = prayer.loved_by.includes(currentUser.id);
-        } else {
-            // ক্যাশ থেকে চেক (লগইনের পর লোড করা হয়)
-            hasLoved = userLovedPrayers.has(prayer.id);
-        }
-        
-        if (prayer.ameened_by && Array.isArray(prayer.ameened_by)) {
-            hasAmeened = prayer.ameened_by.includes(currentUser.id);
-        } else {
-            // ক্যাশ থেকে চেক
-            hasAmeened = userAmeenedPrayers.has(prayer.id);
-        }
+        if (prayer.loved_by && Array.isArray(prayer.loved_by)) { hasLoved = prayer.loved_by.includes(currentUser.id); } 
+        else { hasLoved = userLovedPrayers.has(prayer.id); }
+        if (prayer.ameened_by && Array.isArray(prayer.ameened_by)) { hasAmeened = prayer.ameened_by.includes(currentUser.id); } 
+        else { hasAmeened = userAmeenedPrayers.has(prayer.id); }
     }
     
     const ameenCount = prayer.ameen_count || 0; const loveCount = prayer.love_count || 0;
@@ -1323,10 +1342,7 @@ async function handleVideoView(videoId) {
 // ====================================
 function openGeneralDonationModal() {
     const modal = document.getElementById('generalDonationModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        loadAdminPaymentMethods(); 
-    }
+    if (modal) { modal.style.display = 'flex'; loadAdminPaymentMethods(); }
 }
 
 async function loadAdminPaymentMethods() {
@@ -1353,39 +1369,27 @@ async function loadAdminPaymentMethods() {
 
             methods.forEach(m => {
                 if(m.active && m.num) {
-                    html += `
-                        <div class="pay-option" onclick="selectGenPaymentMethod('${m.name}', '${m.num}')">
-                            <img src="${m.logo}" alt="${m.name}" onerror="this.style.display='none'">
-                            <span>${m.name}</span>
-                        </div>
-                    `;
+                    html += `<div class="pay-option" onclick="selectGenPaymentMethod('${m.name}', '${m.num}')"><img src="${m.logo}" alt="${m.name}" onerror="this.style.display='none'"><span>${m.name}</span></div>`;
                 }
             });
             
             if(html === '') html = '<p>বর্তমানে কোনো পেমেন্ট মেথড সক্রিয় নেই।</p>';
             container.innerHTML = html;
         }
-    } catch (error) {
-        console.error("Payment load error:", error);
-        container.innerHTML = '<p>পেমেন্ট তথ্য লোড করা যায়নি।</p>';
-    }
+    } catch (error) { container.innerHTML = '<p>পেমেন্ট তথ্য লোড করা যায়নি।</p>'; }
 }
 
 window.selectGenPaymentMethod = function(name, number) {
     document.getElementById('genMethodName').innerText = name;
     document.getElementById('genTargetNumber').innerText = number;
-    
     document.querySelectorAll('.pay-option').forEach(el => el.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
-    
     document.getElementById('genPaymentForm').style.display = 'block';
 };
 
 window.copyGenNumber = function() {
     const num = document.getElementById('genTargetNumber').innerText;
-    if(num) {
-        navigator.clipboard.writeText(num).then(() => alert('নাম্বার কপি হয়েছে!'));
-    }
+    if(num) { navigator.clipboard.writeText(num).then(() => alert('নাম্বার কপি হয়েছে!')); }
 };
 
 window.switchDonationTab = function(tabName) {
@@ -1413,134 +1417,60 @@ async function handleGeneralDonationSubmit(e) {
     const method = document.getElementById('genMethodName').innerText;
     
     if(!amount || !sender || !trxId) return;
-    
-    const btn = e.target.querySelector('button');
-    setLoading(btn, true);
+    const btn = e.target.querySelector('button'); setLoading(btn, true);
     
     try {
-        const { error } = await supabaseClient.from('donation_requests').insert({
-            user_id: currentUser.id,
-            amount: amount,
-            sender_number: sender,
-            trx_id: trxId,
-            payment_method: method,
-            status: 'PENDING'
-        });
-        
+        const { error } = await supabaseClient.from('donation_requests').insert({ user_id: currentUser.id, amount: amount, sender_number: sender, trx_id: trxId, payment_method: method, status: 'PENDING' });
         if(error) throw error;
         alert('আপনার তথ্য জমা হয়েছে। এডমিন যাচাই করে অ্যাপ্রুভ করবেন।');
-        e.target.reset();
-        document.getElementById('generalDonationModal').style.display = 'none';
-    } catch(err) {
-        console.error(err);
-        alert('সমস্যা হয়েছে।');
-    } finally {
-        setLoading(btn, false);
-    }
+        e.target.reset(); document.getElementById('generalDonationModal').style.display = 'none';
+    } catch(err) { alert('সমস্যা হয়েছে।'); } finally { setLoading(btn, false); }
 }
 
 async function loadDonationHistory() {
     if(!currentUser) return;
     const container = document.getElementById('donationHistoryList');
     container.innerHTML = '<p style="text-align:center;">লোড হচ্ছে...</p>';
-    
     try {
-        const { data, error } = await supabaseClient
-            .from('donation_requests')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-            
+        const { data, error } = await supabaseClient.from('donation_requests').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
         if(error) throw error;
-        
-        if(!data || data.length === 0) {
-            container.innerHTML = '<p style="text-align:center;">কোনো হিস্ট্রি নেই।</p>';
-            return;
-        }
-        
-        container.innerHTML = data.map(d => `
-            <div class="notification-item" style="cursor:default;">
-                <div style="flex:1;">
-                    <strong>৳ ${d.amount}</strong> (${d.payment_method})
-                    <br><small>${new Date(d.created_at).toLocaleDateString()}</small>
-                </div>
-                <div>
-                    <span class="badge" style="background:${d.status === 'APPROVED' ? '#27ae60' : (d.status === 'REJECTED' ? '#c0392b' : '#f39c12')}; color:white; padding:4px 8px; border-radius:4px; font-size:12px;">${d.status}</span>
-                </div>
-            </div>
-        `).join('');
-        
-    } catch(err) {
-        container.innerHTML = '<p>হিস্ট্রি লোড করা যায়নি।</p>';
-    }
+        if(!data || data.length === 0) { container.innerHTML = '<p style="text-align:center;">কোনো হিস্ট্রি নেই।</p>'; return; }
+        container.innerHTML = data.map(d => `<div class="notification-item" style="cursor:default;"><div style="flex:1;"><strong>৳ ${d.amount}</strong> (${d.payment_method})<br><small>${new Date(d.created_at).toLocaleDateString()}</small></div><div><span class="badge" style="background:${d.status === 'APPROVED' ? '#27ae60' : (d.status === 'REJECTED' ? '#c0392b' : '#f39c12')}; color:white; padding:4px 8px; border-radius:4px; font-size:12px;">${d.status}</span></div></div>`).join('');
+    } catch(err) { container.innerHTML = '<p>হিস্ট্রি লোড করা যায়নি।</p>'; }
 }
 
 window.openDonationConfirmation = function() {
     if(!currentUser) { showLoginModal(); return; }
     if(!activeDonationCampaignId) return;
-
     const modalBody = document.getElementById('donationDetailsBody');
-    modalBody.innerHTML = `
-        <h3>ডোনেশন কনফার্ম করুন</h3>
-        <form id="campaignDonationForm">
-            <div class="form-group"><label>টাকার পরিমাণ</label><input type="number" id="campAmount" required></div>
-            <div class="form-group"><label>আপনার নাম্বার (প্রেরক)</label><input type="text" id="campSender" required></div>
-            <div class="form-group"><label>TrxID</label><input type="text" id="campTrxId" required></div>
-            <div class="form-group"><label>পেমেন্ট মেথড</label>
-                <select id="campMethod">
-                    <option value="Bkash">Bkash</option>
-                    <option value="Nagad">Nagad</option>
-                    <option value="Rocket">Rocket</option>
-                    <option value="Bank">Bank</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-full-width">জমা দিন</button>
-        </form>
-    `;
-    
+    modalBody.innerHTML = `<h3>ডোনেশন কনফার্ম করুন</h3><form id="campaignDonationForm"><div class="form-group"><label>টাকার পরিমাণ</label><input type="number" id="campAmount" required></div><div class="form-group"><label>আপনার নাম্বার (প্রেরক)</label><input type="text" id="campSender" required></div><div class="form-group"><label>TrxID</label><input type="text" id="campTrxId" required></div><div class="form-group"><label>পেমেন্ট মেথড</label><select id="campMethod"><option value="Bkash">Bkash</option><option value="Nagad">Nagad</option><option value="Rocket">Rocket</option><option value="Bank">Bank</option></select></div><button type="submit" class="btn-full-width">জমা দিন</button></form>`;
     document.getElementById('campaignDonationForm').addEventListener('submit', submitDonationDetails);
 };
 
 async function submitDonationDetails(e) {
     e.preventDefault();
-    const btn = e.target.querySelector('button');
-    setLoading(btn, true);
-    
+    const btn = e.target.querySelector('button'); setLoading(btn, true);
     const amount = document.getElementById('campAmount').value;
     const sender = document.getElementById('campSender').value;
     const trxId = document.getElementById('campTrxId').value;
     const method = document.getElementById('campMethod').value;
     
     try {
-        const { error } = await supabaseClient.from('donation_requests').insert({
-            user_id: currentUser.id,
-            prayer_id: activeDonationCampaignId,
-            amount: amount,
-            sender_number: sender,
-            trx_id: trxId,
-            payment_method: method,
-            status: 'PENDING'
-        });
-        
+        const { error } = await supabaseClient.from('donation_requests').insert({ user_id: currentUser.id, prayer_id: activeDonationCampaignId, amount: amount, sender_number: sender, trx_id: trxId, payment_method: method, status: 'PENDING' });
         if(error) throw error;
         alert('ধন্যবাদ! আপনার ডোনেশন তথ্য জমা হয়েছে।');
         document.getElementById('donationModal').style.display = 'none';
-    } catch(err) {
-        alert('সমস্যা হয়েছে: ' + err.message);
-    } finally {
-        setLoading(btn, false);
-    }
+    } catch(err) { alert('সমস্যা হয়েছে: ' + err.message); } finally { setLoading(btn, false); }
 }
 
 // ====================================
-// 13. EVENTS & GLOBAL HANDLERS (UPDATED)
+// 13. EVENTS & GLOBAL HANDLERS
 // ====================================
 function setupEventListeners() {
     document.addEventListener('click', handleGlobalClick);
     setupFormSubmissions();
     setupSearchFunctionality();
     
-    // Notification & Story Modals
     document.getElementById('notificationBtn')?.addEventListener('click', () => document.getElementById('notificationModal').classList.add('active'));
     document.getElementById('closeNotificationModalBtn')?.addEventListener('click', () => document.getElementById('notificationModal').classList.remove('active'));
     document.getElementById('mark-all-read-btn-modal')?.addEventListener('click', markAllAsRead);
@@ -1575,59 +1505,42 @@ async function handleFollow(btn) {
 }
 
 async function handleGlobalClick(e) {
-    // ১. নোটিফিকেশন ডিলিট বাটন
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
     if(deleteNotifBtn) { e.stopPropagation(); deleteNotification(deleteNotifBtn.dataset.id); return; }
 
-    // ২. প্রোফাইল লিংক (লগইন চেক)
     const profileLink = e.target.closest('a[href="/profile.html"]');
     if (profileLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
-    // ৩. গ্লোবাল ডোনেট বাটন
     if (e.target.closest('#globalDonateBtn')) { openGeneralDonationModal(); return; }
 
-    // ৪. ফলো বাটন
     const followBtn = e.target.closest('#followBtn'); if (followBtn) { handleFollow(followBtn); return; }
     
-    // ৫. নোটিফিকেশন আইটেম ক্লিক
     if (e.target.closest('.notification-item')) { 
-        const item = e.target.closest('.notification-item'); 
-        const url = item.dataset.url; 
+        const item = e.target.closest('.notification-item'); const url = item.dataset.url; 
         if (!e.target.closest('.delete-notif-btn')) {
             markNotificationAsRead(item.dataset.id); 
-            if (url && url.startsWith('post_id=')) { 
-                const prayerId = parseInt(url.split('=')[1]); 
-                if (!isNaN(prayerId)) { window.location.href = `comments.html?postId=${prayerId}`; } 
-            } else if (url && url.startsWith('/profile')) {
-                window.location.href = url;
-            }
+            if (url && url.startsWith('post_id=')) { const prayerId = parseInt(url.split('=')[1]); if (!isNaN(prayerId)) { window.location.href = `comments.html?postId=${prayerId}`; } } 
+            else if (url && url.startsWith('/profile')) { window.location.href = url; }
             document.getElementById('notificationModal').classList.remove('active'); 
-        }
-        return; 
+        } return; 
     }
     
-    // ৬. স্টোরি ক্লিক
     const storyItem = e.target.closest('.story-item:not(.my-story)'); if (storyItem) { return; }
     
-    // ৭. শেয়ার বাটন
     const shareBtn = e.target.closest('.share-btn'); 
     if (shareBtn) { 
-        const prayerId = shareBtn.dataset.id; 
-        const prayerTitle = shareBtn.dataset.title; 
-        const prayerText = shareBtn.dataset.text || '';
+        const prayerId = shareBtn.dataset.id; const prayerTitle = shareBtn.dataset.title; const prayerText = shareBtn.dataset.text || '';
         const url = `${window.location.origin}/comments.html?postId=${prayerId}`;
         const fullShareText = `${prayerTitle}\n\n${prayerText}\n\nআমিন বলতে নিচের লিংকে ক্লিক করুন:\n${url}`;
         if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক কপি হয়েছে!'); }, () => { alert('কপি করা যায়নি।'); }); } 
         return; 
     }
     
-    // ৮. ইমেজ ভিউয়ার
     const postImage = e.target.closest('.post-image, .fundraising-image'); if (postImage) { const modal = document.getElementById('image-view-modal'); const modalImg = document.getElementById('modal-image'); modal.style.display = "flex"; modalImg.src = postImage.dataset.src || postImage.src; return; }
     const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); if (closeImageModal && !e.target.closest('.image-modal-content')) { document.getElementById('image-view-modal').style.display = "none"; return; }
     const loginPage = document.getElementById('loginPage'); if (loginPage && loginPage.style.display === 'flex' && !e.target.closest('.login-box')) { return; }
     
-    const profileTrigger = e.target.closest('.profile-link-trigger'); 
-    if (profileTrigger && !currentUser) { e.preventDefault(); showLoginModal(); return; }
+    const profileTrigger = e.target.closest('.profile-link-trigger'); if (profileTrigger && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
     const dropdownTrigger = e.target.closest('.actions-menu-trigger'); if (dropdownTrigger) { document.querySelectorAll('.dropdown-menu').forEach(d => { if (d.id !== dropdownTrigger.dataset.dropdownId) d.style.display = 'none'; }); const targetDropdown = document.getElementById(dropdownTrigger.dataset.dropdownId); if (targetDropdown) targetDropdown.style.display = targetDropdown.style.display === 'block' ? 'none' : 'block'; return; }
     if (!e.target.closest('.dropdown-menu')) { document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none'); }
@@ -1635,12 +1548,7 @@ async function handleGlobalClick(e) {
     
     if (e.target.closest('#googleSignInBtn')) handleGoogleSignIn();
     if (e.target.closest('#facebookSignInBtn')) handleFacebookSignIn();
-    
-    // Updated: Async Sign Out
-    if (e.target.closest('#signOutBtn')) {
-        await supabaseClient.auth.signOut();
-        handleUserLoggedOut(); // Explicitly call UI update
-    }
+    if (e.target.closest('#signOutBtn')) { await supabaseClient.auth.signOut(); handleUserLoggedOut(); }
     
     if (e.target.closest('#sendOtpBtn')) handleSendOtp();
     if (e.target.closest('#verifyOtpBtn')) handleVerifyOtp();
@@ -1653,38 +1561,27 @@ async function handleGlobalClick(e) {
     if (donateBtn) {
         const campaignId = parseInt(donateBtn.dataset.id, 10);
         const campaignData = allFetchedPrayers.get(campaignId);
-        
         if (campaignData) {
             activeDonationCampaignId = campaignId;
             const modalBody = document.getElementById('donationDetailsBody');
             let methodsHtml = '';
-            
             if (campaignData.payment_details && campaignData.payment_details.methods && Array.isArray(campaignData.payment_details.methods)) {
                 methodsHtml = campaignData.payment_details.methods.map(m => {
                     const logos = { 'bkash': './images/bkash.png', 'nagad': './images/nagad.png', 'rocket': './images/rocket.png', 'upay': './images/upay.png', 'bank': './images/bank.png' };
                     const logoSrc = logos[m.type] || logos['bank'];
                     return `<div class="pay-row-display"><div class="pay-info-left"><img src="${logoSrc}" alt="${m.type}" onerror="this.style.display='none'"><div><div class="pay-number">${m.number}</div><div class="pay-type">${m.mode}</div></div></div><button class="copy-btn-small" onclick="navigator.clipboard.writeText('${m.number}').then(() => alert('নাম্বার কপি হয়েছে!'))"><i class="fas fa-copy"></i></button></div>`;
                 }).join('');
-            } else if (campaignData.payment_details && campaignData.payment_details.info) {
-                 methodsHtml = `<div class="payment-info"><pre>${campaignData.payment_details.info}</pre></div>`;
-            } else {
-                 methodsHtml = `<p>কোনো পেমেন্ট তথ্য পাওয়া যায়নি।</p>`;
-            }
-
+            } else if (campaignData.payment_details && campaignData.payment_details.info) { methodsHtml = `<div class="payment-info"><pre>${campaignData.payment_details.info}</pre></div>`; } else { methodsHtml = `<p>কোনো পেমেন্ট তথ্য পাওয়া যায়নি।</p>`; }
             let otherInfoHtml = '';
-            if (campaignData.payment_details && campaignData.payment_details.other_info) {
-                otherInfoHtml = `<div class="other-info-box"><strong>নোট:</strong> ${campaignData.payment_details.other_info}</div>`;
-            }
-
+            if (campaignData.payment_details && campaignData.payment_details.other_info) { otherInfoHtml = `<div class="other-info-box"><strong>নোট:</strong> ${campaignData.payment_details.other_info}</div>`; }
             modalBody.innerHTML = `<p style="text-align:center; margin-bottom:15px;"><strong>${campaignData.organization_name}</strong>-কে সহায়তা করুন।</p>${methodsHtml}${otherInfoHtml}<div class="donation-submit-section"><p style="font-size:12px; color:#666; text-align:center;">টাকা পাঠানোর পর নিচের বাটনে ক্লিক করে তথ্য দিন (ঐচ্ছিক)</p><button class="btn-full-width" style="margin-top:10px; background:#2c3e50;" onclick="openDonationConfirmation()">ডোনেশন কনফার্ম করুন</button></div>`;
             document.getElementById('donationModal').style.display = 'flex';
         }
         return;
     }
 
-    // === [FIXED] রিয়্যাকশন বাটন হ্যান্ডলিং ===
     if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
-        const btn = e.target.closest('.action-btn');
+        const btn = e.target.closest('.action-btn') || e.target.closest('.short-action-btn'); // Support shorts button
         const id = parseInt(btn.dataset.id, 10);
         const type = btn.classList.contains('love-btn') ? 'love' : 'ameen';
         handleReaction(id, type, btn);
@@ -1701,34 +1598,15 @@ async function handleGlobalClick(e) {
     if (e.target.closest('.read-more-btn')) { const btn = e.target.closest('.read-more-btn'); const details = btn.previousElementSibling; details.classList.toggle('collapsed'); btn.textContent = details.classList.contains('collapsed') ? 'আরও পড়ুন...' : 'সংক্ষিপ্ত করুন'; }
 }
 
-async function handleActionButtonClick(actionBtn) { 
-    if (!currentUser) { showLoginModal(); return; } 
-    const prayerId = parseInt(actionBtn.dataset.id, 10); 
-    if (isNaN(prayerId)) return; 
-    
-    if (actionBtn.classList.contains('ameen-btn')) handleReaction(prayerId, 'ameen', actionBtn); 
-    else if (actionBtn.classList.contains('love-btn')) handleReaction(prayerId, 'love', actionBtn); 
-}
-
-// Updated Google Sign In with Force Account Selection
 async function handleGoogleSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
-            options: { 
-                redirectTo: 'https://alaminsarkar-bsc.github.io/',
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent select_account' // Forces account chooser
-                }
-            } 
+            options: { redirectTo: 'https://alaminsarkar-bsc.github.io/', queryParams: { access_type: 'offline', prompt: 'consent select_account' } } 
         }); 
         if (error) throw error; 
-    } catch (error) { 
-        alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); 
-    } 
+    } catch (error) { alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); } 
 }
-
 
 async function handleFacebookSignIn() { try { const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: window.location.origin } }); if (error) throw error; } catch (error) { alert('ফেসবুক সাইনইনে সমস্যা হয়েছে: ' + error.message); } }
 
@@ -1747,106 +1625,48 @@ async function handleVerifyOtp() {
     try { const { data, error } = await supabaseClient.auth.verifyOtp({ phone: phone, token: token, type: 'sms' }); if (error) throw error; if (data.session) { document.getElementById('loginPage').style.display = 'none'; alert("লগইন সফল হয়েছে!"); } } catch (error) { console.error("Verify Error:", error); alert("ভুল কোড। আবার চেষ্টা করুন।"); } finally { setLoading(btn, false); }
 }
 
-// [FIXED] Reaction Handler with RPC & Optimistic UI and Local Cache Update
 async function handleReaction(prayerId, type, btn) {
-    if (!currentUser) { 
-        showLoginModal(); 
-        return; 
-    }
-
-    prayerId = parseInt(prayerId, 10);
-    if (isNaN(prayerId)) return;
-
+    if (!currentUser) { showLoginModal(); return; }
+    prayerId = parseInt(prayerId, 10); if (isNaN(prayerId)) return;
     btn.disabled = true;
-
     const isLove = type === 'love';
-    
-    // DOM Selector
-    const card = document.getElementById(`prayer-${prayerId}`);
+    const card = document.getElementById(isVideoFeedActive ? `short-${prayerId}` : `prayer-${prayerId}`); // Handle both card types
     if (!card) return;
     
     const countSpan = card.querySelector(isLove ? '.love-count' : '.ameen-count');
     const icon = btn.querySelector('i');
-
-    // Get current state from DOM
-    let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10);
-    if (isNaN(currentCount)) currentCount = 0;
-
+    let currentCount = parseInt((countSpan.innerText || '0').replace(/,/g, ''), 10); if (isNaN(currentCount)) currentCount = 0;
     const wasActive = btn.classList.contains(isLove ? 'loved' : 'ameened');
     const newActiveState = !wasActive;
     const newCount = newActiveState ? (currentCount + 1) : Math.max(0, currentCount - 1);
 
-    // Optimistic Update
     btn.classList.toggle(isLove ? 'loved' : 'ameened', newActiveState);
     countSpan.innerText = newCount; 
-    
-    if (isLove && icon) {
-        icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart';
-    }
+    if (isLove && icon) { icon.className = newActiveState ? 'fas fa-heart' : 'far fa-heart'; if(newActiveState && isVideoFeedActive) icon.style.color = '#e44d62'; }
 
     try {
-        // Call RPC function
-        const { error } = await supabaseClient.rpc('toggle_reaction', {
-            p_id: prayerId,
-            u_id: currentUser.id,
-            r_type: type
-        });
-
+        const { error } = await supabaseClient.rpc('toggle_reaction', { p_id: prayerId, u_id: currentUser.id, r_type: type });
         if (error) throw error;
-
-        // [FIXED] Update local caches based on reaction type
-        if (isLove) {
-            if (newActiveState) {
-                userLovedPrayers.add(prayerId);
-            } else {
-                userLovedPrayers.delete(prayerId);
-            }
-        } else {
-            if (newActiveState) {
-                userAmeenedPrayers.add(prayerId);
-            } else {
-                userAmeenedPrayers.delete(prayerId);
-            }
-        }
-
-        // Update prayer in local cache
+        if (isLove) { if (newActiveState) { userLovedPrayers.add(prayerId); } else { userLovedPrayers.delete(prayerId); } } 
+        else { if (newActiveState) { userAmeenedPrayers.add(prayerId); } else { userAmeenedPrayers.delete(prayerId); } }
+        
         const prayer = allFetchedPrayers.get(prayerId);
         if (prayer) {
-            const listKey = isLove ? 'loved_by' : 'ameened_by';
-            const countKey = isLove ? 'love_count' : 'ameen_count';
-            
+            const listKey = isLove ? 'loved_by' : 'ameened_by'; const countKey = isLove ? 'love_count' : 'ameen_count';
             let list = prayer[listKey] || [];
-            if (newActiveState) {
-                if (!list.includes(currentUser.id)) list.push(currentUser.id);
-            } else {
-                list = list.filter(id => id !== currentUser.id);
-            }
-            
-            prayer[listKey] = list;
-            prayer[countKey] = newCount;
-            allFetchedPrayers.set(prayerId, prayer);
+            if (newActiveState) { if (!list.includes(currentUser.id)) list.push(currentUser.id); } else { list = list.filter(id => id !== currentUser.id); }
+            prayer[listKey] = list; prayer[countKey] = newCount; allFetchedPrayers.set(prayerId, prayer);
         }
-
-        // Send notification if liked/ameened someone else's post
         if (newActiveState && prayer && prayer.author_uid !== currentUser.id) {
             const notifMsg = `${currentUser.profile.display_name} আপনার দোয়ায় ${isLove ? 'লাভ' : 'আমিন'} দিয়েছেন।`;
             createNotification(prayer.author_uid, currentUser.id, type, notifMsg, `post_id=${prayerId}`);
         }
-
     } catch (error) {
         console.error('Reaction error:', error);
-        
-        // Rollback on error
-        btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive);
-        countSpan.innerText = currentCount;
-        if (isLove && icon) {
-            icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart';
-        }
-        
+        btn.classList.toggle(isLove ? 'loved' : 'ameened', wasActive); countSpan.innerText = currentCount;
+        if (isLove && icon) { icon.className = wasActive ? 'fas fa-heart' : 'far fa-heart'; }
         alert("নেটওয়ার্ক সমস্যার কারণে রিয়্যাকশন সেভ হয়নি।");
-    } finally {
-        setTimeout(() => { btn.disabled = false; }, 300);
-    }
+    } finally { setTimeout(() => { btn.disabled = false; }, 300); }
 }
 
 async function handleSavePost(btn) {
@@ -1928,7 +1748,6 @@ function setupRealtimeSubscription() {
         .subscribe(); 
 }
 
-// [UPDATED] Realtime Update Handler (Prevents Flickering)
 async function handlePrayerChange(payload) {
     if (document.visibilityState !== 'visible') return; 
     
@@ -1940,57 +1759,35 @@ async function handlePrayerChange(payload) {
 
     if (eventType === 'INSERT') { 
         if (!container) return;
-        
-        // ফান্ডরাইজিং হলে আলাদা লজিক
-        if (newRecord.is_fundraising) { 
-            fetchFundraisingPosts(); 
-            return;
-        } 
-        
+        if (newRecord.is_fundraising) { fetchFundraisingPosts(); return; } 
         shuffledPrayerIds.unshift(prayerId);
-        
-        // নতুন পোস্টের জন্য ইউজারের নাম/ছবি দরকার, তাই একবার ফেচ করা লাগবে
-        const { data: newPrayer } = await supabaseClient
-            .from('prayers')
-            .select('*, users!author_uid(id, display_name, photo_url)')
-            .eq('id', prayerId)
-            .single(); 
-            
+        const { data: newPrayer } = await supabaseClient.from('prayers').select('*, users!author_uid(id, display_name, photo_url)').eq('id', prayerId).single(); 
         if (newPrayer) { 
             allFetchedPrayers.set(prayerId, newPrayer); 
             if (isVideoFeedActive && !newPrayer.uploaded_video_url && !newPrayer.youtube_url) return;
-            
-            // ফিল্টার লজিক অনুযায়ী রেন্ডার
             if (!filteredUserId || (filteredUserId && newPrayer.author_uid === filteredUserId)) {
-                container.prepend(createPrayerCardElement(newPrayer)); 
+                if (isVideoFeedActive && newPrayer.uploaded_video_url) { container.prepend(createShortsCardElement(newPrayer)); }
+                else { container.prepend(createPrayerCardElement(newPrayer)); }
             }
         } 
     }
     else if (eventType === 'UPDATE') { 
-        const existingCard = document.getElementById(`prayer-${prayerId}`); 
-        
-        // নতুন ডাটা সরাসরি payload থেকে নেওয়া (ফাস্ট আপডেট)
-        // ইউজার ইনফো payload এ থাকে না, তাই আগের ক্যাশ থেকে নেওয়া
+        const existingCard = document.getElementById(`prayer-${prayerId}`) || document.getElementById(`short-${prayerId}`); 
         const cachedPrayer = allFetchedPrayers.get(prayerId);
         const updatedPrayer = { ...cachedPrayer, ...newRecord }; 
         
         if (updatedPrayer) {
             allFetchedPrayers.set(prayerId, updatedPrayer);
-            
             if (existingCard) {
-                // ১. আমিন আপডেট (কেবল সংখ্যা আপডেট, ক্লাস ফ্লিকার রোধ)
                 const ameenCountSpan = existingCard.querySelector('.ameen-count');
                 const ameenBtn = existingCard.querySelector('.ameen-btn');
                 if (ameenCountSpan) ameenCountSpan.innerText = updatedPrayer.ameen_count || 0;
                 
-                // শুধুমাত্র যদি সার্ভার থেকে সম্পূর্ণ অ্যারে আসে, তবেই ক্লাস টগল করুন
-                // নতুবা অপটিমিস্টিক UI ঠিক থাকবে
                 if (currentUser && ameenBtn && updatedPrayer.ameened_by) {
                     const hasAmeened = updatedPrayer.ameened_by.includes(currentUser.id);
                     ameenBtn.classList.toggle('ameened', hasAmeened);
                 }
 
-                // ২. লাভ আপডেট
                 const loveCountSpan = existingCard.querySelector('.love-count');
                 const loveBtn = existingCard.querySelector('.love-btn');
                 if (loveCountSpan) loveCountSpan.innerText = updatedPrayer.love_count || 0;
@@ -1999,35 +1796,33 @@ async function handlePrayerChange(payload) {
                     const hasLoved = updatedPrayer.loved_by.includes(currentUser.id);
                     loveBtn.classList.toggle('loved', hasLoved);
                     const icon = loveBtn.querySelector('i');
-                    if(icon) icon.className = hasLoved ? 'fas fa-heart' : 'far fa-heart';
+                    if(icon) {
+                        icon.className = hasLoved ? 'fas fa-heart' : 'far fa-heart';
+                        if(hasLoved && isVideoFeedActive) icon.style.color = '#e44d62';
+                        else if(!hasLoved && isVideoFeedActive) icon.style.color = 'white';
+                    }
                 }
 
-                // ৩. ভিউ বা কমেন্ট কাউন্ট আপডেট
                 const viewCountSpan = document.getElementById(`view-count-${prayerId}`);
                 if (viewCountSpan) viewCountSpan.innerText = (updatedPrayer.view_count || 0).toLocaleString('bn-BD');
                 
                 const commentCountSpan = existingCard.querySelector('.comment-count-text');
                 if (commentCountSpan) commentCountSpan.innerText = `${updatedPrayer.comment_count || 0} টি কমেন্ট`;
                 
-                // ৪. দোয়া কবুল ব্যাজ আপডেট
-                if (updatedPrayer.is_answered && !existingCard.querySelector('.answered-badge')) {
+                if (updatedPrayer.is_answered && !existingCard.querySelector('.answered-badge') && !isVideoFeedActive) {
                     const badge = document.createElement('div');
                     badge.className = 'answered-badge';
                     badge.innerHTML = '<i class="fas fa-check-circle"></i> আলহামদুলিল্লাহ, দোয়া কবুল হয়েছে';
                     const body = existingCard.querySelector('.card-body');
                     if(body) body.prepend(badge);
-                } else if (!updatedPrayer.is_answered && existingCard.querySelector('.answered-badge')) {
-                    existingCard.querySelector('.answered-badge').remove();
                 }
             }
         }
     }
     else if (eventType === 'DELETE') { 
         allFetchedPrayers.delete(oldRecord.id); 
-        if (!oldRecord.is_fundraising) { 
-            shuffledPrayerIds = shuffledPrayerIds.filter(id => id !== oldRecord.id); 
-        } 
-        const card = document.getElementById(`prayer-${oldRecord.id}`);
+        if (!oldRecord.is_fundraising) { shuffledPrayerIds = shuffledPrayerIds.filter(id => id !== oldRecord.id); } 
+        const card = document.getElementById(`prayer-${oldRecord.id}`) || document.getElementById(`short-${oldRecord.id}`);
         if(card) card.remove(); 
     }
 }
@@ -2037,20 +1832,25 @@ function handleCommentChange(payload) {
     const prayerId = newRecord?.prayer_id || oldRecord?.prayer_id;
     if (!prayerId) return;
 
-    if (eventType === 'INSERT' && currentUser && newRecord.author_uid === currentUser.id) {
-        return;
-    }
+    if (eventType === 'INSERT' && currentUser && newRecord.author_uid === currentUser.id) return;
 
-    const card = document.getElementById(`prayer-${prayerId}`);
+    const card = document.getElementById(`prayer-${prayerId}`) || document.getElementById(`short-${prayerId}`);
     const prayerData = allFetchedPrayers.get(prayerId);
 
     if (eventType === 'INSERT') {
         if (card) {
+            // For normal cards
             const countSpan = card.querySelector('.comment-count-text');
             if (countSpan) {
                 const currentText = countSpan.innerText;
                 const currentCount = parseInt(currentText) || 0;
                 countSpan.innerText = `${currentCount + 1} টি কমেন্ট`;
+            }
+            // For shorts
+            const shortCommentBtn = card.querySelector('.short-action-btn[href*="comments.html"] span');
+            if(shortCommentBtn) {
+                const currentCount = parseInt(shortCommentBtn.innerText) || 0;
+                shortCommentBtn.innerText = currentCount + 1;
             }
         }
         if (prayerData) {
@@ -2065,6 +1865,11 @@ function handleCommentChange(payload) {
                 const currentCount = parseInt(currentText) || 0;
                 countSpan.innerText = `${Math.max(0, currentCount - 1)} টি কমেন্ট`;
             }
+            const shortCommentBtn = card.querySelector('.short-action-btn[href*="comments.html"] span');
+            if(shortCommentBtn) {
+                const currentCount = parseInt(shortCommentBtn.innerText) || 0;
+                shortCommentBtn.innerText = Math.max(0, currentCount - 1);
+            }
         }
         if (prayerData) {
             prayerData.comment_count = Math.max(0, (prayerData.comment_count || 0) - 1);
@@ -2073,24 +1878,14 @@ function handleCommentChange(payload) {
     }
 }
 
-// ====================================
-// NEW: UPDATE HEADER PROFILE ICON
-// ====================================
 function updateHeaderProfileIcon(photoUrl) {
     const profileTab = document.querySelector('.header-nav-row a[href="/profile.html"]');
     if (!profileTab) return;
-    if (photoUrl) {
-        profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`;
-    } else {
-        profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`;
-    }
+    if (photoUrl) { profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`; } 
+    else { profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`; }
 }
 
-// ====================================
-// NEW: PROFILE IMAGE UPLOAD LOGIC
-// ====================================
 function setupProfileImageUploads() {
-    // বাটন ক্লিক ইভেন্ট
     const coverBtn = document.getElementById('changeCoverBtn');
     const profileBtn = document.getElementById('changeProfilePicBtn');
     const coverInput = document.getElementById('coverPicInput');
@@ -2108,95 +1903,44 @@ function setupProfileImageUploads() {
         newProfileBtn.addEventListener('click', () => document.getElementById('profilePicInput').click());
     }
 
-    if(coverInput) {
-        coverInput.onchange = (e) => handleProfileImageUpload(e, 'cover');
-    }
-    if(profileInput) {
-        profileInput.onchange = (e) => handleProfileImageUpload(e, 'profile');
-    }
+    if(coverInput) { coverInput.onchange = (e) => handleProfileImageUpload(e, 'cover'); }
+    if(profileInput) { profileInput.onchange = (e) => handleProfileImageUpload(e, 'profile'); }
 }
 
 async function handleProfileImageUpload(e, type) {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-        alert("ফাইলের আকার খুব বেশি! ৫ এমবির নিচে হতে হবে।");
-        return;
-    }
-
+    if (file.size > 5 * 1024 * 1024) { alert("ফাইলের আকার খুব বেশি! ৫ এমবির নিচে হতে হবে।"); return; }
     const loadingModal = document.getElementById('uploadProgressModal');
     if(loadingModal) loadingModal.style.display = 'flex';
 
     try {
         const dbColumn = type === 'cover' ? 'cover_photo_url' : 'photo_url';
-        const { data: userData, error: fetchError } = await supabaseClient
-            .from('users')
-            .select(dbColumn)
-            .eq('id', currentUser.id)
-            .single();
-
+        const { data: userData, error: fetchError } = await supabaseClient.from('users').select(dbColumn).eq('id', currentUser.id).single();
         if (fetchError) throw fetchError;
-
         const oldUrl = userData ? userData[dbColumn] : null;
-
         if (oldUrl) {
-            try {
-                const pathParts = oldUrl.split('/post_images/'); 
-                if (pathParts.length > 1) {
-                    const oldPath = pathParts[1]; 
-                    await supabaseClient.storage.from('post_images').remove([oldPath]);
-                }
-            } catch (delErr) { console.warn("Old image delete failed:", delErr); }
+            try { const pathParts = oldUrl.split('/post_images/'); if (pathParts.length > 1) { const oldPath = pathParts[1]; await supabaseClient.storage.from('post_images').remove([oldPath]); } } catch (delErr) { console.warn("Old image delete failed:", delErr); }
         }
-
         const fileExt = file.name.split('.').pop();
         const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
         const filePath = `${type}s/${fileName}`;
-
-        const { data, error: uploadError } = await supabaseClient.storage
-            .from('post_images')
-            .upload(filePath, file, { upsert: true });
-
+        const { data, error: uploadError } = await supabaseClient.storage.from('post_images').upload(filePath, file, { upsert: true });
         if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabaseClient.storage
-            .from('post_images')
-            .getPublicUrl(filePath);
-            
+        const { data: publicUrlData } = supabaseClient.storage.from('post_images').getPublicUrl(filePath);
         const imageUrl = publicUrlData.publicUrl;
-
-        const updateData = {};
-        updateData[dbColumn] = imageUrl;
-
-        const { error: dbError } = await supabaseClient
-            .from('users')
-            .update(updateData)
-            .eq('id', currentUser.id);
-
+        const updateData = {}; updateData[dbColumn] = imageUrl;
+        const { error: dbError } = await supabaseClient.from('users').update(updateData).eq('id', currentUser.id);
         if (dbError) throw dbError;
 
         if (type === 'cover') {
-            const imgEl = document.getElementById('profileCoverDisplay');
-            imgEl.src = imageUrl;
-            imgEl.style.display = 'block';
+            const imgEl = document.getElementById('profileCoverDisplay'); imgEl.src = imageUrl; imgEl.style.display = 'block';
         } else {
             const avatarEl = document.getElementById('profileAvatar');
             avatarEl.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
-            
-            if(currentUser.profile) {
-                currentUser.profile[dbColumn] = imageUrl;
-            }
+            if(currentUser.profile) { currentUser.profile[dbColumn] = imageUrl; }
             updateHeaderProfileIcon(imageUrl);
         }
-
         alert("আপলোড সফল হয়েছে!");
-
-    } catch (error) {
-        console.error("Upload Error:", error);
-        alert("আপলোড করতে সমস্যা হয়েছে: " + error.message);
-    } finally {
-        if(loadingModal) loadingModal.style.display = 'none';
-        e.target.value = '';
-    }
+    } catch (error) { console.error("Upload Error:", error); alert("আপলোড করতে সমস্যা হয়েছে: " + error.message); } finally { if(loadingModal) loadingModal.style.display = 'none'; e.target.value = ''; }
 }

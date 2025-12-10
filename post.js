@@ -1,4 +1,3 @@
-
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -13,16 +12,15 @@ let recordedAudioBlob = null;
 let recorderStream;
 let timerInterval;
 let postType = 'prayer'; 
-let isPollMode = false; // পোল মোড ট্র্যাকিং
+let isPollMode = false;
 
 // ====================================
-// AI মডারেশন মডেল লোড (NEW)
+// AI মডারেশন মডেল লোড
 // ====================================
 let nsfwModel = null;
 
 async function loadNSFWModel() {
     try {
-        // মডেল লোড হতে একটু সময় নিতে পারে, ব্যাকগ্রাউন্ডে লোড হবে
         nsfwModel = await nsfwjs.load();
         console.log("NSFW AI Model Loaded Successfully");
     } catch (err) {
@@ -30,28 +28,53 @@ async function loadNSFWModel() {
     }
 }
 
-// কন্টেন্ট চেক করার ফাংশন (NEW)
 async function checkContentSafety(imgElement) {
     if (!nsfwModel) {
         console.warn("NSFW Model not loaded yet, skipping check.");
-        return true; // মডেল লোড না হলে আপাতত বাইপাস করবে
+        return true;
     }
     
     try {
         const predictions = await nsfwModel.classify(imgElement);
-        // Porn বা Hentai ক্যাটাগরি যদি খুব বেশি হয় (৬০% এর উপরে) তবে ব্লক করবে
+        // Porn বা Hentai ক্যাটাগরি ৬০% এর বেশি হলে ব্লক করবে
         const unsafe = predictions.find(p => 
             (p.className === 'Porn' || p.className === 'Hentai') && p.probability > 0.60
         );
         
         if (unsafe) {
             console.warn("Unsafe content detected:", unsafe);
-            return false; // কন্টেন্ট খারাপ
+            return false;
         }
-        return true; // কন্টেন্ট ভালো
+        return true;
     } catch (e) {
         console.error("Prediction Error:", e);
-        return true; // এরর হলে বাইপাস
+        return true;
+    }
+}
+
+// ====================================
+// ইমেজ কমপ্রেশন ফাংশন (NEW FEATURE)
+// ====================================
+async function compressImageFile(imageFile) {
+    // যদি লাইব্রেরি লোড না হয়, অরিজিনাল ফাইল ফেরত দিবে
+    if (typeof imageCompression === 'undefined') return imageFile;
+
+    console.log(`Original Size: ${(imageFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+    const options = {
+        maxSizeMB: 0.5,          // সর্বোচ্চ সাইজ ০.৫ এমবি (500KB)
+        maxWidthOrHeight: 1920,  // সর্বোচ্চ ১৯২০ পিক্সেল
+        useWebWorker: true,      // ফাস্ট প্রসেসিং
+        initialQuality: 0.7      // ৭০% কোয়ালিটি
+    };
+
+    try {
+        const compressedFile = await imageCompression(imageFile, options);
+        console.log(`Compressed Size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+        return compressedFile;
+    } catch (error) {
+        console.error("Compression Error:", error);
+        return imageFile; // কমপ্রেশন ফেইল করলে অরিজিনাল ফাইল যাবে
     }
 }
 
@@ -59,7 +82,6 @@ async function checkContentSafety(imgElement) {
 // অ্যাপলিকেশন শুরু
 // ====================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // মডেল লোড শুরু করুন
     loadNSFWModel();
 
     try {
@@ -89,7 +111,7 @@ async function initializeApp() {
     }
     
     setupFormSubmissions();
-    setupPollLogic(); // পোল লজিক সেটআপ
+    setupPollLogic(); 
 }
 
 // ====================================
@@ -110,21 +132,20 @@ window.togglePollMode = function() {
 
     if (isPollMode) {
         pollInputs.style.display = 'block';
-        mediaSection.style.display = 'none'; // মিডিয়া হাইড
+        mediaSection.style.display = 'none'; 
         btn.classList.add('active');
         btn.innerHTML = '<i class="fas fa-times"></i> পোল বাতিল করুন';
-        // রিসেট মিডিয়া
         resetAllMediaInputs('none');
     } else {
         pollInputs.style.display = 'none';
-        mediaSection.style.display = 'block'; // মিডিয়া শো
+        mediaSection.style.display = 'block';
         btn.classList.remove('active');
         btn.innerHTML = '<i class="fas fa-poll"></i> পোল তৈরি করুন';
     }
 };
 
 // ====================================
-// FUNDRAISING SETUP (Dynamic Fields)
+// FUNDRAISING SETUP
 // ====================================
 async function setupFundraisingUI() {
     try {
@@ -139,7 +160,6 @@ async function setupFundraisingUI() {
             return; 
         }
 
-        // UI Updates
         postType = 'fundraising';
         document.getElementById('pageTitle').textContent = 'নতুন ক্যাম্পেইন তৈরি করুন';
         document.getElementById('prayerTitleInput').placeholder = 'ক্যাম্পেইনের শিরোনাম';
@@ -147,18 +167,15 @@ async function setupFundraisingUI() {
         
         document.getElementById('fundraisingFields').style.display = 'block';
         
-        // পোল এবং নাম গোপন অপশন হাইড করা (ফান্ডরাইজিং এ এগুলো থাকে না)
         const anonContainer = document.getElementById('anonymousCheckContainer');
         if(anonContainer) anonContainer.style.display = 'none';
         
         const pollWrapper = document.querySelector('.poll-section-wrapper');
         if(pollWrapper) pollWrapper.style.display = 'none';
 
-        // Required fields
         document.getElementById('organizationName').required = true;
         document.getElementById('goalAmount').required = true;
 
-        // Dynamic Payment Logic Setup
         setupDynamicPaymentLogic();
 
     } catch (err) {
@@ -269,6 +286,7 @@ function setupFormSubmissions() {
         prayerForm.addEventListener('submit', handleNewPost);
         setupMediaUploads();
         setupAudioRecording();
+        setupProfileImageUploads(); // প্রোফাইল আপলোডের জন্য
     }
 }
 
@@ -321,30 +339,20 @@ async function handleNewPost(e) {
     e.preventDefault();
     const btn = document.getElementById('submitPrayerBtn');
     
-    // --- 1. বেসিক ভ্যালিডেশন ---
     const title = document.getElementById('prayerTitleInput').value.trim();
     let details = document.getElementById('prayerDetailsTextarea').value.trim();
     
-    if (!details && !isPollMode) {
-        alert('বিস্তারিত লিখুন।');
-        return;
-    }
-    if (isPollMode && !title) {
-        alert('পোলের একটি শিরোনাম দিন।');
-        return;
-    }
+    if (!details && !isPollMode) { alert('বিস্তারিত লিখুন।'); return; }
+    if (isPollMode && !title) { alert('পোলের একটি শিরোনাম দিন।'); return; }
     if (isPollMode && !details) details = title;
 
-    // --- 2. AI MODERATION CHECK (NEW) ---
-    // ফাইলগুলো ধরা
     const imageFile = document.getElementById('imageUploadInput').files[0];
     const videoFile = document.getElementById('videoUploadInput').files[0];
     
-    // চেকিং শুরু করার আগে লোডিং দেখান
     setLoading(btn, true);
 
+    // --- AI MODERATION CHECK ---
     try {
-        // ১. ছবি চেক করা
         if (imageFile) {
             console.log("Checking image safety...");
             const img = new Image();
@@ -355,15 +363,13 @@ async function handleNewPost(e) {
             if (!isSafe) {
                 alert("দুঃখিত! আপনার ছবিতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
                 setLoading(btn, false);
-                return; // এখানেই প্রসেস বন্ধ
+                return; 
             }
         }
 
-        // ২. ভিডিও চেক করা (থাম্বনেইল এর মাধ্যমে)
         if (videoFile) {
             console.log("Checking video safety...");
             try {
-                // ভিডিও থেকে থাম্বনেইল তৈরি
                 const thumbnailBlob = await generateVideoThumbnailFromFile(videoFile);
                 const thumbImg = new Image();
                 thumbImg.src = URL.createObjectURL(thumbnailBlob);
@@ -373,7 +379,7 @@ async function handleNewPost(e) {
                 if (!isSafe) {
                     alert("দুঃখিত! আপনার ভিডিওতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
                     setLoading(btn, false);
-                    return; // আপলোড বন্ধ
+                    return; 
                 }
             } catch (thumbErr) {
                 console.warn("Thumbnail check skipped due to error:", thumbErr);
@@ -381,14 +387,8 @@ async function handleNewPost(e) {
         }
     } catch (checkError) {
         console.error("Moderation check failed:", checkError);
-        // মডারেশন ফেইল হলে কী করবেন? আপাতত আমরা আপলোড চালিয়ে যাচ্ছি, কিন্তু আপনি চাইলে আটকাতে পারেন
-        // alert("যাচাইকরণে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।");
-        // setLoading(btn, false);
-        // return;
     }
 
-    // --- 3. আসল আপলোড লজিক (আগের কোড) ---
-    // (যদি মডারেশন পাস করে, কোড এখানে আসবে)
     const youtubeUrl = document.getElementById('youtubeLinkInput').value.trim();
     const audioInputFile = document.getElementById('audioUploadInput').files[0];
 
@@ -415,8 +415,18 @@ async function handleNewPost(e) {
         // --- NORMAL POST LOGIC ---
         else {
             if (imageFile) {
-                imageUrl = await uploadWithProgress('post_images', `${currentUser.id}_img_${Date.now()}`, imageFile);
-            } else if (videoFile) {
+                // Image Compression
+                const compressedFile = await compressImageFile(imageFile);
+                imageUrl = await uploadWithProgress('post_images', `${currentUser.id}_img_${Date.now()}`, compressedFile);
+            } 
+            else if (videoFile) {
+                // Video Size Limit (100MB)
+                if (videoFile.size > 100 * 1024 * 1024) {
+                    alert("ভিডিওর সাইজ অনেক বড়! দয়া করে ১০০ এমবির নিচে ভিডিও আপলোড করুন।");
+                    setLoading(btn, false);
+                    return;
+                }
+
                 try {
                     const thumbnailBlob = await generateVideoThumbnailFromFile(videoFile);
                     const thumbnailFileName = `${currentUser.id}_thumb_${Date.now()}.jpg`;
@@ -425,7 +435,8 @@ async function handleNewPost(e) {
                     console.warn("থাম্বনেইল তৈরি করা যায়নি:", thumbError);
                 }
                 uploadedVideoUrl = await uploadWithProgress('post_videos', `${currentUser.id}_vid_${Date.now()}`, videoFile);
-            } else if (recordedAudioBlob) {
+            } 
+            else if (recordedAudioBlob) {
                 audioFileUrl = await uploadWithProgress('audio_prayers', `audio-${currentUser.id}-${Date.now()}.webm`, recordedAudioBlob);
             } else if (audioInputFile) {
                 const fileName = `audio-${currentUser.id}-${Date.now()}.${audioInputFile.name.split('.').pop()}`;
@@ -569,4 +580,87 @@ function stopRecording() {
 function startTimer() {
     let s = 0; const el = document.getElementById('recordingTimer'); el.innerText = "00:00";
     timerInterval = setInterval(() => { s++; const m = Math.floor(s / 60).toString().padStart(2, '0'); const sec = (s % 60).toString().padStart(2, '0'); el.innerText = `${m}:${sec}`; if(s >= 300) stopRecording(); }, 1000);
+}
+
+// ====================================
+// প্রোফাইল ইমেজ কমপ্রেশন ও আপলোড
+// ====================================
+function setupProfileImageUploads() {
+    const coverBtn = document.getElementById('changeCoverBtn');
+    const profileBtn = document.getElementById('changeProfilePicBtn');
+    const coverInput = document.getElementById('coverPicInput');
+    const profileInput = document.getElementById('profilePicInput');
+
+    if(coverBtn) {
+        const newCoverBtn = coverBtn.cloneNode(true);
+        coverBtn.parentNode.replaceChild(newCoverBtn, coverBtn);
+        newCoverBtn.addEventListener('click', () => document.getElementById('coverPicInput').click());
+    }
+
+    if(profileBtn) {
+        const newProfileBtn = profileBtn.cloneNode(true);
+        profileBtn.parentNode.replaceChild(newProfileBtn, profileBtn);
+        newProfileBtn.addEventListener('click', () => document.getElementById('profilePicInput').click());
+    }
+
+    if(coverInput) { coverInput.onchange = (e) => handleProfileImageUpload(e, 'cover'); }
+    if(profileInput) { profileInput.onchange = (e) => handleProfileImageUpload(e, 'profile'); }
+}
+
+async function handleProfileImageUpload(e, type) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert("ফাইলের আকার খুব বেশি! ৫ এমবির নিচে হতে হবে।");
+        return;
+    }
+
+    const loadingModal = document.getElementById('uploadProgressModal');
+    if(loadingModal) loadingModal.style.display = 'flex';
+
+    try {
+        // ইমেজ কমপ্রেশন
+        const compressedFile = await compressImageFile(file);
+
+        const dbColumn = type === 'cover' ? 'cover_photo_url' : 'photo_url';
+        const { data: userData, error: fetchError } = await supabaseClient.from('users').select(dbColumn).eq('id', currentUser.id).single();
+        if (fetchError) throw fetchError;
+        
+        const oldUrl = userData ? userData[dbColumn] : null;
+        if (oldUrl) {
+            try { const pathParts = oldUrl.split('/post_images/'); if (pathParts.length > 1) { const oldPath = pathParts[1]; await supabaseClient.storage.from('post_images').remove([oldPath]); } } catch (delErr) { console.warn("Old image delete failed:", delErr); }
+        }
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
+        const filePath = `${type}s/${fileName}`;
+        
+        // আপলোড কমপ্রেসড ফাইল
+        const { data, error: uploadError } = await supabaseClient.storage.from('post_images').upload(filePath, compressedFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        
+        const { data: publicUrlData } = supabaseClient.storage.from('post_images').getPublicUrl(filePath);
+        const imageUrl = publicUrlData.publicUrl;
+        
+        const updateData = {}; updateData[dbColumn] = imageUrl;
+        const { error: dbError } = await supabaseClient.from('users').update(updateData).eq('id', currentUser.id);
+        if (dbError) throw dbError;
+
+        if (type === 'cover') {
+            const imgEl = document.getElementById('profileCoverDisplay'); imgEl.src = imageUrl; imgEl.style.display = 'block';
+        } else {
+            const avatarEl = document.getElementById('profileAvatar');
+            avatarEl.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+            if(currentUser.profile) { currentUser.profile[dbColumn] = imageUrl; }
+            updateHeaderProfileIcon(imageUrl);
+        }
+        alert("আপলোড সফল হয়েছে!");
+    } catch (error) { 
+        console.error("Upload Error:", error); 
+        alert("আপলোড করতে সমস্যা হয়েছে: " + error.message); 
+    } finally { 
+        if(loadingModal) loadingModal.style.display = 'none'; 
+        e.target.value = ''; 
+    }
 }

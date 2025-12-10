@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Messages - iPray</title>
+    
+    <!-- মোবাইল অ্যাপ কালার থিম -->
+    <meta name="theme-color" content="#ffffff">
+    
+    <!-- আইকন ও স্টাইল -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css"> <!-- গ্লোবাল স্টাইল -->
+    <link rel="stylesheet" href="messages.css"> <!-- চ্যাট স্পেসিফিক স্টাইল -->
+</head>
+<body id="chat-page">
+
+    <!-- ===========================
+       ১. ইনবক্স ভিউ (Inbox View)
+       =========================== -->
+    <div id="inbox-view" class="view-container">
+        <!-- মেসেঞ্জার স্টাইল হেডার -->
+        <header class="msg-header">
+            <div class="header-left">
+                <a href="/index.html" class="my-profile-link">
+                    <!-- নিজের প্রোফাইল ছবি এখানে লোড হবে -->
+                    <div id="myHeaderAvatar" class="avatar-small"></div>
+                </a>
+                <h1 class="page-title">Chats</h1>
+            </div>
+            <div class="header-right">
+                <button class="icon-circle-btn"><i class="fas fa-camera"></i></button>
+                <button class="icon-circle-btn" id="newChatBtn"><i class="fas fa-edit"></i></button>
+            </div>
+        </header>
+        
+        <!-- সার্চ বার -->
+        <div class="msg-search-container">
+            <div class="msg-search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="chatSearchInput" placeholder="Search">
+            </div>
+        </div>
+
+        <!-- অ্যাক্টিভ ইউজার (Stories style - Optional) -->
+        <div class="active-users-bar" id="activeUsersBar" style="display:none;">
+            <!-- JS দিয়ে এখানে অ্যাক্টিভ ইউজার আসবে -->
+        </div>
+
+        <!-- চ্যাট লিস্ট -->
+        <div id="chatListContainer" class="chat-list-area">
+            <div class="loader-container" style="padding-top: 50px;">
+                <div class="loader" style="border-color: #0084ff; border-bottom-color: transparent;"></div>
+            </div>
+        </div>
+        
+        <!-- বটম নেভিগেশন (মেসেঞ্জারের মতো নিচে থাকে) -->
+        <nav class="bottom-nav">
+            <a href="/index.html" class="nav-item"><i class="fas fa-home"></i></a>
+            <div class="nav-item active"><i class="fas fa-comment"></i></div>
+            <a href="/profile.html" class="nav-item"><i class="fas fa-user"></i></a>
+        </nav>
+    </div>
+
+    <!-- ===========================
+       ২. কনভারসেশন ভিউ (Chat Room)
+       =========================== -->
+    <div id="conversation-view" class="view-container" style="display: none;">
+        
+        <!-- চ্যাট হেডার -->
+        <header class="chat-room-header">
+            <button id="backToInboxBtn" class="back-btn-chat"><i class="fas fa-arrow-left"></i></button>
+            
+            <div class="chat-partner-info">
+                <div class="partner-avatar-wrapper">
+                    <img id="chatHeaderImg" src="" alt="" class="partner-img">
+                    <span class="active-dot" id="headerActiveDot"></span>
+                </div>
+                <div class="partner-text">
+                    <h3 id="chatHeaderName">Loading...</h3>
+                    <span id="chatHeaderStatus">Active now</span>
+                </div>
+            </div>
+            
+            <div class="chat-actions">
+                <button class="action-icon"><i class="fas fa-phone-alt"></i></button>
+                <button class="action-icon"><i class="fas fa-video"></i></button>
+                <button class="action-icon info-icon"><i class="fas fa-info-circle"></i></button>
+            </div>
+        </header>
+
+        <!-- মেসেজ বডি (যেখানে চ্যাট থাকবে) -->
+        <main class="message-body" id="messageContainer">
+            <!-- মেসেজগুলো এখানে ডায়নামিকলি আসবে -->
+            <div class="empty-chat-placeholder" style="display: none;">
+                <div class="profile-placeholder-large">
+                    <img id="emptyStateImg" src="" alt="">
+                </div>
+                <h3 id="emptyStateName"></h3>
+                <p>You're friends on iPray</p>
+            </div>
+        </main>
+
+        <!-- ইমেজ প্রিভিউ প্যানেল (সেন্ড করার আগে) -->
+        <div id="imagePreviewPanel" class="image-preview-box" style="display: none;">
+            <div class="preview-content">
+                <img id="uploadPreviewImg" src="" alt="Preview">
+                <button id="closePreviewBtn"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- চ্যাট ফুটার (ইনপুট এরিয়া) -->
+        <footer class="chat-footer-area">
+            <div class="footer-actions-left">
+                <button class="footer-btn"><i class="fas fa-plus-circle" style="color: #0084ff;"></i></button>
+                <button class="footer-btn" id="cameraTriggerBtn"><i class="fas fa-camera"></i></button>
+                <button class="footer-btn" id="galleryTriggerBtn"><i class="fas fa-image"></i></button>
+                <!-- Hidden Inputs -->
+                <input type="file" id="chatImageInput" accept="image/*" hidden>
+            </div>
+
+            <div class="input-pill">
+                <input type="text" id="messageInput" placeholder="Message..." autocomplete="off">
+                <button class="emoji-icon"><i class="fas fa-smile"></i></button>
+            </div>
+
+            <div class="footer-action-right">
+                <!-- ডিফল্ট অবস্থায় লাইক বাটন, টাইপ করলে সেন্ড বাটন হবে -->
+                <button id="sendMessageBtn" class="like-send-btn">
+                    <i class="fas fa-thumbs-up"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ইমেজ ভিউয়ার মডাল (চ্যাটের ছবি বড় করে দেখার জন্য) -->
+    <div id="fullScreenImageModal" class="fs-image-modal">
+        <span class="fs-close-btn">&times;</span>
+        <img class="fs-modal-content" id="fsModalImg">
+        <!-- ডাউনলোড বাটন -->
+        <a id="downloadImgBtn" href="#" download class="fs-download-btn"><i class="fas fa-download"></i></a>
+    </div>
+
+    <!-- লাইব্রেরি -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- ইমেজ কমপ্রেশন (ফাস্ট আপলোডের জন্য) -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+
+    <!-- মেইন লজিক -->
+    <script src="messages.js"></script>
+</body>
+</html>
