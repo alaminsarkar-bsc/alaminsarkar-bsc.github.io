@@ -1,3 +1,5 @@
+/* --- START OF FILE messages.css --- */
+
 :root {
     --messenger-blue: #0084ff;
     --messenger-gray: #e4e6eb;
@@ -93,7 +95,7 @@ body {
 
 /* Chat List Area */
 .chat-list-area {
-    height: calc(100vh - 140px); /* হেডার ও বটম ন্যাভ বাদ দিয়ে */
+    height: calc(100vh - 140px);
     overflow-y: auto;
     padding-bottom: 20px;
 }
@@ -113,12 +115,6 @@ body {
 }
 .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.online-badge {
-    position: absolute; bottom: 2px; right: 2px;
-    width: 12px; height: 12px; background: #31a24c;
-    border: 2px solid #fff; border-radius: 50%;
-}
-
 .chat-info {
     flex: 1;
     display: flex;
@@ -135,7 +131,7 @@ body {
     border-radius: 50%;
 }
 
-/* Skeleton Loader Style (লোডিং ইফেক্ট) */
+/* Skeleton Loader Style */
 .skeleton-chat-item {
     display: flex;
     align-items: center;
@@ -155,7 +151,7 @@ body {
 .skeleton-name-line { width: 50%; height: 14px; border-radius: 4px; }
 .skeleton-msg-line { width: 80%; height: 10px; border-radius: 4px; }
 
-/* Loader Spinner (Center Fixed) */
+/* Loader Spinner */
 .loader-container {
     display: flex;
     justify-content: center;
@@ -221,10 +217,10 @@ body {
     color: var(--messenger-blue); cursor: pointer;
 }
 
-/* Message Body */
+/* [UPDATED] Message Body Height Fixed */
 .message-body {
     padding: 70px 10px 80px 10px; /* Header & Footer Space */
-    height: 100vh;
+    height: calc(100vh - 140px); /* Full height minus header/footer */
     overflow-y: auto;
     background: #fff;
     display: flex;
@@ -288,11 +284,20 @@ body {
     border: 1px solid rgba(0,0,0,0.1);
 }
 
+/* [NEW] Audio Bubble Styling */
+.audio-bubble {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 150px;
+}
+.audio-bubble audio {
+    height: 35px;
+    max-width: 220px;
+}
+
 .empty-chat-placeholder {
     text-align: center; margin-top: 50px; opacity: 0.6;
-}
-.profile-placeholder-large img {
-    width: 80px; height: 80px; border-radius: 50%; margin-bottom: 10px;
 }
 
 /* ============================
@@ -305,6 +310,7 @@ body {
     box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
     box-sizing: border-box;
     z-index: 100;
+    height: 60px;
 }
 
 .footer-actions-left { display: flex; gap: 12px; align-items: center; }
@@ -340,24 +346,73 @@ body {
 }
 .like-send-btn:active { transform: scale(1.2); }
 
-/* Image Preview Panel */
+/* [FIXED] Image Preview Panel (Positioned correctly) */
 .image-preview-box {
-    position: fixed; bottom: 60px; left: 0; width: 100%;
-    background: rgba(255,255,255,0.95);
-    padding: 10px; border-top: 1px solid #ddd;
-    z-index: 90; backdrop-filter: blur(5px);
-    display: flex; justify-content: center;
+    position: fixed; 
+    bottom: 65px; /* ফুটারের ঠিক উপরে */
+    left: 10px; 
+    right: 10px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    z-index: 110;
+    display: flex; 
+    justify-content: center;
+    animation: slideUp 0.3s ease;
 }
+@keyframes slideUp { 
+    from { transform: translateY(20px); opacity: 0; } 
+    to { transform: translateY(0); opacity: 1; } 
+}
+
 .preview-content { position: relative; width: fit-content; }
 .preview-content img {
-    max-height: 120px; border-radius: 10px;
-    border: 1px solid #ccc;
+    max-height: 200px;
+    border-radius: 8px;
+    border: 1px solid #eee;
 }
 #closePreviewBtn {
-    position: absolute; top: -8px; right: -8px;
-    background: #555; color: white; border: none;
-    border-radius: 50%; width: 22px; height: 22px; cursor: pointer;
+    position: absolute; top: -10px; right: -10px;
+    background: #333; color: white; border: none;
+    border-radius: 50%; width: 24px; height: 24px; cursor: pointer;
 }
+
+/* [NEW] Audio Recording UI */
+.audio-recording-ui {
+    position: fixed; 
+    bottom: 65px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background: #ea4335; 
+    color: white; 
+    padding: 10px 20px;
+    border-radius: 30px; 
+    display: flex; 
+    align-items: center; 
+    gap: 20px;
+    box-shadow: 0 4px 10px rgba(234, 67, 53, 0.4); 
+    z-index: 120;
+    animation: popIn 0.2s ease;
+}
+@keyframes popIn { 
+    from { transform: translateX(-50%) scale(0.8); opacity: 0; } 
+    to { transform: translateX(-50%) scale(1); opacity: 1; } 
+}
+
+.recording-indicator { display: flex; align-items: center; gap: 10px; }
+.red-dot { width: 10px; height: 10px; background: white; border-radius: 50%; }
+.pulse { animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+#recordingTimer { font-weight: bold; font-family: monospace; font-size: 16px; }
+
+.recording-actions { display: flex; gap: 10px; }
+.rec-btn {
+    width: 35px; height: 35px; border-radius: 50%; border: none;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.rec-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
+.rec-btn.send { background: white; color: #ea4335; }
 
 /* Full Screen Modal */
 .fs-image-modal {
