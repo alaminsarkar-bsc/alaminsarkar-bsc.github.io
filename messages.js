@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser = session.user;
     loadMyProfile();
     
-    // ডাইরেক্ট চ্যাট হ্যান্ডলিং (প্রোফাইল পেজ থেকে আসলে)
     const startChatUser = localStorage.getItem('startChatWith');
     if (startChatUser) {
         localStorage.removeItem('startChatWith');
@@ -64,7 +63,6 @@ async function loadChatList() {
     const container = document.getElementById('chatListContainer');
     if(!container) return;
     
-    // লোডার দেখানো
     container.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
 
     try {
@@ -72,7 +70,7 @@ async function loadChatList() {
 
         if (error) throw error;
 
-        container.innerHTML = ''; // ক্লিয়ার লোডার
+        container.innerHTML = ''; 
 
         if (!partners || partners.length === 0) {
             container.innerHTML = `
@@ -177,7 +175,7 @@ async function loadMessages(partnerId) {
 }
 
 // ==========================
-// ৪. মেসেজ পাঠানো (Text / Image / Voice)
+// ৪. মেসেজ পাঠানো (Text / Image / Voice) - [FIXED]
 // ==========================
 async function sendMessage() {
     if (isUploading) return;
@@ -188,42 +186,67 @@ async function sendMessage() {
 
     // যদি টেক্সট বা ছবি কিছুই না থাকে, তবে লাইক পাঠাবে
     if (!text && !selectedImageFile) {
-        sendLikeEmoji(partnerId); return;
+        sendLikeEmoji(partnerId); 
+        return;
     }
 
-    // UI রিসেট
-    input.value = '';
-    toggleSendButton();
-    const emptyPlaceholder = document.querySelector('.empty-chat-placeholder');
-    if(emptyPlaceholder) emptyPlaceholder.remove();
+    isUploading = true; // আপলোডিং শুরু
+    const sendBtnIcon = document.querySelector('#sendMessageBtn i');
+    const originalIcon = sendBtnIcon.className;
+    sendBtnIcon.className = 'fas fa-spinner fa-spin'; // লোডিং আইকন
 
     let imageUrl = null;
-    
-    // ইমেজ আপলোড
+
+    // [FIXED] ইমেজ আপলোড লজিক
     if (selectedImageFile) {
-        isUploading = true;
-        // বাকেটের নাম 'chat_images' হতে হবে
-        imageUrl = await uploadFile(selectedImageFile, 'chat_images');
-        closeImagePreview();
-        isUploading = false;
-        
-        if (!imageUrl) return; 
+        try {
+            // 'chat_images' বাকেটে আপলোড হবে
+            imageUrl = await uploadFile(selectedImageFile, 'chat_images');
+            
+            if (!imageUrl) {
+                alert("ছবি আপলোড ব্যর্থ হয়েছে।");
+                resetSendButton(originalIcon);
+                return;
+            }
+        } catch (error) {
+            console.error("Image Upload Error:", error);
+            resetSendButton(originalIcon);
+            return;
+        }
     }
 
+    // মেসেজ অবজেক্ট তৈরি
     const newMessage = { 
         sender_id: currentUser.id, 
         receiver_id: partnerId, 
-        content: text, 
+        content: text || null, // টেক্সট না থাকলে নাল
         image_url: imageUrl, 
         is_read: false 
     };
     
     try {
-        await supabaseClient.from('messages').insert([newMessage]);
+        const { error } = await supabaseClient.from('messages').insert([newMessage]);
+        if (error) throw error;
+        
+        // সফল হলে UI রিসেট
+        input.value = '';
+        closeImagePreview(); // প্রিভিউ বন্ধ এবং ফাইল নাল করা
+        const empty = document.querySelector('.empty-chat-placeholder');
+        if(empty) empty.remove();
+
     } catch (err) {
         console.error("Send failed:", err);
         alert("মেসেজ পাঠানো যায়নি।");
+    } finally {
+        resetSendButton('fas fa-thumbs-up');
     }
+}
+
+function resetSendButton(className) {
+    isUploading = false;
+    const icon = document.querySelector('#sendMessageBtn i');
+    icon.className = className;
+    toggleSendButton(); // বাটনের অবস্থা আবার চেক করা
 }
 
 async function sendLikeEmoji(partnerId) {
@@ -243,16 +266,18 @@ async function sendLikeEmoji(partnerId) {
 // ইউনিভার্সাল আপলোড ফাংশন
 async function uploadFile(file, bucketName) {
     try {
-        // ইমেজ হলে কম্প্রেস করা
         let fileToUpload = file;
-        if(file.type.startsWith('image/')) {
-            const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
-            if(typeof imageCompression !== 'undefined') {
+        // ইমেজ হলে কম্প্রেস করা
+        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
+            try {
+                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
                 fileToUpload = await imageCompression(file, options);
+            } catch (cErr) {
+                console.warn("Compression failed, uploading original.", cErr);
             }
         }
 
-        const ext = file.name ? file.name.split('.').pop() : 'webm';
+        const ext = file.name ? file.name.split('.').pop() : 'jpg';
         const fileName = `${currentUser.id}/${Date.now()}.${ext}`;
         
         const { data, error } = await supabaseClient.storage.from(bucketName).upload(fileName, fileToUpload);
@@ -262,14 +287,13 @@ async function uploadFile(file, bucketName) {
         const { data: urlData } = supabaseClient.storage.from(bucketName).getPublicUrl(fileName);
         return urlData.publicUrl;
     } catch (err) { 
-        console.error("Upload failed:", err); 
-        alert("আপলোড ব্যর্থ হয়েছে। বাকেট পারমিশন চেক করুন।");
+        console.error("Upload failed details:", err); 
         return null; 
     }
 }
 
 // ==========================
-// ৫. ভয়েস রেকর্ডিং লজিক (New)
+// ৫. ভয়েস রেকর্ডিং লজিক
 // ==========================
 async function startRecording() {
     try {
@@ -281,18 +305,14 @@ async function startRecording() {
             audioChunks.push(event.data);
         };
         
-        mediaRecorder.onstop = () => {
-            // স্টপ হওয়ার পর sendRecording এ হ্যান্ডেল করা হবে
-        };
-        
         mediaRecorder.start();
         isRecording = true;
         
         // UI আপডেট
         document.getElementById('audioRecordingUI').style.display = 'flex';
-        document.querySelector('.chat-footer-area').style.display = 'none'; // ফুটার হাইড
+        document.querySelector('.chat-footer-area').style.display = 'none'; 
         
-        // টাইমার চালু
+        // টাইমার
         let seconds = 0;
         document.getElementById('recordingTimer').innerText = "00:00";
         recordingInterval = setInterval(() => {
@@ -310,7 +330,7 @@ async function startRecording() {
 
 function cancelRecording() {
     if (mediaRecorder) {
-        mediaRecorder.stream.getTracks().forEach(track => track.stop()); // স্ট্রীম বন্ধ
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
         mediaRecorder = null;
     }
     clearInterval(recordingInterval);
@@ -319,7 +339,7 @@ function cancelRecording() {
 
 function closeRecordingUI() {
     document.getElementById('audioRecordingUI').style.display = 'none';
-    document.querySelector('.chat-footer-area').style.display = 'flex'; // ফুটার শো
+    document.querySelector('.chat-footer-area').style.display = 'flex'; 
     isRecording = false;
 }
 
@@ -329,8 +349,6 @@ async function sendRecording() {
     // ম্যানুয়ালি স্টপ ইভেন্ট হ্যান্ডেল করা
     mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        
-        // বাকেটের নাম 'chat_audio' হতে হবে
         const audioUrl = await uploadFile(audioBlob, 'chat_audio');
         
         if (audioUrl) {
@@ -344,6 +362,8 @@ async function sendRecording() {
                 content: null,
                 is_read: false 
             }]);
+        } else {
+            alert("Audio send failed.");
         }
     };
     
@@ -430,7 +450,7 @@ function toggleSendButton() {
     const input = document.getElementById('messageInput');
     const icon = document.querySelector('#sendMessageBtn i');
     
-    // ইনপুটে লেখা থাকলে বা ছবি থাকলে সেন্ড বাটন দেখাবে
+    // ইনপুটে লেখা থাকলে বা ছবি সিলেক্ট করা থাকলে সেন্ড আইকন
     if (input.value.trim() !== '' || selectedImageFile) { 
         icon.className = 'fas fa-paper-plane'; 
         icon.style.color = '#0084ff'; 
@@ -441,7 +461,7 @@ function toggleSendButton() {
     }
 }
 
-function timeAgoShort(dateString) { return dateString ? 'Just now' : ''; } // সিম্পলিফাইড
+function timeAgoShort(dateString) { return dateString ? 'Just now' : ''; }
 
 async function markAsSeen(partnerId) {
     try { 
@@ -471,32 +491,27 @@ function setupEventListeners() {
     const triggerFile = () => document.getElementById('chatImageInput').click();
     document.getElementById('galleryTriggerBtn').addEventListener('click', triggerFile);
     
-    // [FIXED] ইমেজ প্রিভিউ লজিক
+    // [FIXED] ফাইল চেঞ্জ হ্যান্ডলার
     document.getElementById('chatImageInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             selectedImageFile = file;
-            // প্রিভিউ প্যানেল দেখানো
+            // প্রিভিউ দেখানো
             const panel = document.getElementById('imagePreviewPanel');
             const previewImg = document.getElementById('uploadPreviewImg');
             
             if(panel && previewImg) { 
                 previewImg.src = URL.createObjectURL(file);
                 panel.style.display = 'flex'; 
-                toggleSendButton(); // বাটন পরিবর্তন
+                toggleSendButton(); // বাটন পরিবর্তন করা (thumbs up -> paper plane)
             }
         }
     });
     
     // প্রিভিউ ক্লোজ
-    document.getElementById('closePreviewBtn').addEventListener('click', () => {
-        selectedImageFile = null;
-        document.getElementById('chatImageInput').value = '';
-        document.getElementById('imagePreviewPanel').style.display = 'none';
-        toggleSendButton();
-    });
+    document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
     
-    // অডিও রেকর্ডিং বাটন
+    // অডিও রেকর্ডিং
     document.getElementById('micTriggerBtn').addEventListener('click', startRecording);
     document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
     document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
@@ -505,6 +520,13 @@ function setupEventListeners() {
     document.querySelector('.fs-close-btn').addEventListener('click', () => { 
         document.getElementById('fullScreenImageModal').style.display = 'none'; 
     });
+}
+
+function closeImagePreview() {
+    selectedImageFile = null;
+    document.getElementById('chatImageInput').value = '';
+    document.getElementById('imagePreviewPanel').style.display = 'none';
+    toggleSendButton();
 }
 
 window.viewFullScreenImage = function(src) {
