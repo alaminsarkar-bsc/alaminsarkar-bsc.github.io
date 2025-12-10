@@ -1573,17 +1573,6 @@ textarea.post-input {
     color: #856404;
 }
 
-আলহামদুলিল্লাহ। নোটিফিকেশন ডিলিট করার ফিচারটি (সিঙ্গেল ডিলিট এবং সব ডিলিট) যুক্ত করার জন্য আমি কোড আপডেট করছি।
-
-আপনাকে **৩টি** কাজ করতে হবে:
-১. `style.css` এ একটু কোড যোগ করা।
-২. `index.html` এ নোটিফিকেশন মডালের হেডারে একটি বাটন যোগ করা।
-৩. `script.js` সম্পূর্ণ রিপ্লেস করা (আমি আপডেট করে দিচ্ছি)।
-
-### ১. style.css আপডেট
-আপনার `style.css` ফাইলের একদম শেষে নিচের কোডটুকু যোগ করে দিন:
-
-```css
 /* Notification Delete Buttons */
 .delete-notif-btn {
     background: none;
@@ -3098,8 +3087,8 @@ textarea.post-input {
 
 /* কমেন্টের ভেতরে অডিও প্লেয়ার ডিজাইন */
 .comment-audio-player {
-    width: 100%;
-    height: 35px;
+    width: 50%;
+    height: 20px;
     margin-top: 5px;
     border-radius: 20px;
     outline: none;

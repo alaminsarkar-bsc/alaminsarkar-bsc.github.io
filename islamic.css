@@ -1204,3 +1204,17 @@ html[dir="rtl"] .namaz-step-details p {
     min-width: 30px;
     text-align: center;
 }
+
+/* অটো লোকেশন বাটন স্টাইল */
+.btn-icon {
+    padding: 10px 15px; /* ইনপুট ফিল্ডের হাইটের সাথে মিল রাখার জন্য */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 45px;
+}
+
+.btn-icon i {
+    font-size: 1.2rem;
+}
+

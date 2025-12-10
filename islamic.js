@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             request.onerror = (event) => {
                 console.error("IndexedDB error:", event.target.errorCode);
-                // Resolve anyway so app doesn't crash, but db will be undefined
                 resolve(null);
             };
         });
@@ -39,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getFromDB(storeName, key) {
         return new Promise((resolve, reject) => {
             if (!db) {
-                return resolve(null); // ডেটাবেজ প্রস্তুত না হলে null রিটার্ন করবে
+                return resolve(null);
             }
             try {
                 const transaction = db.transaction([storeName], 'readonly');
@@ -78,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 request.onerror = (event) => {
                     console.error(`Error saving data to ${storeName}:`, event.target.error);
-                    resolve(); // Fail silently
+                    resolve();
                 };
             } catch (e) {
                 console.warn("DB Save Error:", e);
@@ -132,15 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
             latestRequestedSurah: null,
         },
         autoClosePlayer: JSON.parse(localStorage.getItem('autoClosePlayer')) !== false,
-// এই অংশটুকু state এর ভেতরে যোগ করুন
-    autoScroll: {
-        isActive: false,
-        speed: 1, 
-        interval: null
-    }
+        autoScroll: {
+            isActive: false,
+            speed: 1, 
+            interval: null
+        }
     };
 
-    // --- START: ব্যাক বাটন নেভিগেশন হ্যান্ডলার ---
+    // --- ব্যাক বাটন নেভিগেশন হ্যান্ডলার ---
     const handlePopstate = (event) => {
         const quranTabContainer = document.getElementById('quran-tab');
         const amalTabContainer = document.getElementById('amal-tab');
@@ -150,52 +148,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.state) {
             const { tab, view, data } = event.state;
 
-            // যদি সঠিক ট্যাব সক্রিয় না থাকে, তবে সেটি সক্রিয় করুন
             if (!document.querySelector(`.tab[data-tab="${tab}"]`).classList.contains('active')) {
                 switchTab(tab);
             }
 
-            // স্টেট অনুযায়ী সঠিক ভিউ রেন্ডার করুন
             switch (view) {
-                // Quran Tab
-                case 'surahList':
-                    loadSurahList();
-                    break;
-                case 'surahDetail':
-                    loadSurahDetail(data.surahNumber);
-                    break;
-                 case 'bookmarks':
-                    loadBookmarksView();
-                    break;
-                // Amal Tab
-                case 'amalCategories':
-                    loadDailyAmalCategories();
-                    break;
-                case 'amalDetail':
-                    loadDailyAmalDetail(data.category);
-                    break;
-                // Hadith Tab
-                case 'hadithBookSelection':
-                    initHadithTab(hadithTabContainer);
-                    break;
-                case 'hadithList':
-                    // যেহেতু loadHadithList initHadithTab-এর ভেতরে, তাই initHadithTab আবার কল করতে হবে
-                    // এবং এটি book selection দেখাবে, যা সঠিক ব্যাক নেভিগেশন
-                    initHadithTab(hadithTabContainer); 
-                    break;
-                case 'hadithBookmarks':
-                    initHadithTab(hadithTabContainer);
-                    break;
-                // Namaz Shikkha Tab
-                case 'genderSelection':
-                     initNamazShikkhaTab(namazShikkhaTabContainer);
-                     break;
-                 case 'namazSteps':
-                     initNamazShikkhaTab(namazShikkhaTabContainer);
-                     break;
-
+                case 'surahList': loadSurahList(); break;
+                case 'surahDetail': loadSurahDetail(data.surahNumber); break;
+                case 'bookmarks': loadBookmarksView(); break;
+                case 'amalCategories': loadDailyAmalCategories(); break;
+                case 'amalDetail': loadDailyAmalDetail(data.category); break;
+                case 'hadithBookSelection': initHadithTab(hadithTabContainer); break;
+                case 'hadithList': initHadithTab(hadithTabContainer); break;
+                case 'hadithBookmarks': initHadithTab(hadithTabContainer); break;
+                case 'genderSelection': initNamazShikkhaTab(namazShikkhaTabContainer); break;
+                case 'namazSteps': initNamazShikkhaTab(namazShikkhaTabContainer); break;
                 default:
-                    // কোনো নির্দিষ্ট ভিউ না থাকলে ট্যাবের মূল ভিউতে ফিরে যান
                     if(tab === 'quran') loadSurahList();
                     if(tab === 'amal') loadDailyAmalCategories();
                     if(tab === 'hadith') initHadithTab(hadithTabContainer);
@@ -203,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
         } else {
-             // যদি কোনো স্টেট না থাকে (যেমন অ্যাপের শুরুতে), তাহলে প্রধান ট্যাবে ফিরে যান
              const activeTab = document.querySelector('.tab.active').dataset.tab;
              if(activeTab === 'quran') loadSurahList();
              else if(activeTab === 'amal') loadDailyAmalCategories();
@@ -212,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     window.addEventListener('popstate', handlePopstate);
-    // --- END: ব্যাক বাটন নেভিগেশন হ্যান্ডলার ---
 
     const surahData = {
         names: {
@@ -261,9 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { title: { bn: "ঘরে প্রবেশের দোয়া", en: "Dua for entering the house", hi: "घर में प्रवेश करने की दुआ", ur: "گھر میں داخل ہونے کی دعا" }, arab: "بِسْمِ اللهِ وَلَجْنَا، وَبِسْمِ اللهِ خَرَجْنَا، وَعَلَى رَبِّנָא تَوَكَّلْنَا", bn_pron: "বিসমিল্লাহি ওয়ালাজনা, ওয়া বিসমিল্লাহি খারাজনা, ওয়া ‘আলা রাব্বিনা তাওয়াক্কালনা।", bn: "আল্লাহর নামে আমরা প্রবেশ করলাম এবং আল্লাহর নামেই বের হলাম এবং আমাদের প্রতিপালকের ওপরই আমরা ভরসা করলাম।", en: "In the name of Allah we enter, and in the name of Allah we leave, and upon our Lord we rely.", hi: "अल्लाह के नाम से हम दाखिल हुए, और अल्लाह के नाम से हम निकले, और अपने रब पर ही हमने भरोसा किया।", ur: "اللہ کے نام سے ہم داخل ہوئے، اور اللہ کے نام سے ہم نکلے، اور اپنے رب پر ہی ہم نے بھروسہ کیا۔" },
             { title: { bn: "ঘর থেকে বের হওয়ার দোয়া", en: "Dua for leaving the house", hi: "घर से निकलने की दुआ", ur: "گھر سے نکلنے کی دعا" }, arab: "بِسْمِ اللهِ، تَوَكَّلْتُ عَلَى اللهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ", bn_pron: "বিসমিল্লাহি, তাওয়াক্কালতু আলাল্লাহি, ওয়া লা হাওলা ওয়ালা কুওয়াতা ইল্লা বিল্লাহ।", bn: "আল্লাহর নামে (বের হচ্ছি), আমি আল্লাহর উপর ভরসা করলাম, আল্লাহ ছাড়া কোনো উপায় ও শক্তি নেই।", en: "In the name of Allah, I have placed my trust in Allah, there is no might and no power except with Allah.", hi: "अल्लाह के नाम से, मैंने अल्लाह पर भरोसा किया, अल्लाह के सिवा कोई शक्ति और कोई बल नहीं है।", ur: "اللہ کے نام سے، میں نے اللہ پر بھروسہ کیا، اللہ کے سوا کوئی طاقت اور کوئی قوت نہیں ہے۔" },
             { title: { bn: "ঘুমানোর দোয়া", en: "Dua before sleeping", hi: "सोने से पहले की दुआ", ur: "سونے سے پہلے کی دعا" }, arab: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", bn_pron: "বিস্মিকাল্লা-হুম্মা আমূতু ওয়া আহ্ইয়া।", bn: "হে আল্লাহ! আপনার নামেই আমি মৃত্যুবরণ করি এবং জীবিত হই।", en: "In Your name, O Allah, I die and I live.", hi: "हे अल्लाह! तेरे ही नाम से मैं मरता और जीता हूँ।", ur: "اے اللہ! تیرے ہی نام سے میں مرتا اور جیتا ہوں۔" },
-            { title: { bn: "ঘুম থেকে ওঠার দোয়া", en: "Dua after waking up", hi: "जागने के बाद की दुआ", ur: "جاگنے کے بعد کی دعا" }, arab: "اَلْحَمْدُ لِلّٰهِ الَّذِيْ أَحْيَانَا bَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُوْرُ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী আহ্ইয়ানা বা'দা মা আমা-তানা ওয়া ইলাইহิน্ নুশূর।", bn: "সমস্ত প্রশংসা সেই আল্লাহর জন্য যিনি আমাদেরকে মৃত্যুর পর জীবন দান করেছেন এবং তাঁরই দিকে আমাদের পুনরুত্থান।", en: "All praise is for Allah who gave us life after having taken it from us and unto Him is the resurrection.", hi: "सारी प्रशंसा उस अल्लाह के लिए है जिसने हमें मौत के बाद जीवन दिया और उसी की ओर हमें लौटना है।", ur: "تمام تعریفیں اس اللہ کے لیے ہیں جس نے ہمیں मौत کے बाद زندگی دی اور اسی کی طرف ہمیں لوٹنا ہے۔" },
+            { title: { bn: "ঘুম থেকে ওঠার দোয়া", en: "Dua after waking up", hi: "जागने के बाद की दुआ", ur: "جاگنے کے بعد کی دعا" }, arab: "اَلْحَمْدُ لِلّٰهِ الَّذِيْ أَحْيَانَا bَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُوْرُ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী আহ্ইয়ানা বা'দা মা আমা-তানা ওয়া ইলাইহิน্ নুশূর।", bn: "সমস্ত প্রশংসা সেই আল্লাহর জন্য যিনি আমাদেরকে মৃত্যুর পর জীবন দান করেছেন এবং তাঁরই দিকে আমাদের পুনরুত্থান।", en: "All praise is for Allah who gave us life after having taken it from us and unto Him is the resurrection.", hi: "सारी प्रशंसा उस अल्लाह के लिए है जिसने हमें मौत के बाद जीवन दिया और उसी की ओर हमें लौटना है।", ur: "تمام تعریفیں اس اللہ کے لیے ہیں جس نے ہمیں मौत के बाद زندگی دی اور اسی کی طرف ہمیں لوٹنا ہے۔" },
             { title: { bn: "খাবার খাওয়ার আগের দোয়া", en: "Dua before eating", hi: "खाने से पहले की दुआ", ur: "کھانے سے پہلے کی دعا" }, arab: "بِسْمِ اللهِ", bn_pron: "বিসমিল্লাহ।", bn: "আল্লাহর নামে শুরু করছি।", en: "In the name of Allah.", hi: "अल्लाह के नाम से।", ur: "اللہ کے نام سے۔" },
-            { title: { bn: "খাবার খাওয়ার পরের দোয়া", en: "Dua after eating", hi: "खाने के बाद की दुआ", ur: "کھانے کے بعد کی دعا" }, arab: "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنِي هَذَا وَرَזَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী আত্ব'আমানী হা-যা ওয়া রাযাক্বানীহি মিন গাইরি হাওলিম মিন্নী ওয়ালা কুওয়্যাহ।", bn: "সকল প্রশংসা আল্লাহর জন্য, যিনি আমাকে এই খাদ্য খাওয়ালেন এবং রিযিক দান করলেন আমার কোনো চেষ্টা ও শক্তি ছাড়া।", en: "Praise is to Allah Who has fed me this and provided it for me without any might nor power from myself.", hi: "सभी प्रशंसा अल्लाह के लिए है जिसने मुझे यह खिलाया और मुझे बिना किसी प्रयास और शक्ति के यह प्रदान किया।", ur: "تمام تعریفیں اللہ کے لیے ہیں جس نے مجھے यह کھلایا اور مجھے بغیر کسی کوشش اور طاقت کے यह فراہم کیا۔" },
+            { title: { bn: "খাবার খাওয়ার পরের দোয়া", en: "Dua after eating", hi: "खाने के बाद की दुआ", ur: "کھانے के बाद की दुआ" }, arab: "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنِي هَذَا وَرَזَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী আত্ব'আমানী হা-যা ওয়া রাযাক্বানীহি মিন গাইরি হাওলিম মিন্নী ওয়ালা কুওয়্যাহ।", bn: "সকল প্রশংসা আল্লাহর জন্য, যিনি আমাকে এই খাদ্য খাওয়ালেন এবং রিযিক দান করলেন আমার কোনো চেষ্টা ও শক্তি ছাড়া।", en: "Praise is to Allah Who has fed me this and provided it for me without any might nor power from myself.", hi: "सभी प्रशंसा अल्लाह के लिए है जिसने मुझे यह खिलाया और मुझे बिना किसी प्रयास और शक्ति के यह प्रदान किया।", ur: "تمام تعریفیں اللہ کے لیے ہیں جس نے مجھے यह کھلایا اور مجھے بغیر کسی کوشش اور طاقت کے यह فراہم کیا۔" },
             { title: { bn: "মসজিদে প্রবেশের দোয়া", en: "Dua for entering the mosque", hi: "मस्जिद में प्रवेश करने की दुआ", ur: "مسجد میں داخل ہونے کی دعا" }, arab: "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ", bn_pron: "আল্লা-হুম্মাফতাহ লী আবওয়া-বা রাহমাতিক।", bn: "হে আল্লাহ! আমার জন্য আপনার রহমতের দরজাসমূহ খুলে দিন।", en: "O Allah, open for me the gates of Your mercy.", hi: "हे अल्लाह! मेरे लिए अपनी रहमत के दरवाज़े खोल दे।", ur: "اے اللہ! میرے لیے اپنی رحمت کے دروازے کھول دے۔" },
             { title: { bn: "মসজিদ থেকে বের হওয়ার দোয়া", en: "Dua for leaving the mosque", hi: "मस्जिद से निकलने की दुआ", ur: "مسجد سے نکلنے کی دعا" }, arab: "اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ", bn_pron: "আল্লা-হুম্মা ইন্নী আস'আলুকা মিন ফাদ্বলিক।", bn: "হে আল্লাহ! আমি আপনার কাছে আপনার অনুগ্রহ প্রার্থনা করছি।", en: "O Allah, I ask You from Your bounty.", hi: "हे अल्लाह! मैं तुझसे तेरे फज़्ल का सवाल करता हूँ।", ur: "اے اللہ! میں تجھ سے تیرے فضل کا سوال کرتا ہوں۔" },
             { title: { bn: "বাথরুমে প্রবেশের দোয়া", en: "Dua for entering the toilet", hi: "शौचालय में प्रवेश करने की दुआ", ur: "بیت الخلا میں داخل ہونے کی دعا" }, arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُbُثِ وَالْخَبَائِثِ", bn_pron: "আল্লা-হুম্মা ইন্নী আ'উযু বিকা মিনাল খুবুসি ওয়াল খাবা-ইস।", bn: "হে আল্লাহ! আমি আপনার কাছে পুরুষ ও নারী শয়তানের অনিষ্ট থেকে আশ্রয় চাই।", en: "O Allah, I seek refuge in you from the male and female evil spirits.", hi: "हे अल्लाह! मैं तुझसे नर और मादा शैतानों से पनाह मांगता हूँ।", ur: "اے اللہ! میں تجھ سے نر اور مادہ شیطانوں سے پناہ مانگتا ہوں۔" },
@@ -275,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { title: { bn: "রোগী দেখার দোয়া", en: "Dua when visiting the sick", hi: "बीमार से मिलने की दुआ", ur: "بیمار کی عیادت کی دعا" }, arab: "لَا بَأْسَ طَهُورٌ إِنْ شَاءَ اللَّهُ", bn_pron: "লা বা'সা, ত্বহুরুন ইনশা-আল্লাহ।", bn: "কোনো ক্ষতি নেই, ইনশাআল্লাহ এটা (রোগ) পবিত্রকারী।", en: "Do not worry, it will be a purification (for you), God willing.", hi: "कोई बात नहीं, यह (बीमारी) पाक करने वाली है, इंशाअल्लाह।", ur: "کوئی حرج نہیں، यह (بیماری) پاک کرنے والی ہے، انشاءاللہ۔" },
             { title: { bn: "বৃষ্টি দেখলে পড়ার দোয়া", en: "Dua upon seeing rain", hi: "बारिश देखने पर दुआ", ur: "بارش دیکھنے پر دعا" }, arab: "اللَّهُمَّ صَيِّbًا نَافِعًا", bn_pron: "আল্লা-হুম্মা সায়্যিবান না-ফি'আ।", bn: "হে আল্লাহ! এ বৃষ্টিকে উপকারী ও কল্যাণকর করে দিন।", en: "O Allah, may it be a beneficial rain.", hi: "हे अल्लाह! इसे एक लाभदायक बारिश बना।", ur: "اے اللہ! اسے ایک فائدہ مند بارش بنا۔" },
             { title: { bn: "ইফতারের দোয়া", en: "Dua for breaking the fast", hi: "रोज़ा खोलने की दुआ", ur: "روزہ کھولنے کی دعا" }, arab: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ", bn_pron: "যাহাবায্ যমাউ, ওয়াবতাল্লাতিল উরূকু, ওয়া সাবাতাল আজরু ইনশা-আল্লাহ।", bn: "তৃষ্ণা দূর হলো, শিরা-উপশিরা সিক্ত হলো এবং পুরস্কার নির্ধারিত হলো, ইনশাআল্লাহ।", en: "The thirst is gone, the veins are moistened, and the reward is confirmed, if Allah wills.", hi: "प्यास चली गई, नसें तर हो गईं, और इनाम पक्का हो गया, इंशाअल्लाह।", ur: "پیاس چلی گئی، رگیں تر ہو گئیں، اور اجر ثابت ہو گیا، انشاءاللہ۔" },
-            { title: { bn: "কাপড় পরিধানের দোয়া", en: "Dua for wearing a garment", hi: "कपड़े पहनने की दुआ", ur: "کپڑے پہننے کی دعا" }, arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا وَرَזَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী কাসানী হা-যা ওয়া রাযাক্বানীহি মিন গাইরি হাওলিম মিন্নী ওয়ালা কুওয়্যাহ।", bn: "সকল প্রশংসা আল্লাহর জন্য, যিনি আমাকে এই পোশাক পরিধান করিয়েছেন এবং রিযিক দান করেছেন আমার কোনো চেষ্টা ও শক্তি ছাড়া।", en: "Praise is to Allah Who has clothed me with this and provided it for me without any might nor power from myself.", hi: "सभी प्रशंसा अल्लाह के लिए है जिसने मुझे यह पहनाया और मुझे बिना किसी प्रयास और शक्ति के यह प्रदान किया।", ur: "تمام تعریفیں اللہ کے لیے ہیں جس نے مجھے यह پہنایا اور مجھے بغیر کسی کوشش اور طاقت کے यह فراہم کیا۔" },
+            { title: { bn: "কাপড় পরিধানের দোয়া", en: "Dua for wearing a garment", hi: "कपड़े पहनने की दुआ", ur: "کپڑے پہننے کی دعا" }, arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا وَرَזَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", bn_pron: "আলহামদু লিল্লা-হিল্লাযী কাসানী হা-যা ওয়া রাযাক্বানীহি মিন গাইরি হাওলিম মিন্নী ওয়ালা কুওয়্যাহ।", bn: "সকল প্রশংসা আল্লাহর জন্য, যিনি আমাকে এই পোশাক পরিধান করিয়েছেন এবং রিযিক দান করেছেন আমার কোনো চেষ্টা ও শক্তি ছাড়া।", en: "Praise is to Allah Who has fed me this and provided it for me without any might nor power from myself.", hi: "सभी प्रशंसा अल्लाह के लिए है जिसने मुझे यह पहनाया और मुझे बिना किसी प्रयास और शक्ति के यह प्रदान किया।", ur: "تمام تعریفیں اللہ کے لیے ہیں جس نے مجھے यह پہنایا اور مجھے بغیر کسی کوشش اور طاقت کے यह فراہم کیا۔" },
             { title: { bn: "ক্ষমা প্রার্থনার শ্রেষ্ঠ দোয়া", en: "The master of forgiveness", hi: "क्षमा की सर्वश्रेष्ठ दुआ", ur: "استغفار کی سردار دعا" }, arab: "اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ وَأَبُوءُ لَكَ بِذَنْbِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ", bn_pron: "আল্লা-হুম্মা আনতা রব্বী, লা ইলা-হা ইল্লা আনতা, খলাক্বতানী ওয়া আনা ‘আবদুকা, ওয়া আনা ‘আলা ‘আহদিকা ওয়া ওয়া‘দিকা মাসতাত্বা‘তু। আ‘ঊযু বিকা মিন শাররি মা সানা‘তু, আবূউ লাকা বিনি‘মাতিকা ‘আলাইয়্যা, ওয়া আবূউ লাকা বিযাম্বী। ফাগফির লী, ফা ইন্নাহূ লা ইয়াগফিরুয যুনূবা ইল্লা আনতা।", bn: "হে আল্লাহ! আপনি আমার প্রতিপালক। আপনি ছাড়া কোনো উপাস্য নেই। আপনি আমাকে সৃষ্টি করেছেন এবং আমি আপনার বান্দা। আমি আপনার প্রতিশ্রুতি ও অঙ্গীকারের উপর যথাসাধ্য প্রতিষ্ঠিত আছি। আমি যা করেছি, তার মন্দ থেকে আপনার আশ্রয় চাই। আমার উপর আপনার যে নিয়ামত আছে, তা আমি স্বীকার করছি এবং আমার অপরাধও স্বীকার করছি। সুতরাং, আপনি আমাকে ক্ষমা করে দিন। কেননা, আপনি ছাড়া আর কেউ অপরাধ ক্ষমা করতে পারে না।", en: "O Allah, You are my Lord, there is none worthy of worship but You. You created me and I am your servant. I abide by Your covenant and promise as much as I can. I seek refuge in You from the evil of what I have done. I acknowledge Your favor upon me and I acknowledge my sin, so forgive me, for verily none can forgive sins except You.", hi: "हे अल्लाह! तू मेरा रब है, तेरे सिवा कोई माबूद नहीं। तूने मुझे पैदा किया और मैं तेरा बंदा हूँ। मैं अपनी क्षमता के अनुसार तेरे वादे और प्रतिज्ञा पर कायम हूँ। मैंने जो कुछ किया है, उसकी बुराई से तेरी पनाह चाहता हूँ। मैं तुझ पर तेरी नेमतों को स्वीकार करता हूँ और अपने गुनाहों को स्वीकार करता हूँ, इसलिए मुझे माफ कर दे, क्योंकि तेरे सिवा कोई गुनाहों को माफ नहीं कर सकता।", ur: "اے اللہ! تو میرا رب ہے، تیرے سوا کوئی معبود نہیں۔ تو نے مجھے پیدا کیا اور میں تیرا بندہ ہوں۔ میں اپنی استطاعت کے مطابق تیرے عہد اور وعدے پر قائم ہوں۔ میں نے جو کچھ کیا ہے، اس کے شر سے تیری پناہ चाहता ہوں۔ میں مجھ پر تیری نعمتوں کا اقرار کرتا ہوں اور اپنے گناہوں کا اقرار کرتا ہوں، پس مجھے معاف فرما دے، کیونکہ تیرے سوا کوئی گناہوں کو معاف نہیں کر सकता۔" },
             { title: { bn: "দুনিয়া ও আখেরাতের কল্যাণের দোয়া", en: "Dua for good in this world and the hereafter", hi: "दुनिया और आख़िरत की भलाई की दुआ", ur: "دنیا اور آخرت کی بھلائی کی دعا" }, arab: "رَبَّנָא آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", bn_pron: "রব্বানা আ-তিনা ফিদ্ দুনইয়া হাসানাতাও ওয়া ফিল আ-খিরাতি হাসানাতাও ওয়া ক্বিনা ‘আযা-বান্ না-র।", bn: "হে আমাদের প্রতিপালক! আমাদেরকে দুনিয়াতে কল্যাণ দান করুন এবং আখেরাতেও কল্যাণ দান করুন এবং আমাদেরকে জাহান্নামের আগুন থেকে রক্ষা করুন।", en: "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.", hi: "ऐ हमारे रब! हमें दुनिया में भलाई दे और आख़िरत में भी भलाई दे और हमें आग के अज़ाब से बचा।", ur: "اے ہمارے رب! ہمیں دنیا میں بھلائی دے اور آخرت میں بھی بھلائی دے اور ہمیں آگ کے عذاب سے بچا۔" }
         ],
@@ -766,8 +732,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (!targetPane.dataset.loaded) {
-            // --- START: ব্যাক বাটন পরিবর্তন ---
-            // ট্যাব কন্টেন্ট লোড করার আগে তার প্রাথমিক স্টেট সেট করুন
             switch (tabId) {
                 case 'quran':
                     history.replaceState({ tab: 'quran', view: 'surahList' }, '', '#quran');
@@ -782,7 +746,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     history.replaceState({ tab: 'namaz-shikkha', view: 'genderSelection' }, '', '#namaz-shikkha');
                     break;
             }
-            // --- END: ব্যাক বাটন পরিবর্তন ---
             loadTabContent(tabId, targetPane);
             targetPane.dataset.loaded = 'true';
         }
@@ -1096,7 +1059,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         container.innerHTML = `${headerActionsHTML}${progressCardHTML}<div class="card" style="padding:0;">${surahListHTML}</div>`;
         
-        // --- START: ব্যাক বাটন পরিবর্তন ---
         container.querySelectorAll('.item-details').forEach(item => {
             item.addEventListener('click', () => {
                 const surahNumber = item.dataset.surahNumber;
@@ -1104,7 +1066,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadSurahDetail(surahNumber);
             });
         });
-        // --- END: ব্যাক বাটন পরিবর্তন ---
 
         container.querySelectorAll('.favorite-star').forEach(star => { star.addEventListener('click', (e) => { e.stopPropagation(); const surahNumber = parseInt(star.dataset.surahNumber, 10); const index = state.favoriteSurahs.indexOf(surahNumber); if (index > -1) state.favoriteSurahs.splice(index, 1); else state.favoriteSurahs.push(surahNumber); saveFavorites(); loadSurahList(); }); });
         
@@ -1123,12 +1084,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (state.bookmarkingEnabled) {
-            // --- START: ব্যাক বাটন পরিবর্তন ---
             document.getElementById('view-bookmarks-btn').addEventListener('click', () => {
                 history.pushState({ tab: 'quran', view: 'bookmarks' }, '', '#quran/bookmarks');
                 loadBookmarksView();
             });
-            // --- END: ব্যাক বাটন পরিবর্তন ---
         }
         
         updateQuranProgressDisplay();
@@ -1220,48 +1179,34 @@ document.addEventListener('DOMContentLoaded', () => {
         
         container.innerHTML = `<div class="quran-header-actions" style="margin-top:15px;"><button id="back-to-surah-list" class="btn btn-primary" style="width:100%"><i class="fas fa-arrow-left"></i> ${t.backToSurahList}</button></div><h2 style="text-align:center; margin-bottom:1rem; color:var(--primary);">${arabicData.name} (${surahData.names[state.currentLang][surahNumber - 1]})</h2>${ayahsHTML}`;
         
-// --- Auto Scroll Panel for Quran ---
-    const scrollControlsHTML = `
-        <div id="quran-auto-scroll-panel" class="auto-scroll-panel visible">
-            <button class="scroll-btn" id="scroll-speed-down"><i class="fas fa-minus"></i></button>
-            <span class="scroll-speed-display" id="scroll-speed-val">1x</span>
-            <button class="scroll-btn" id="scroll-speed-up"><i class="fas fa-plus"></i></button>
-            <div style="width:1px; height:20px; background:rgba(255,255,255,0.3); margin:0 5px;"></div>
-            <button class="scroll-btn main-toggle" id="scroll-toggle-btn">
-                <i class="fas fa-play"></i>
-            </button>
-        </div>
-    `;
-    container.insertAdjacentHTML('beforeend', scrollControlsHTML);
+        const scrollControlsHTML = `
+            <div id="quran-auto-scroll-panel" class="auto-scroll-panel visible">
+                <button class="scroll-btn" id="scroll-speed-down"><i class="fas fa-minus"></i></button>
+                <span class="scroll-speed-display" id="scroll-speed-val">1x</span>
+                <button class="scroll-btn" id="scroll-speed-up"><i class="fas fa-plus"></i></button>
+                <div style="width:1px; height:20px; background:rgba(255,255,255,0.3); margin:0 5px;"></div>
+                <button class="scroll-btn main-toggle" id="scroll-toggle-btn">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', scrollControlsHTML);
 
-    // বাটনগুলোতে ক্লিক ইভেন্ট যোগ করা
-    document.getElementById('scroll-toggle-btn').addEventListener('click', toggleAutoScroll);
-    document.getElementById('scroll-speed-up').addEventListener('click', () => changeScrollSpeed(0.5));
-    document.getElementById('scroll-speed-down').addEventListener('click', () => changeScrollSpeed(-0.5));
-    
-    // রিসেট
-    state.autoScroll.speed = 1;
-    stopAutoScroll();
-
-    // ব্যাক বাটন চাপলে যেন স্ক্রল বন্ধ হয়
-    const backBtn = document.getElementById('back-to-surah-list');
-    // পুরনো লিসেনার থাকলে সেটা রিপ্লেস করার জন্য ক্লোন করা হলো (সেফটি)
-    const newBackBtn = backBtn.cloneNode(true);
-    backBtn.parentNode.replaceChild(newBackBtn, backBtn);
-    
-    newBackBtn.addEventListener('click', () => {
+        document.getElementById('scroll-toggle-btn').addEventListener('click', toggleAutoScroll);
+        document.getElementById('scroll-speed-up').addEventListener('click', () => changeScrollSpeed(0.5));
+        document.getElementById('scroll-speed-down').addEventListener('click', () => changeScrollSpeed(-0.5));
+        
+        state.autoScroll.speed = 1;
         stopAutoScroll();
-        history.back();
-    });
 
-
-
-
-        // --- START: ব্যাক বাটন পরিবর্তন ---
-        document.getElementById('back-to-surah-list').addEventListener('click', () => {
+        const backBtn = document.getElementById('back-to-surah-list');
+        const newBackBtn = backBtn.cloneNode(true);
+        backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+        
+        newBackBtn.addEventListener('click', () => {
+            stopAutoScroll();
             history.back();
         });
-        // --- END: ব্যাক বাটন পরিবর্তন ---
 
         if (state.bookmarkingEnabled) setupBookmarkListeners(container); 
         if (state.audioEnabled) setupAudioListeners(container);
@@ -1370,9 +1315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             container.innerHTML = `<button id="back-to-surah-list" class="btn btn-primary" style="margin-top:15px; margin-bottom:1rem;"><i class="fas fa-arrow-left"></i> ${t.backToSurahList}</button><h2 style="text-align:center; margin-bottom:1rem;">${t.bookmarksTitle}</h2><div class="card" style="padding:0;">${bookmarksHTML}</div>`; 
-            // --- START: ব্যাক বাটন পরিবর্তন ---
             document.getElementById('back-to-surah-list').addEventListener('click', () => history.back());
-            // --- END: ব্যাক বাটন পরিবর্তন ---
         } catch (error) { showError(container, t.error); }
     };
     
@@ -1657,7 +1600,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('amal-tab');
         container.innerHTML = `<div style="margin-top:15px;"><h2 style="text-align:center; margin-bottom:1rem; color:var(--primary);">${t.dailyAmalTitle}</h2><div class="card" style="padding:0;"><div class="list-item" data-amal-category="hadiths"><div class="item-number"><i class="fas fa-book-bookmark"></i></div><div class="item-details"><p class="item-name-bn">${t.selectedHadiths}</p></div></div><div class="list-item" data-amal-category="duas"><div class="item-number"><i class="fas fa-praying-hands"></i></div><div class="item-details"><p class="item-name-bn">${t.essentialDuas}</p></div></div><div class="list-item" data-amal-category="asmaulHusna"><div class="item-number"><i class="fas fa-star-of-david"></i></div><div class="item-details"><p class="item-name-bn">${t.asmaulHusna}</p></div></div><div class="list-item" data-amal-category="zakat"><div class="item-number"><i class="fas fa-calculator"></i></div><div class="item-details"><p class="item-name-bn">${t.zakatCalculator}</p></div></div></div></div>`;
         
-        // --- START: ব্যাক বাটন পরিবর্তন ---
         container.querySelectorAll('.list-item').forEach(item => {
             item.addEventListener('click', () => {
                 const category = item.dataset.amalCategory;
@@ -1665,7 +1607,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadDailyAmalDetail(category);
             });
         });
-        // --- END: ব্যাক বাটন পরিবর্তন ---
     };
     
     const loadDailyAmalDetail = (category) => {
@@ -1677,11 +1618,9 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (category === 'zakat') { initZakatCalculator(container); return; }
         container.innerHTML = `<div style="margin-top:15px;"><button id="back-to-amal-categories" class="btn btn-primary" style="margin-bottom:1rem;"><i class="fas fa-arrow-left"></i> ${t.back}</button><h2 style="text-align:center; margin-bottom:1rem; color:var(--primary);">${title}</h2>${contentHTML}</div>`;
         
-        // --- START: ব্যাক বাটন পরিবর্তন ---
         document.getElementById('back-to-amal-categories').addEventListener('click', () => {
             history.back();
         });
-        // --- END: ব্যাক বাটন পরিবর্তন ---
     };
     
     const initZakatCalculator = (container) => {
@@ -1721,11 +1660,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // --- START: ব্যাক বাটন পরিবর্তন ---
         document.getElementById('back-to-amal-categories').addEventListener('click', () => {
             history.back();
         });
-        // --- END: ব্যাক বাটন পরিবর্তন ---
 
         document.getElementById('calculate-zakat-btn').addEventListener('click', () => {
             const cash = parseFloat(document.getElementById('cash').value) || 0;
@@ -1821,7 +1758,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             
-            // --- START: ব্যাক বাটন পরিবর্তন ---
             container.querySelectorAll('.hadith-book-select-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const bookKey = card.dataset.bookKey;
@@ -1835,7 +1771,6 @@ document.addEventListener('DOMContentLoaded', () => {
                      loadHadithBookmarksView();
                 });
             }
-            // --- END: ব্যাক বাটন পরিবর্তন ---
         };
 
         const displayHadithPage = (bookTitle, bookKey) => {
@@ -1911,41 +1846,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-// --- Auto Scroll Panel for Hadith ---
-    // সেইম HTML ব্যবহার করা হচ্ছে
-    const scrollControlsHTML = `
-        <div id="quran-auto-scroll-panel" class="auto-scroll-panel visible">
-            <button class="scroll-btn" id="scroll-speed-down"><i class="fas fa-minus"></i></button>
-            <span class="scroll-speed-display" id="scroll-speed-val">1x</span>
-            <button class="scroll-btn" id="scroll-speed-up"><i class="fas fa-plus"></i></button>
-            <div style="width:1px; height:20px; background:rgba(255,255,255,0.3); margin:0 5px;"></div>
-            <button class="scroll-btn main-toggle" id="scroll-toggle-btn">
-                <i class="fas fa-play"></i>
-            </button>
-        </div>
-    `;
-    container.insertAdjacentHTML('beforeend', scrollControlsHTML);
+            const scrollControlsHTML = `
+                <div id="quran-auto-scroll-panel" class="auto-scroll-panel visible">
+                    <button class="scroll-btn" id="scroll-speed-down"><i class="fas fa-minus"></i></button>
+                    <span class="scroll-speed-display" id="scroll-speed-val">1x</span>
+                    <button class="scroll-btn" id="scroll-speed-up"><i class="fas fa-plus"></i></button>
+                    <div style="width:1px; height:20px; background:rgba(255,255,255,0.3); margin:0 5px;"></div>
+                    <button class="scroll-btn main-toggle" id="scroll-toggle-btn">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', scrollControlsHTML);
 
-    document.getElementById('scroll-toggle-btn').addEventListener('click', toggleAutoScroll);
-    document.getElementById('scroll-speed-up').addEventListener('click', () => changeScrollSpeed(0.5));
-    document.getElementById('scroll-speed-down').addEventListener('click', () => changeScrollSpeed(-0.5));
-    
-    state.autoScroll.speed = 1;
-    stopAutoScroll();
-
-    // ব্যাক বাটন ফিক্স
-    const backBtn = document.getElementById('back-to-hadith-books');
-    const newBackBtn = backBtn.cloneNode(true);
-    backBtn.parentNode.replaceChild(newBackBtn, backBtn);
-
-    newBackBtn.addEventListener('click', () => {
-        stopAutoScroll();
-        history.back();
-    });
+            document.getElementById('scroll-toggle-btn').addEventListener('click', toggleAutoScroll);
+            document.getElementById('scroll-speed-up').addEventListener('click', () => changeScrollSpeed(0.5));
+            document.getElementById('scroll-speed-down').addEventListener('click', () => changeScrollSpeed(-0.5));
             
-            // --- START: ব্যাক বাটন পরিবর্তন ---
-            document.getElementById('back-to-hadith-books').addEventListener('click', () => history.back());
-            // --- END: ব্যাক বাটন পরিবর্তন ---
+            state.autoScroll.speed = 1;
+            stopAutoScroll();
+
+            const backBtn = document.getElementById('back-to-hadith-books');
+            const newBackBtn = backBtn.cloneNode(true);
+            backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+
+            newBackBtn.addEventListener('click', () => {
+                stopAutoScroll();
+                history.back();
+            });
             
             const searchInput = document.getElementById('hadith-search-input');
             searchInput.addEventListener('input', (e) => handleHadithSearch(e, bookTitle, bookKey));
@@ -2135,9 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h2 style="text-align:center; margin-bottom:1rem;">${t.hadithBookmarksTitle}</h2>
                     <div class="card" style="padding:0;">${bookmarksHTML || `<p style="padding: 1rem; text-align: center;">${t.noHadithBookmarks}</p>`}</div>`;
                 
-                // --- START: ব্যাক বাটন পরিবর্তন ---
                 document.getElementById('back-to-hadith-books').addEventListener('click', () => history.back());
-                // --- END: ব্যাক বাটন পরিবর্তন ---
 
             } catch (error) {
                 console.error("Error loading hadith bookmarks:", error);
@@ -2154,7 +2080,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderNamazShikkhaHome = () => { 
             container.innerHTML = `<div class="gender-selection-container" style="margin-top:15px;"><div class="gender-select-btn" data-gender="male"><i class="fas fa-person"></i><span>${t.mensPrayer}</span></div><div class="gender-select-btn" data-gender="female"><i class="fas fa-person-dress"></i><span>${t.womensPrayer}</span></div></div>`; 
             
-            // --- START: ব্যাক বাটন পরিবর্তন ---
             container.querySelectorAll('.gender-select-btn').forEach(btn => { 
                 btn.addEventListener('click', () => { 
                     const gender = btn.dataset.gender;
@@ -2162,7 +2087,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderNamazSteps(gender); 
                 }); 
             }); 
-            // --- END: ব্যাক বাটন পরিবর্তন ---
         };
 
         const renderNamazSteps = (gender) => { 
@@ -2170,17 +2094,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const stepsHTML = data.map((step, index) => `<div class="namaz-step-card"><div class="namaz-step-number">${index + 1}</div><div class="namaz-step-details"><h4>${step.title}</h4><p>${step.details}</p></div></div>`).join(''); 
             container.innerHTML = `<div class="namaz-steps-view" style="margin-top:15px;"><button class="btn btn-primary back-to-selection" style="width: 100%; margin-bottom: 1rem;"><i class="fas fa-arrow-left"></i> ${t.back}</button>${stepsHTML}</div>`; 
             
-            // --- START: ব্যাক বাটন পরিবর্তন ---
             container.querySelector('.back-to-selection').addEventListener('click', () => history.back()); 
-            // --- END: ব্যাক বাটন পরিবর্তন ---
         };
         
         renderNamazShikkhaHome();
     };
     
+    // ==========================================
+    // আপডেট: অটো লোকেশন ফিচার যুক্ত করা হয়েছে
+    // ==========================================
     const initSettings = () => {
         const t = translations[state.currentLang];
         const container = document.getElementById('settings-tab');
+        
         container.innerHTML = `
             <div style="margin-top:15px;">
                 <div class="card dev-info-card">
@@ -2195,10 +2121,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="card">
                     <h3 data-translate-key="changeCity">${t.changeCity}</h3>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <input type="text" id="city-input-settings" value="${state.currentCity}">
+                    <div style="display:flex; gap:10px; margin-top:10px; align-items: center;">
+                        <input type="text" id="city-input-settings" value="${state.currentCity}" style="flex-grow: 1;">
+                        
+                        <!-- অটো লোকেশন বাটন -->
+                        <button id="auto-location-btn" class="btn btn-primary btn-icon" title="আমার লোকেশন নিন">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                        
                         <button id="city-save-btn" class="btn btn-primary" data-translate-key="save">${t.save}</button>
                     </div>
+                    <p id="location-status" style="font-size: 12px; color: var(--text-secondary); margin-top: 5px; display: none;"></p>
                 </div>
                  <div class="card">
                     <h3 data-translate-key="language">${t.language}</h3>
@@ -2293,20 +2226,108 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('auto-close-toggle').addEventListener('change', e => { state.autoClosePlayer = e.target.checked; localStorage.setItem('autoClosePlayer', state.autoClosePlayer); });
         document.getElementById('copy-donation-number').addEventListener('click', (e) => { const numberToCopy = document.getElementById('donation-number').textContent; const btn = e.currentTarget; copyToClipboard(numberToCopy, () => { const originalText = btn.querySelector('span').textContent; btn.querySelector('span').textContent = t.copiedBtn; btn.disabled = true; setTimeout(() => { btn.querySelector('span').textContent = originalText; btn.disabled = false; }, 2000); }); });
         document.getElementById('copy-bank-account-number').addEventListener('click', (e) => { const numberToCopy = document.getElementById('bank-account-number').textContent; const btn = e.currentTarget; copyToClipboard(numberToCopy, () => { const originalText = btn.querySelector('span').textContent; btn.querySelector('span').textContent = t.copiedBtn; btn.disabled = true; setTimeout(() => { btn.querySelector('span').textContent = originalText; btn.disabled = false; }, 2000); }); });
+
+        // ==========================================
+        // অটো লোকেশন লজিক
+        // ==========================================
+        document.getElementById('auto-location-btn').addEventListener('click', () => {
+            const statusEl = document.getElementById('location-status');
+            const cityInput = document.getElementById('city-input-settings');
+            
+            if (!navigator.geolocation) {
+                alert("আপনার ব্রাউজারে জিওলোকেশন সাপোর্ট করে না।");
+                return;
+            }
+
+            statusEl.style.display = 'block';
+            statusEl.textContent = "লোকেশন খোঁজা হচ্ছে...";
+            statusEl.style.color = "var(--text-secondary)";
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const data = await res.json();
+                    
+                    const city = data.address.city || data.address.town || data.address.village || data.address.county || data.address.state_district;
+                    
+                    if (city) {
+                        cityInput.value = city;
+                        state.currentCity = city;
+                        localStorage.setItem('appCity', city);
+                        
+                        getPrayerTimes();
+                        
+                        statusEl.textContent = `লোকেশন সেট করা হয়েছে: ${city}`;
+                        statusEl.style.color = "var(--primary)";
+                        
+                        alert(translations[state.currentLang].cityUpdated.replace('%s', city));
+                    } else {
+                        statusEl.textContent = "শহরের নাম পাওয়া যায়নি, দয়া করে ম্যানুয়ালি লিখুন।";
+                        statusEl.style.color = "var(--danger)";
+                    }
+                } catch (error) {
+                    console.error("Geocoding error:", error);
+                    statusEl.textContent = "ইন্টারনেট সংযোগ চেক করুন।";
+                    statusEl.style.color = "var(--danger)";
+                }
+            }, (error) => {
+                console.error("Geolocation error:", error);
+                statusEl.textContent = "লোকেশন পারমিশন দেওয়া হয়নি।";
+                statusEl.style.color = "var(--danger)";
+            });
+        });
     };
     
-    const namazEducationData = {
-        male: {
-            bn: [ { title: "তাকবীরে তাহরিমা", details: "কিবলামুখী হয়ে সোজাভাবে দাঁড়ান। নিয়্যত করার পর 'আল্লাহু আকবার' বলে উভয় হাত কাঁধ বা কান পর্যন্ত উঠান। হাতের তালু কিবলার দিকে থাকবে। এরপর নাভির নিচে ডান হাত বাম হাতের উপর রেখে হাত বাঁধুন।" }, { title: "সানা, তাআউজ ও তাসমিয়া", details: "হাত বাঁধার পর প্রথমে সানা পড়ুন: 'সুবহানাকা আল্লাহুম্মা ওয়া বিহামদিকা...। এরপর তাআউজ 'আ'উযুবিল্লাহি মিনাশ শাইতানির রাজীম' এবং তাসমিয়া 'বিসমিল্লাহির রাহমানির রাহীম' পড়ুন।" }, { title: "সূরা ফাতিহা ও অন্য সূরা", details: "সূরা ফাতিহা পড়ুন। এরপর কুরআনের অন্য যেকোনো একটি ছোট সূরা বা বড় সূরার তিন আয়াত পরিমাণ তিলাওয়াত করুন।" }, { title: "রুকু", details: "'আল্লাহু আকবার' বলে রুকুতে যান। দুই হাতের আঙুল দিয়ে হাঁটুকে আঁকড়ে ধরুন। পিঠ ও মাথা সমান্তরাল থাকবে। রুকুতে কমপক্ষে তিনবার 'সুবহানা রাব্বিয়াল আযীম' বলুন।" }, { title: "ক্বওমা (রুকু থেকে দাঁড়ানো)", details: "রুকু থেকে 'সামি'আল্লাহু লিমান হামিদাহ' বলতে বলতে সোজা হয়ে দাঁড়ান। এরপর বলুন 'রাব্বানা লাকাল হামদ'।" }, { title: "সিজদা", details: "'আল্লাহু আকবার' বলে সিজদায় যান। প্রথমে হাঁটু, তারপর দুই হাত, তারপর নাক এবং শেষে কপাল মাটিতে রাখুন। সিজদায় কমপক্ষে তিনবার 'সুবহানা রাব্বিয়াল আ'লা' বলুন।" }, { title: "জলসা (দুই সিজদার মাঝে বসা)", details: "'আল্লাহু আকবার' বলে সিজদা থেকে উঠে বসুন। বাম পা বিছিয়ে তার উপর বসুন এবং ডান পা খাড়া রাখুন।" }, { title: "দ্বিতীয় সিজদা", details: "'আল্লাহু আকবার' বলে আবার আগের মতো দ্বিতীয় সিজদা করুন এবং 'সুবহানা রাব্বিয়াল আ'লা' তিনবার বলুন।" }, { title: "শেষ বৈঠক (আত্তাহিয়্যাতু)", details: "দুই রাকাত নামাজের ক্ষেত্রে দ্বিতীয় সিজদার পর এবং চার রাকাতের ক্ষেত্রে শেষ রাকাতে বসুন। বসে তাশাহহুদ (আত্তাহিয়্যাতু), দরুদ শরীফ এবং দোয়া মাসুরা পড়ুন।" }, { title: "সালাম", details: "প্রথমে ডান দিকে মুখ ফিরিয়ে বলুন 'আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ'। এরপর বাম দিকে মুখ ফিরিয়ে একইভাবে সালাম দিন।" } ],
-            en: [ { title: "Takbir-e-Tahrima", details: "Face the Qibla and stand straight. After making your intention (niyyah), say 'Allahu Akbar' and raise both hands to your shoulders or ears, with palms facing the Qibla. Then, place your right hand over your left hand below the navel." }, { title: "Thana, Ta'awwuz & Tasmiyah", details: "After placing your hands, recite the Thana: 'Subhanakallahumma wa bihamdika...'. Then recite Ta'awwuz 'A'udhu billahi minash shaitanir rajim' and Tasmiyah 'Bismillahir rahmanir rahim'." }, { title: "Surah Al-Fatihah & another Surah", details: "Recite Surah Al-Fatihah. Then, recite another short Surah or three verses from a longer Surah." }, { title: "Ruku'", details: "Say 'Allahu Akbar' and bow down for Ruku'. Grasp your knees with your fingers. Keep your back and head parallel to the ground. In Ruku', say 'Subhana Rabbiyal 'Azim' at least three times." }, { title: "Qawmah (Standing from Ruku')", details: "Rise from Ruku' while saying 'Sami'allahu liman hamidah'. Then, stand straight and say 'Rabbana lakal-hamd'." }, { title: "Sajdah", details: "Say 'Allahu Akbar' and go into prostration (Sajdah). Your knees, both hands, nose, and forehead should touch the ground. In Sajdah, say 'Subhana Rabbiyal A'la' at least three times." }, { title: "Jalsah (Sitting between two Sajdahs)", details: "Say 'Allahu Akbar' and rise from Sajdah to a sitting position. Sit on your left foot while keeping your right foot upright." }, { title: "Second Sajdah", details: "Say 'Allahu Akbar' and perform the second Sajdah just like the first one, reciting 'Subhana Rabbiyal A'la' three times." }, { title: "Final Sitting (Tashahhud)", details: "After the second Sajdah of the second rak'ah (and the final rak'ah for 3/4 rak'ah prayers), sit for Tashahhud. Recite At-Tahiyyat, Durood Sharif, and Dua Masura." }, { title: "Salam", details: "First, turn your face to the right and say 'Assalamu Alaikum wa Rahmatullah'. Then, turn your face to the left and repeat the salam." } ],
-            hi: [ { title: "तकबीर-ए-तहरीमा", details: "क़िबला की ओर मुँह करके सीधे खड़े हों। नियत करने के बाद 'अल्लाहु अकबर' कहें और दोनों हाथों को कंधों या कानों तक उठाएं। हथेलियाँ क़िबला की ओर हों। फिर नाभि के नीचे दाहिना हाथ बाएं हाथ पर रखें।" }, { title: "सना, तअव्वुज़ और तस्मिया", details: "हाथ बांधने के बाद सना पढ़ें: 'सुब्हानकल्लाहुम्मा व बिहम्दिका...'। फिर तअव्वुज़ 'अऊज़ु बिल्लाहि मिनश शैतानिर रजीम' और तस्मिया 'बिस्मिल्लाहिर रहमानिर रहीम' पढ़ें।" }, { title: "सूरह फातिहा और दूसरी सूरह", details: "सूरह फातिहा पढ़ें। फिर कुरान से कोई भी छोटी सूरह या किसी बड़ी सूरह की तीन आयतें पढ़ें।" }, { title: "रुकू", details: "'अल्लाहु अकबर' कहकर रुकू में जाएं। घुटनों को अपनी उंगलियों से पकड़ें। अपनी पीठ और सिर को ज़मीन के समानांतर रखें। रुकू में कम से कम तीन बार 'सुब्हान रब्बियल अज़ीम' कहें।" }, { title: "क़ौमा (रुकू से खड़ा होना)", details: "रुकू से उठते समय 'समि'अल्लाहु लिमन हमिदह' कहें। फिर सीधे खड़े होकर 'रब्बना लकल हम्द' कहें।" }, { title: "सजदा", details: "'अल्लाहु अकबर' कहकर सजदे में जाएं। आपके घुटने, दोनों हाथ, नाक और माथा ज़मीन को छूना चाहिए। सजदे में कम से कम तीन बार 'सुब्हान रब्बियल आला' कहें।" }, { title: "जलसा (दो सजदों के बीच बैठना)", details: "'अल्लाहु अकबर' कहकर सजदे से उठकर बैठें। अपने बाएं पैर पर बैठें और दाहिने पैर को सीधा रखें।" }, { title: "दूसरा सजदा", details: "'अल्लाहु अकबर' कहकर दूसरा सजदा पहले की तरह करें, और तीन बार 'सुब्हान रब्बियल आला' पढ़ें।" }, { title: "अंतिम बैठक (तशह्हुद)", details: "दूसरी रकअत के दूसरे सजदे के बाद (और 3/4 रकअत की नमाज़ में अंतिम रकअत में) तशह्हुद के लिए बैठें। अत्तहिय्यात, दुरूद शरीफ और दुआ मासूरा पढ़ें।" }, { title: "सलाम", details: "पहले अपना चेहरा दाईं ओर करें और 'अस्सलामु अलैकुम व रहमतुल्लाह' कहें। फिर अपना चेहरा बाईं ओर करें और सलाम दोहराएं।" } ],
-            ur: [ { title: "تکبیر تحریمہ", details: "قبلہ رخ ہو کر سیدھے کھڑے ہوں۔ نیت کرنے کے بعد 'اللہ اکبر' کہہ کر دونوں ہاتھ کندھوں یا کانوں تک اٹھائیں۔ ہتھیلیاں قبلہ کی طرف ہوں۔ پھر ناف کے نیچے دایاں ہاتھ بائیں ہاتھ پر رکھ کر باندھ لیں۔" }, { title: "ثناء، تعوذ و تسمیہ", details: "ہاتھ باندھنے کے بعد پہلے ثناء پڑھیں: 'سبحانک اللھم وبحمدک...'۔ اس کے بعد تعوذ 'اعوذ باللہ من الشیطان الرجیم' اور تسمیہ 'بسم اللہ الرحمن الرحیم' پڑھیں۔" }, { title: "سورۃ الفاتحہ اور دوسری سورت", details: "سورۃ الفاتحہ پڑھیں۔ اس کے بعد قرآن کی کوئی دوسری چھوٹی سورت یا بڑی سورت کی تین آیات تلاوت کریں۔" }, { title: "رکوع", details: "'اللہ اکبر' کہہ کر رکوع میں جائیں۔ دونوں ہاتھوں کی انگلیوں سے گھٹنوں کو پکڑیں۔ پیٹھ اور سر کو برابر رکھیں۔ رکوع میں کم از کم تین بار 'سبحان ربی العظیم' کہیں۔" }, { title: "قومہ (رکوع سے کھڑا ہونا)", details: "رکوع سے 'سمع اللہ لمن حمدہ' کہتے ہوئے سیدھے کھڑے ہو جائیں۔ پھر کہیں 'ربنا لک الحمد'۔" }, { title: "سجدہ", details: "'اللہ اکبر' کہہ کر سجدے میں جائیں۔ پہلے گھٹنے، پھر دونوں ہاتھ، پھر ناک اور آخر میں پیشانی زمین پر رکھیں۔ سجدے میں کم از کم تین بار 'سبحان ربی الاعلی' کہیں۔" }, { title: "جلسہ (دو سجدوں کے درمیان بیٹھنا)", details: "'اللہ اکبر' کہہ کر سجدے سے اٹھ کر بیٹھیں۔ بایاں پاؤں بچھا کر اس پر بیٹھیں اور دایاں پاؤں کھڑا رکھیں۔" }, { title: "دوسرا سجدہ", details: "'اللہ اکبر' کہہ کر دوبارہ پہلے کی طرح دوسرا سجدہ کریں اور 'سبحان ربی الاعلی' تین بار کہیں۔" }, { title: "آخری نشست (التحیات)", details: "دو رکعت نماز میں دوسرے سجدے کے بعد اور چار رکعت میں آخری رکعت میں بیٹھیں۔ بیٹھ کر تشہد (التحیات)، درود شریف اور دعا ماثورہ پڑھیں۔" }, { title: "سلام", details: "پہلے دائیں طرف منہ پھیر کر 'السلام علیکم ورحمۃ اللہ' کہیں۔ پھر بائیں طرف منہ پھیر کر اسی طرح سلام کہیں۔" } ]
-        },
-        female: {
-            bn: [ { title: "তাকবীরে তাহরিমা", details: "কিবলামুখী হয়ে দাঁড়ান। নিয়্যত করার পর 'আল্লাহু আকবার' বলে উভয় হাত কাঁধ পর্যন্ত উঠান, হাতের তালু কিবলার দিকে থাকবে। এরপর বুকের উপর ডান হাত বাম হাতের উপর রেখে হাত বাঁধুন।" }, { title: "সানা, তাআউজ ও তাসমিয়া", details: "হাত বাঁধার পর প্রথমে সানা পড়ুন: 'সুবহানাকা আল্লাহুম্মা ওয়া বিহামদিকা...। এরপর তাআউজ 'আ'উযুবিল্লাহি মিনাশ শাইতানির রাজীম' এবং তাসমিয়া 'বিসমিল্লাহির রাহমানির রাহীম' পড়ুন।" }, { title: "সূরা ফাতিহা ও অন্য সূরা", details: "সূরা ফাতিহা পড়ুন। এরপর কুরআনের অন্য যেকোনো একটি ছোট সূরা বা বড় সূরার তিন আয়াত পরিমাণ তিলাওয়াত করুন।" }, { title: "রুকু", details: "'আল্লাহু আকবার' বলে রুকুতে যান। সামান্য ঝুঁকে দুই হাত হাঁটুর উপর রাখুন, আঙুলগুলো মেলানো থাকবে। পুরুষদের মতো পিঠ সোজা না করলেও চলবে।" }, { title: "ক্বওমা (রুকু থেকে দাঁড়ানো)", details: "রুকু থেকে 'সামি'আল্লাহু লিমান হামিদাহ' বলতে বলতে সোজা হয়ে দাঁড়ান। এরপর বলুন 'রাব্বানা লাকাল হামদ'।" }, { title: "সিজদা", details: "'আল্লাহু আকবার' বলে সিজদায় যান। অত্যন্ত জড়সড় হয়ে সিজদা করুন। হাত ও পা শরীরের সাথে মিলিয়ে রাখুন এবং পেট উরুর সাথে মিলিয়ে দিন।" }, { title: "জলসা (দুই সিজদার মাঝে বসা)", details: "'আল্লাহু আকবার' বলে সিজদা থেকে উঠে বসুন। উভয় পা ডান দিকে বের করে দিয়ে নিতম্বের উপর বসুন।" }, { title: "দ্বিতীয় সিজদা", details: "'আল্লাহু আকবার' বলে আবার আগের মতো জড়সড় হয়ে দ্বিতীয় সিজদা করুন।" }, { title: "শেষ বৈঠক (আত্তাহিয়্যাতু)", details: "দ্বিতীয় সিজদার পর জলসার মতো বসে তাশাহহুদ (আত্তাহিয়্যাতু), দরুদ শরীফ এবং দোয়া মাসুরা পড়ুন।" }, { title: "সালাম", details: "প্রথমে ডান দিকে মুখ ফিরিয়ে বলুন 'আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ'। এরপর বাম দিকে মুখ ফিরিয়ে একইভাবে সালাম দিন।" } ],
-            en: [ { title: "Takbir-e-Tahrima", details: "Face the Qibla. After making your intention, say 'Allahu Akbar' and raise both hands to your shoulders, palms facing the Qibla. Then, place your right hand over your left hand on your chest." }, { title: "Thana, Ta'awwuz & Tasmiyah", details: "After placing your hands, recite the Thana, Ta'awwuz, and Tasmiyah." }, { title: "Surah Al-Fatihah & another Surah", details: "Recite Surah Al-Fatihah, followed by another short Surah or equivalent." }, { title: "Ruku'", details: "Say 'Allahu Akbar' and bend for Ruku'. Bend slightly, placing hands on the knees with fingers together. It is not necessary to straighten the back completely like men." }, { title: "Qawmah (Standing from Ruku')", details: "Rise from Ruku' while saying 'Sami'allahu liman hamidah'. Then, stand straight and say 'Rabbana lakal-hamd'." }, { title: "Sajdah", details: "Say 'Allahu Akbar' and go into prostration (Sajdah). Prostrate in a compact manner. Keep arms and legs close to the body, with the abdomen touching the thighs." }, { title: "Jalsah (Sitting between two Sajdahs)", details: "Say 'Allahu Akbar' and rise from Sajdah. Sit on your left hip, with both feet pointing to the right side." }, { title: "Second Sajdah", details: "Say 'Allahu Akbar' and perform the second Sajdah in the same compact manner." }, { title: "Final Sitting (Tashahhud)", details: "After the second Sajdah, sit in the same way as in Jalsah. Recite At-Tahiyyat, Durood Sharif, and Dua Masura." }, { title: "Salam", details: "Turn your face to the right and say 'Assalamu Alaikum wa Rahmatullah'. Then, turn to the left and repeat." } ],
-            hi: [ { title: "तकबीर-ए-तहरीमा", details: "क़िबला की ओर मुँह करें। नियत करने के बाद 'अल्लाहु अकबर' कहें और दोनों हाथों को कंधों तक उठाएं, हथेलियाँ क़िबला की ओर हों। फिर सीने पर दाहिना हाथ बाएं हाथ पर रखें।" }, { title: "सना, तअव्वुज़ और तस्मिया", details: "हाथ बांधने के बाद सना, तअव्वुज़ और तस्मिया पढ़ें।" }, { title: "सूरह फातिहा और दूसरी सूरह", details: "सूरह फातिहा पढ़ें, फिर कोई और छोटी सूरह पढ़ें।" }, { title: "रुकू", details: "'अल्लाहु अकबर' कहकर रुकू में जाएं। थोड़ा झुकें, हाथों को घुटनों पर रखें, उंगलियां मिली हुई हों। पुरुषों की तरह पीठ को पूरी तरह सीधा करना आवश्यक नहीं है।" }, { title: "क़ौमा (रुकू से खड़ा होना)", details: "रुकू से उठते समय 'समि'अल्लाहु लिमन हमिदह' कहें। फिर सीधे खड़े होकर 'रब्बना लकल हम्द' कहें।" }, { title: "सजदा", details: "'अल्लाहु अकबर' कहकर सजदे में जाएं। शरीर को सिकोड़कर सजदा करें। हाथ और पैर शरीर के करीब रखें, और पेट को जांघों से मिलाएं।" }, { title: "जलसा (दो सजदों के बीच बैठना)", details: "'अल्लाहु अकबर' कहकर सजदे से उठें। अपने दोनों पैरों को दाईं ओर निकालकर बैठें।" }, { title: "दूसरा सजदा", details: "'अल्लाहु अकबर' कहकर दूसरा सजदा भी उसी तरह सिकोड़कर करें।" }, { title: "अंतिम बैठक (तशह्हुद)", details: "दूसरे सजदे के बाद, जलसा की तरह बैठकर अत्तहिय्यात, दुरूद शरीफ और दुआ मासूरा पढ़ें।" }, { title: "सलाम", details: "पहले अपना चेहरा दाईं ओर करें और 'अस्सलामु अलैकुम व रहमतुल्लाह' कहें। फिर बाईं ओर करें और दोहराएं।" } ],
-            ur: [ { title: "تکبیر تحریمہ", details: "قبلہ رخ ہوں۔ نیت کرنے کے بعد 'اللہ اکبر' کہہ کر دونوں ہاتھ کندھوں تک اٹھائیں، ہتھیلیاں قبلہ کی طرف ہوں۔ پھر سینے پر دایاں ہاتھ بائیں ہاتھ پر رکھ کر باندھ لیں۔" }, { title: "ثناء، تعوذ و تسمیہ", details: "ہاتھ باندھنے کے بعد ثناء، تعوذ اور تسمیہ پڑھیں۔" }, { title: "سورۃ الفاتحہ اور دوسری سورت", details: "سورۃ الفاتchequer پڑھیں، پھر کوئی اور چھوٹی سورت پڑھیں۔" }, { title: "رکوع", details: "'اللہ اکبر' کہہ کر رکوع میں جائیں۔ تھوڑا جھکیں، ہاتھوں کو گھٹنوں پر رکھیں، انگلیاں ملی ہوئی ہوں۔ مردوں کی طرح پیٹھ کو پوری طرح سیدھا کرنا ضروری نہیں ہے۔" }, { title: "قومہ (رکوع سے کھڑا ہونا)", details: "رکوع سے اٹھتے وقت 'سمع اللہ لمن حمدہ' کہیں۔ پھر سیدھے کھڑے ہو کر 'ربنا لک الحمد' کہیں۔" }, { title: "سجدہ", details: "'اللہ اکبر' کہہ کر سجدے میں جائیں۔ جسم کو سمیٹ کر سجدہ کریں۔ بازو اور ٹانگیں جسم کے قریب رکھیں، اور پیٹ کو رانوں سے ملائیں۔" }, { title: "جلسہ (دو سجدوں کے درمیان بیٹھنا)", details: "'اللہ اکبر' کہہ کر سجدے سے اٹھیں۔ اپنے دونوں پاؤں دائیں طرف نکال کر بیٹھیں۔" }, { title: "دوسرا سجدہ", details: "'اللہ اکبر' کہہ کر دوسرا سجدہ بھی اسی طرح سمیٹ کر کریں۔" }, { title: "آخری نشست (التحیات)", details: "دوسرے سجدے کے بعد، جلسہ کی طرح بیٹھ کر التحیات، درود شریف، اور دعا ماثورہ پڑھیں۔" }, { title: "سلام", details: "पहले अपना चेहरा دائیं ओर करें اور 'السلام علیکم ورحمۃ اللہ' कहें। फिर بائیں طرف کریں اور دہرائیں۔" } ]
+    // --- Auto Scroll Logic Functions ---
+    const toggleAutoScroll = () => {
+        const btn = document.getElementById('scroll-toggle-btn');
+        const icon = btn.querySelector('i');
+        if (state.autoScroll.isActive) {
+            stopAutoScroll();
+            icon.classList.remove('fa-pause');
+            icon.classList.add('fa-play');
+        } else {
+            startAutoScroll();
+            icon.classList.remove('fa-play');
+            icon.classList.add('fa-pause');
+        }
+    };
+
+    const startAutoScroll = () => {
+        state.autoScroll.isActive = true;
+        const scrollContainer = document.querySelector('.tab-content'); 
+        
+        if (state.autoScroll.interval) clearInterval(state.autoScroll.interval);
+        
+        state.autoScroll.interval = setInterval(() => {
+            scrollContainer.scrollTop += state.autoScroll.speed;
+            
+            if(scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight) {
+                stopAutoScroll();
+                const btn = document.getElementById('scroll-toggle-btn');
+                if(btn) {
+                    btn.querySelector('i').classList.remove('fa-pause');
+                    btn.querySelector('i').classList.add('fa-play');
+                }
+            }
+        }, 50); 
+    };
+
+    const stopAutoScroll = () => {
+        state.autoScroll.isActive = false;
+        if (state.autoScroll.interval) {
+            clearInterval(state.autoScroll.interval);
+            state.autoScroll.interval = null;
+        }
+    };
+
+    const changeScrollSpeed = (change) => {
+        let newSpeed = state.autoScroll.speed + change;
+        if (newSpeed >= 0.5 && newSpeed <= 3) {
+            state.autoScroll.speed = newSpeed;
+            document.getElementById('scroll-speed-val').textContent = newSpeed + 'x';
         }
     };
 
@@ -2379,69 +2400,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-
-// --- NEW: Auto Scroll Logic Functions ---
-    const toggleAutoScroll = () => {
-        const btn = document.getElementById('scroll-toggle-btn');
-        const icon = btn.querySelector('i');
-        if (state.autoScroll.isActive) {
-            stopAutoScroll();
-            icon.classList.remove('fa-pause');
-            icon.classList.add('fa-play');
-        } else {
-            startAutoScroll();
-            icon.classList.remove('fa-play');
-            icon.classList.add('fa-pause');
-        }
-    };
-
-    const startAutoScroll = () => {
-        state.autoScroll.isActive = true;
-        // ট্যাব কন্টেন্ট যেখানে স্ক্রল হয় সেটি ধরা হচ্ছে
-        const scrollContainer = document.querySelector('.tab-content'); 
-        
-        if (state.autoScroll.interval) clearInterval(state.autoScroll.interval);
-        
-        state.autoScroll.interval = setInterval(() => {
-            // নিচে স্ক্রল করা
-            scrollContainer.scrollTop += state.autoScroll.speed;
-            
-            // একদম নিচে পৌঁছে গেলে বন্ধ হবে
-            if(scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight) {
-                stopAutoScroll();
-                const btn = document.getElementById('scroll-toggle-btn');
-                if(btn) {
-                    btn.querySelector('i').classList.remove('fa-pause');
-                    btn.querySelector('i').classList.add('fa-play');
-                }
-            }
-        }, 50); // প্রতি ৫০ মিলিসেকেন্ডে আপডেট
-    };
-
-    const stopAutoScroll = () => {
-        state.autoScroll.isActive = false;
-        if (state.autoScroll.interval) {
-            clearInterval(state.autoScroll.interval);
-            state.autoScroll.interval = null;
-        }
-    };
-
-    const changeScrollSpeed = (change) => {
-        let newSpeed = state.autoScroll.speed + change;
-        // স্পিড লিমিট: ০.৫ থেকে ৩ পর্যন্ত
-        if (newSpeed >= 0.5 && newSpeed <= 3) {
-            state.autoScroll.speed = newSpeed;
-            document.getElementById('scroll-speed-val').textContent = newSpeed + 'x';
-        }
-    };
-
-
-
-
-
-
-
-
-    
     initApp();
 });
