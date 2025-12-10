@@ -95,8 +95,7 @@ body {
 
 /* [FIXED] Message Body - Full Width & Padding Fix */
 .message-body {
-    /* উপরে এবং নিচে প্যাডিং, কিন্তু ডানে-বামে ০ */
-    padding: 70px 0 80px 0; 
+    padding: 70px 0 80px 0; /* ডানে-বামে প্যাডিং ০ */
     height: calc(100vh - 140px);
     overflow-y: auto; 
     overflow-x: hidden;
@@ -113,7 +112,6 @@ body {
     margin-bottom: 2px; 
     align-items: flex-end; 
     width: 100%;
-    /* মেসেজগুলো যেন একদম স্ক্রিনের বর্ডারে না লাগে সেজন্য সামান্য প্যাডিং */
     padding: 2px 10px; 
     box-sizing: border-box;
 }
@@ -128,7 +126,7 @@ body {
 
 /* [FIXED] Bubble - Wider Width */
 .bubble { 
-    max-width: 85%; /* বাবলের চওড়া বাড়ানো হয়েছে */
+    max-width: 85%; 
     padding: 8px 12px; 
     border-radius: 18px; 
     font-size: 15px; 
@@ -188,46 +186,47 @@ body {
 }
 .input-pill input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
 
-.emoji-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); }
+.emoji-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); cursor: pointer; }
 .like-send-btn { background: none; border: none; font-size: 24px; color: var(--messenger-blue); cursor: pointer; padding: 0 5px; flex-shrink: 0; }
 
-/* Image Preview Panel (Position Fixed above footer) */
+/* Image Preview Panel */
 .image-preview-box {
-    position: fixed; 
-    bottom: 65px; 
-    left: 10px; 
-    right: 10px;
-    background: #fff; 
-    padding: 10px; 
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
-    z-index: 110;
-    display: flex; 
-    justify-content: center; 
-    animation: slideUp 0.3s ease;
+    position: fixed; bottom: 65px; left: 10px; right: 10px;
+    background: #fff; padding: 10px; border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 110;
+    display: flex; justify-content: center; animation: slideUp 0.3s ease;
 }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .preview-content { position: relative; width: fit-content; }
 .preview-content img { max-height: 200px; border-radius: 8px; border: 1px solid #eee; }
 #closePreviewBtn { position: absolute; top: -10px; right: -10px; background: #333; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
 
+/* [NEW] Emoji Picker Styles */
+.emoji-picker-popup {
+    position: fixed;
+    bottom: 70px; /* ফুটারের ঠিক উপরে */
+    right: 10px;
+    z-index: 200;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    border-radius: 10px;
+    background: white;
+    /* মোবাইল ভিউতে সাইজ ঠিক রাখার জন্য */
+    max-width: 90vw;
+}
+emoji-picker {
+    width: 320px;
+    height: 350px;
+    --border-radius: 10px;
+    max-width: 100%;
+}
+
 /* Audio Recording UI */
 .audio-recording-ui {
-    position: fixed; 
-    bottom: 65px; 
-    left: 50%; 
-    transform: translateX(-50%);
-    background: #ea4335; 
-    color: white; 
-    padding: 10px 20px;
-    border-radius: 30px; 
-    display: flex; 
-    align-items: center; 
-    gap: 20px;
-    box-shadow: 0 4px 10px rgba(234, 67, 53, 0.4); 
-    z-index: 120;
-    animation: popIn 0.2s ease; 
-    white-space: nowrap;
+    position: fixed; bottom: 65px; left: 50%; transform: translateX(-50%);
+    background: #ea4335; color: white; padding: 10px 20px;
+    border-radius: 30px; display: flex; align-items: center; gap: 20px;
+    box-shadow: 0 4px 10px rgba(234, 67, 53, 0.4); z-index: 120;
+    animation: popIn 0.2s ease; white-space: nowrap;
 }
 @keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 .recording-indicator { display: flex; align-items: center; gap: 10px; }
@@ -246,38 +245,12 @@ body {
 .fs-close-btn { position: absolute; top: 20px; right: 20px; font-size: 40px; color: #fff; cursor: pointer; }
 .fs-download-btn { position: absolute; bottom: 30px; right: 30px; background: white; padding: 10px; border-radius: 50%; font-size: 20px; color: black; }
 
-/* Loader Spinner */
-.loader-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding-top: 50px;
-}
-.loader {
-    width: 30px; height: 30px;
-    border: 3px solid #0084ff;
-    border-bottom-color: transparent;
-    border-radius: 50%;
-    display: inline-block;
-    animation: rotation 1s linear infinite;
-}
+/* Loader & Skeleton */
+.loader-container { display: flex; justify-content: center; align-items: center; width: 100%; padding-top: 50px; }
+.loader { width: 30px; height: 30px; border: 3px solid #0084ff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
 @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* Skeleton Loader Style */
-.skeleton-chat-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    gap: 12px;
-    border-bottom: 1px solid #f0f2f5;
-}
-.skeleton-animate {
-    background: #f0f2f5;
-    background: linear-gradient(to right, #f0f2f5 8%, #e4e6eb 18%, #f0f2f5 33%);
-    background-size: 800px 100%;
-    animation: shimmer 1.5s infinite linear;
-}
+.skeleton-chat-item { display: flex; align-items: center; padding: 10px 15px; gap: 12px; border-bottom: 1px solid #f0f2f5; }
+.skeleton-animate { background: #f0f2f5; background: linear-gradient(to right, #f0f2f5 8%, #e4e6eb 18%, #f0f2f5 33%); background-size: 800px 100%; animation: shimmer 1.5s infinite linear; }
 @keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
 .skeleton-avatar-circle { width: 55px; height: 55px; border-radius: 50%; flex-shrink: 0; }
 .skeleton-text-group { flex: 1; display: flex; flex-direction: column; gap: 8px; }

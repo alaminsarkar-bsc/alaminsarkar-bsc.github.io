@@ -1953,3 +1953,76 @@ async function handleProfileImageUpload(e, type) {
         alert("আপলোড সফল হয়েছে!");
     } catch (error) { console.error("Upload Error:", error); alert("আপলোড করতে সমস্যা হয়েছে: " + error.message); } finally { if(loadingModal) loadingModal.style.display = 'none'; e.target.value = ''; }
 }
+
+// ====================================
+// GLOBAL MESSAGE NOTIFICATION BADGE
+// ====================================
+document.addEventListener('DOMContentLoaded', () => {
+    // লগইন চেক করার পর এটি কল হবে
+    setTimeout(() => setupGlobalMessageListener(), 2000);
+});
+
+async function setupGlobalMessageListener() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return;
+    
+    const currentUser = session.user;
+
+    // ১. শুরুতে আনরিড মেসেজ চেক করা
+    const { count } = await supabaseClient
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', currentUser.id)
+        .eq('is_read', false);
+
+    updateMessageBadge(count || 0);
+
+    // ২. রিয়েলটাইমে নতুন মেসেজ আসলে ব্যাজ আপডেট করা
+    supabaseClient.channel('global-msg-count')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            if (payload.new.receiver_id === currentUser.id) {
+                // বর্তমান ব্যাজ সংখ্যা নিয়ে ১ যোগ করা
+                const badge = document.getElementById('msg-badge-count');
+                let current = 0;
+                if(badge && badge.innerText) {
+                    current = parseInt(badge.innerText.replace('+', '')) || 0;
+                }
+                updateMessageBadge(current + 1);
+            }
+        })
+        .subscribe();
+}
+
+function updateMessageBadge(count) {
+    // মেসেঞ্জার আইকন খুঁজে বের করা (লিংক ধরে)
+    const messengerLink = document.querySelector('a[href="messages.html"]'); 
+
+    if (!messengerLink) return;
+
+    // পজিশন রিলেটিভ করা যাতে ব্যাজ ঠিকমতো বসে
+    messengerLink.style.position = 'relative';
+    
+    let badge = document.getElementById('msg-badge-count');
+
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'msg-badge-count';
+        // ব্যাজের স্টাইল
+        badge.style.cssText = `
+            position: absolute; top: -5px; right: -5px;
+            background-color: #e41e3f; color: white;
+            font-size: 10px; font-weight: bold;
+            padding: 2px 5px; border-radius: 50%;
+            border: 2px solid #fff; display: none;
+            min-width: 15px; text-align: center;
+        `;
+        messengerLink.appendChild(badge);
+    }
+
+    if (count > 0) {
+        badge.innerText = count > 9 ? '9+' : count;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
