@@ -411,7 +411,7 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
 }
 
 // ====================================
-// 5. PROFILE PAGE LOGIC
+// 5. PROFILE PAGE LOGIC (UPDATED)
 // ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -434,18 +434,11 @@ async function initProfilePage() {
         document.getElementById('profileAddress').textContent = userProfile.address || 'কোনো বায়ো নেই';
         
         const avatarEl = document.getElementById('profileAvatar');
-        if (userProfile.photo_url) {
-            avatarEl.innerHTML = `<img src="${userProfile.photo_url}" style="width:100%;height:100%;object-fit:cover;">`;
-        } else {
-            avatarEl.style.backgroundColor = generateAvatarColor(userProfile.display_name);
-            avatarEl.innerHTML = (userProfile.display_name || 'U').charAt(0).toUpperCase();
-        }
+        if (userProfile.photo_url) { avatarEl.innerHTML = `<img src="${userProfile.photo_url}" style="width:100%;height:100%;object-fit:cover;">`; } 
+        else { avatarEl.style.backgroundColor = generateAvatarColor(userProfile.display_name); avatarEl.innerHTML = (userProfile.display_name || 'U').charAt(0).toUpperCase(); }
 
         const coverEl = document.getElementById('profileCoverDisplay');
-        if (userProfile.cover_photo_url) {
-            coverEl.src = userProfile.cover_photo_url;
-            coverEl.style.display = 'block';
-        } else { coverEl.style.display = 'none'; }
+        if (userProfile.cover_photo_url) { coverEl.src = userProfile.cover_photo_url; coverEl.style.display = 'block'; } else { coverEl.style.display = 'none'; }
 
         const [postsCount, followersCount, followingCount] = await Promise.all([
             supabaseClient.from('prayers').select('*', { count: 'exact', head: true }).eq('author_uid', userId).eq('status', 'active'),
@@ -462,23 +455,39 @@ async function initProfilePage() {
         const signOutBtn = document.getElementById('signOutBtn');
         const changeCoverBtn = document.getElementById('changeCoverBtn');
         const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
+        const msgBtn = document.getElementById('profileMessageBtn'); // নতুন মেসেজ বাটন
         
+        // ডিফল্ট সব বাটন হাইড
         editBtn.style.display = 'none'; followBtn.style.display = 'none'; signOutBtn.style.display = 'none';
         if(changeCoverBtn) changeCoverBtn.style.display = 'none';
         if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'none';
+        if(msgBtn) msgBtn.style.display = 'none';
 
+        // নিজের প্রোফাইল হলে
         if (currentUser && currentUser.id === userId) {
             editBtn.style.display = 'inline-block'; signOutBtn.style.display = 'inline-block';
             if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; 
             if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'flex';
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'inline-block');
             setupProfileImageUploads(); 
-        } else {
+        } 
+        // অন্য কারো প্রোফাইল হলে
+        else {
             followBtn.style.display = 'inline-block'; followBtn.dataset.userId = userId;
             if (currentUser) {
                 const { data: isFollowing } = await supabaseClient.from('followers').select('id').eq('follower_id', currentUser.id).eq('following_id', userId).single();
                 if (isFollowing) { followBtn.textContent = 'আনফলো'; followBtn.classList.add('following'); } 
                 else { followBtn.textContent = 'অনুসরণ করুন'; followBtn.classList.remove('following'); }
+                
+                // === মেসেজ বাটন লজিক ===
+                if(msgBtn) {
+                    msgBtn.style.display = 'inline-block';
+                    msgBtn.onclick = () => {
+                        // লোকাল স্টোরেজে ইউজারের আইডি সেট করে মেসেজ পেজে পাঠানো হবে
+                        localStorage.setItem('startChatWith', userId);
+                        window.location.href = 'messages.html';
+                    };
+                }
             }
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'none');
         }

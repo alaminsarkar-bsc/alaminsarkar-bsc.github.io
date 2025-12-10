@@ -1,31 +1,35 @@
 // service-worker.js - Enhanced for Full Offline Support (Islamic Pro)
-// Updated Strategy: NetworkFirst for Admin Pages to ensure updates are visible immediately.
+// Updated Strategy: Added Messages files & Image Compression Library
 
-const CACHE_NAME = 'doa-angina-v6-offline'; // Version updated to v5 to force update
-const ASSETS_CACHE = 'assets-v6';
-const MEDIA_CACHE = 'media-v6';
-const API_CACHE = 'api-v6';
-const FONT_CACHE = 'fonts-v6';
+const CACHE_NAME = 'doa-angina-v8-offline'; // Version updated to v8
+const ASSETS_CACHE = 'assets-v8';
+const MEDIA_CACHE = 'media-v8';
+const API_CACHE = 'api-v8';
+const FONT_CACHE = 'fonts-v8';
 
-// admin.html এবং campaign-admin.html এখান থেকে সরানো হয়েছে
-// যাতে ইন্সটলেশনের সময় এগুলো স্ট্যাটিক ক্যাশে জমা না হয়।
+// ক্যাশ করার জন্য ফাইলের তালিকা (নতুন ৩টি ফাইল এবং লাইব্রেরি যুক্ত করা হয়েছে)
 const urlsToCache = [
   './',
   './index.html',
   './profile.html',
+  './messages.html', // New
   './style.css',
+  './messages.css',  // New
   './admin.css',
   './script.js',
+  './messages.js',   // New
   './admin.js',
-  './campaign-admin.js', // JS ফাইল রাখা হলো, তবে HTML পেজগুলো NetworkFirst এ হ্যান্ডেল হবে
+  './campaign-admin.js', 
   './post.html',
   './post.js',
   './islamic.html',
   './islamic.css',
   './islamic.js',
   './manifest.json',
+  // External Libraries (Offline Support)
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js' // New Library
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,19 +43,16 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
   // 1. Handle Admin Pages (Network First, fallback to cache)
-  // এডমিন এবং ক্যাম্পেইন এডমিন পেজের জন্য নেটওয়ার্ক আগে চেক করা হবে।
   if (event.request.url.includes('/admin.html') || event.request.url.includes('/campaign-admin.html')) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
           return caches.open(ASSETS_CACHE).then((cache) => {
-            // নতুন ভার্সন পেলে ক্যাশ আপডেট করবে
             cache.put(event.request, networkResponse.clone());
             return networkResponse;
           });
         })
         .catch(() => {
-          // নেটওয়ার্ক না থাকলে ক্যাশ থেকে দেখাবে
           return caches.match(event.request);
         })
     );
@@ -61,7 +62,8 @@ self.addEventListener('fetch', (event) => {
   // 2. Handle Google Fonts & Font Awesome (Cache First - Persistent)
   if (requestUrl.hostname.includes('fonts.googleapis.com') || 
       requestUrl.hostname.includes('fonts.gstatic.com') ||
-      requestUrl.hostname.includes('cdnjs.cloudflare.com')) {
+      requestUrl.hostname.includes('cdnjs.cloudflare.com') ||
+      requestUrl.hostname.includes('cdn.jsdelivr.net')) { // Added cdn for libraries
     event.respondWith(
       caches.open(FONT_CACHE).then((cache) => {
         return cache.match(event.request).then((cachedResponse) => {
@@ -97,10 +99,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 4. Handle Islamic APIs (Prayer, Quran, Hadith) -> Stale While Revalidate
-  // এটি অফলাইনে আগের ডেটা দেখাবে এবং অনলাইনে থাকলে আপডেট করবে
   if (requestUrl.hostname.includes('api.aladhan.com') || 
       requestUrl.hostname.includes('api.alquran.cloud') || 
-      requestUrl.hostname.includes('cdn.jsdelivr.net') || // Hadith JSONs
+      requestUrl.hostname.includes('cdn.jsdelivr.net') || 
       (requestUrl.hostname.includes('supabase.co') && !requestUrl.pathname.includes('/storage/'))) {
     
     event.respondWith(
@@ -112,7 +113,6 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           }).catch((err) => {
-             // Network failed, swallow error
              console.log('Network fetch failed for API, using offline cache if available.');
           });
           return cachedResponse || fetchPromise;
