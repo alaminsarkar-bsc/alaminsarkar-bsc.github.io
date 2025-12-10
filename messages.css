@@ -9,7 +9,10 @@
 
 body {
     background-color: var(--messenger-bg);
-    overflow: hidden; /* পুরো পেজ স্ক্রল হবে না, শুধু চ্যাট এরিয়া স্ক্রল হবে */
+    overflow: hidden; /* পুরো পেজ স্ক্রল বন্ধ, শুধু চ্যাট এরিয়া স্ক্রল হবে */
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* ============================
@@ -21,6 +24,9 @@ body {
     align-items: center;
     padding: 15px;
     background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .header-left {
@@ -85,36 +91,9 @@ body {
     outline: none;
 }
 
-/* Active Users Bar (Optional) */
-.active-users-bar {
-    display: flex;
-    gap: 15px;
-    padding: 15px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-.active-user-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-}
-.active-avatar-wrap {
-    position: relative;
-    width: 50px;
-    height: 50px;
-}
-.active-avatar-wrap img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.online-badge {
-    position: absolute; bottom: 2px; right: 2px;
-    width: 12px; height: 12px; background: #31a24c;
-    border: 2px solid #fff; border-radius: 50%;
-}
-
 /* Chat List Area */
 .chat-list-area {
-    height: calc(100vh - 180px);
+    height: calc(100vh - 140px); /* হেডার ও বটম ন্যাভ বাদ দিয়ে */
     overflow-y: auto;
     padding-bottom: 20px;
 }
@@ -130,9 +109,15 @@ body {
 .chat-item-row:active { background-color: #f2f2f2; }
 
 .chat-avatar {
-    width: 55px; height: 55px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    width: 55px; height: 55px; border-radius: 50%; overflow: hidden; flex-shrink: 0; position: relative;
 }
 .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.online-badge {
+    position: absolute; bottom: 2px; right: 2px;
+    width: 12px; height: 12px; background: #31a24c;
+    border: 2px solid #fff; border-radius: 50%;
+}
 
 .chat-info {
     flex: 1;
@@ -145,17 +130,54 @@ body {
     font-size: 14px; color: var(--text-secondary); margin-top: 3px;
     display: flex; justify-content: space-between;
 }
-.chat-preview.unread { color: var(--text-primary); font-weight: 600; }
 .unread-dot {
     width: 12px; height: 12px; background: var(--messenger-blue);
     border-radius: 50%;
 }
 
+/* Skeleton Loader Style */
+.skeleton-chat-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    gap: 12px;
+    border-bottom: 1px solid #f0f2f5;
+}
+.skeleton-animate {
+    background: #f0f2f5;
+    background: linear-gradient(to right, #f0f2f5 8%, #e4e6eb 18%, #f0f2f5 33%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+@keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+.skeleton-avatar-circle { width: 55px; height: 55px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-text-group { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton-name-line { width: 50%; height: 14px; border-radius: 4px; }
+.skeleton-msg-line { width: 80%; height: 10px; border-radius: 4px; }
+
+/* Loader Spinner (Center Fixed) */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding-top: 50px;
+}
+.loader {
+    width: 30px; height: 30px;
+    border: 3px solid #0084ff;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    animation: rotation 1s linear infinite;
+}
+@keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 /* Bottom Nav */
 .bottom-nav {
     position: fixed; bottom: 0; width: 100%; height: 60px;
     background: #fff; border-top: 1px solid #ddd;
-    display: flex; justify-content: space-around; align-items: center;
+    display: flex; justify-content: space-around; align-items: center; z-index: 100;
 }
 .nav-item { font-size: 24px; color: #ccc; cursor: pointer; }
 .nav-item.active { color: var(--messenger-blue); }
@@ -213,7 +235,7 @@ body {
 /* Message Bubbles */
 .message-row {
     display: flex;
-    margin-bottom: 5px; /* ছোট গ্যাপ */
+    margin-bottom: 2px;
     align-items: flex-end;
     animation: fadeInBubble 0.2s ease-out;
 }
@@ -225,7 +247,6 @@ body {
 .message-row.sent { justify-content: flex-end; }
 .message-row.received { justify-content: flex-start; }
 
-/* Avatar in Chat (Only for received) */
 .msg-avatar {
     width: 28px; height: 28px; border-radius: 50%;
     margin-right: 8px; margin-bottom: 5px;
@@ -246,7 +267,7 @@ body {
 .message-row.sent .bubble {
     background-color: var(--messenger-blue);
     color: white;
-    border-bottom-right-radius: 4px; /* বাবল এফেক্ট */
+    border-bottom-right-radius: 4px;
 }
 
 /* Received Style (Gray) */
@@ -255,6 +276,8 @@ body {
     color: black;
     border-bottom-left-radius: 4px;
 }
+
+.bg-transparent { background: transparent !important; padding: 0 !important; }
 
 /* Images in Chat */
 .bubble-image {
@@ -265,14 +288,6 @@ body {
     border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* Timestamp */
-.msg-time {
-    font-size: 10px; color: #999; margin-top: 2px;
-    text-align: right; display: block; opacity: 0.8;
-}
-.message-row.received .msg-time { text-align: left; }
-
-/* Empty Placeholder */
 .empty-chat-placeholder {
     text-align: center; margin-top: 50px; opacity: 0.6;
 }
@@ -331,8 +346,9 @@ body {
     background: rgba(255,255,255,0.95);
     padding: 10px; border-top: 1px solid #ddd;
     z-index: 90; backdrop-filter: blur(5px);
+    display: flex; justify-content: center;
 }
-.preview-content { position: relative; width: fit-content; margin: 0 auto; }
+.preview-content { position: relative; width: fit-content; }
 .preview-content img {
     max-height: 120px; border-radius: 10px;
     border: 1px solid #ccc;
@@ -343,9 +359,7 @@ body {
     border-radius: 50%; width: 22px; height: 22px; cursor: pointer;
 }
 
-/* ============================
-   4. FULL SCREEN IMAGE MODAL
-   ============================ */
+/* Full Screen Modal */
 .fs-image-modal {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.95); z-index: 5000;
@@ -362,53 +376,4 @@ body {
     position: absolute; bottom: 30px; right: 30px;
     background: white; padding: 10px; border-radius: 50%;
     font-size: 20px; color: black;
-}
-/* ====================================
-   SKELETON LOADER FOR CHAT LIST
-   ==================================== */
-.skeleton-chat-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    gap: 12px;
-    border-bottom: 1px solid #f0f2f5;
-}
-
-/* Shimmer Animation Effect */
-.skeleton-animate {
-    background: #f0f2f5;
-    background: linear-gradient(to right, #f0f2f5 8%, #e4e6eb 18%, #f0f2f5 33%);
-    background-size: 800px 100%;
-    animation: shimmer 1.5s infinite linear;
-}
-
-@keyframes shimmer {
-    0% { background-position: -468px 0; }
-    100% { background-position: 468px 0; }
-}
-
-.skeleton-avatar-circle {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.skeleton-text-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.skeleton-name-line {
-    width: 50%;
-    height: 14px;
-    border-radius: 4px;
-}
-
-.skeleton-msg-line {
-    width: 80%;
-    height: 10px;
-    border-radius: 4px;
 }

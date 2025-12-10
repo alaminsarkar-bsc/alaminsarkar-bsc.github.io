@@ -1210,86 +1210,69 @@ textarea.post-input { resize: none; min-height: 120px; font-family: inherit; }
 
 
 /* ====================================
-   SHORTS VIDEO FEED STYLES (UPDATED)
+   SHORTS VIDEO FEED STYLES (FULL SCREEN FIXED)
    ==================================== */
 
-/* শর্টস মোড কন্টেইনার */
+/* ১. মেইন কন্টেইনার */
 .shorts-feed-container {
-    /* হেডার (50px) এবং ফুটার (60px) বাদে বাকি পুরো জায়গা নিবে */
-    height: calc(100vh - 50px) !important; 
+    position: fixed;
+    top: 98px; /* হেডারের উচ্চতা (Header Top + Nav Row) */
+    left: 0;
     width: 100%;
+    
+    /* একদম নিচ পর্যন্ত জায়গা নিবে */
+    height: calc(100vh - 98px) !important; 
+    
+    background-color: #000; /* ব্যাকগ্রাউন্ড কালো */
+    z-index: 500;
+    
+    /* স্ক্রলিং ফিক্স */
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
-    background-color: #000;
-    position: fixed;
-    top: 50px;
-    left: 0;
-    z-index: 500;
-    /* এই লাইনটি ইম্পরট্যান্ট: এটি একবারে একাধিক ভিডিও স্কিপ করা আটকাবে */
-    scroll-snap-stop: always; 
-    padding-bottom: 60px; /* ফুটারের জন্য জায়গা */
+    scroll-snap-stop: always;
+    padding-bottom: 0; /* নিচে কোনো ফাঁকা জায়গা থাকবে না */
 }
 
-/* প্রতিটি শর্ট ভিডিও কার্ড */
+/* ২. প্রতিটি কার্ড */
 .short-card {
     width: 100%;
-    height: 100%; /* কন্টেইনারের সমান উচ্চতা */
+    height: 100%; /* কন্টেইনারের সমান হাইট */
     scroll-snap-align: start;
-    scroll-snap-stop: always; /* ডাবল প্রোটেকশন */
+    scroll-snap-stop: always;
     position: relative;
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden; /* হার্ট এনিমেশন বাইরে যাওয়া আটকাবে */
+    overflow: hidden;
 }
 
-/* ভিডিও প্লেয়ার */
+/* ৩. ভিডিও প্লেয়ার */
 .short-video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover; /* স্ক্রিন ফিল করবে */
+    object-position: center; 
     display: block;
 }
 
-/* ডাবল ট্যাপ হার্ট এনিমেশন */
-.heart-animation {
-    position: absolute;
-    color: #e44d62;
-    font-size: 80px; /* বড় হার্ট */
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0);
-    animation: popup 0.8s ease-in-out;
-    z-index: 20;
-    pointer-events: none; /* যাতে ক্লিকে সমস্যা না করে */
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-}
-
-@keyframes popup {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    30% { transform: translate(-50%, -50%) scale(0.9); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); } /* উপরের দিকে ভেসে যাবে */
-}
-
-/* ভিডিওর ওপরের কালো শেড */
+/* ৪. ভিডিওর ওপরের কালো শেড (যাতে নাম স্পষ্ট বোঝা যায়) */
 .short-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 200px; /* গ্রেডিয়েন্ট একটু বাড়ানো হলো */
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    height: 250px; /* শেড একটু বাড়ানো হলো */
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 100%);
     pointer-events: none;
     z-index: 2;
 }
 
-/* ডানপাশের অ্যাকশন বাটন */
+/* ৫. ডানপাশের অ্যাকশন বাটন */
 .short-actions {
     position: absolute;
     right: 10px;
-    bottom: 80px; /* ফুটার এর উপরে থাকবে */
+    bottom: 120px; /* নিচ থেকে একটু উপরে তোলা হলো */
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -1315,31 +1298,57 @@ textarea.post-input { resize: none; min-height: 120px; font-family: inherit; }
 .short-action-btn i { font-size: 24px; }
 .short-action-btn span { font-size: 12px; margin-top: 5px; font-weight: 600; }
 
-/* নিচের ইনফো */
+/* ৬. নিচের ইনফো (ইউজার নেম ও ক্যাপশন) */
 .short-info {
     position: absolute;
-    bottom: 20px; /* ফুটার এর উপরে */
+    bottom: 30px; /* একদম নিচে লেগে থাকবে না, একটু উপরে */
     left: 15px;
-    right: 70px;
+    right: 70px; /* ডানপাশের বাটন থেকে দূরত্ব */
     z-index: 10;
     color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8); /* টেক্সট শ্যাডো বাড়ানো হলো */
+    pointer-events: none;
 }
 
+/* ইউজার নেম */
 .short-username {
     font-weight: 700;
     font-size: 16px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    pointer-events: auto;
 }
 
+/* ক্যাপশন */
 .short-caption {
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.5;
+    color: #eee;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3; /* ৩ লাইনের বেশি হলে ... দেখাবে */
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+/* ডাবল ট্যাপ হার্ট এনিমেশন */
+.heart-animation {
+    position: absolute;
+    color: #e44d62;
+    font-size: 80px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    animation: popup 0.8s ease-in-out;
+    z-index: 20;
+    pointer-events: none;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+@keyframes popup {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    30% { transform: translate(-50%, -50%) scale(0.9); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); }
 }
