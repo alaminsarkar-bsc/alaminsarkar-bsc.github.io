@@ -1218,3 +1218,58 @@ html[dir="rtl"] .namaz-step-details p {
     font-size: 1.2rem;
 }
 
+
+/* ====================================
+   CITY SETTINGS LAYOUT FIX
+   ==================================== */
+
+/* ইনপুট এবং বাটনের কন্টেইনার */
+#settings-tab .card > div[style*="display:flex"] {
+    display: flex !important;
+    flex-wrap: nowrap !important; /* বাটন নিচে নামবে না */
+    align-items: center !important;
+    gap: 8px !important; /* মাঝখানের গ্যাপ কমানো হয়েছে */
+    width: 100%;
+}
+
+/* শহরের নাম লেখার ইনপুট */
+#city-input-settings {
+    flex: 1 !important; /* যতটুকু জায়গা পাবে নিবে */
+    width: auto !important;
+    min-width: 0 !important; /* ওভারফ্লো আটকাবে */
+    height: 40px !important; /* ফিক্সড উচ্চতা */
+    padding: 0 10px !important;
+    box-sizing: border-box;
+    margin: 0 !important; /* ডিফল্ট মার্জিন রিমুভ */
+}
+
+/* অটো লোকেশন বাটন (নীল আইকন বাটন) */
+#auto-location-btn {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important; /* একটু চারকোনা শেপ */
+    flex-shrink: 0 !important; /* বাটন চ্যাপ্টা হবে না */
+    margin: 0 !important;
+}
+
+#auto-location-btn i {
+    font-size: 16px !important; /* আইকন সাইজ */
+}
+
+/* সেভ বাটন */
+#city-save-btn {
+    height: 40px !important;
+    padding: 0 15px !important; /* ডানে-বামে প্যাডিং */
+    font-size: 14px !important;
+    white-space: nowrap !important; /* লেখা এক লাইনে থাকবে */
+    border-radius: 8px !important;
+    flex-shrink: 0 !important; /* বাটন চ্যাপ্টা হবে না */
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
