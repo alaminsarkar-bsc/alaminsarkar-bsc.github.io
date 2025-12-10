@@ -1,11 +1,11 @@
 // service-worker.js - Enhanced for Full Offline Support (Islamic Pro)
 // Updated Strategy: Added Messages files & Image Compression Library
 
-const CACHE_NAME = 'doa-angina-v8-offline'; // Version updated to v8
-const ASSETS_CACHE = 'assets-v8';
-const MEDIA_CACHE = 'media-v8';
-const API_CACHE = 'api-v8';
-const FONT_CACHE = 'fonts-v8';
+const CACHE_NAME = 'doa-angina-v9-offline'; // Version updated to v8
+const ASSETS_CACHE = 'assets-v9';
+const MEDIA_CACHE = 'media-v9';
+const API_CACHE = 'api-v9';
+const FONT_CACHE = 'fonts-v9';
 
 // ক্যাশ করার জন্য ফাইলের তালিকা (নতুন ৩টি ফাইল এবং লাইব্রেরি যুক্ত করা হয়েছে)
 const urlsToCache = [
