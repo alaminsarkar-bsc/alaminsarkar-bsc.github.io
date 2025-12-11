@@ -9,7 +9,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ZEGO CLOUD কনফিগারেশন
 const ZEGO_APP_ID = 361002182;
-const ZEGO_SERVER_SECRET = '723224a492e399607fc92fe644d60144';
+const ZEGO_SERVER_SECRET = 'b955265279ceb08e4803537873597ddceaa17a10a8b94d3f519055bc888b7fef';
 
 // ================================================================
 // ২. গ্লোবাল ভ্যারিয়েবল ডিক্লারেশন
