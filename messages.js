@@ -51,8 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     currentUser = sessionData.session.user;
     
-    // ZegoCloud কলিং সিস্টেম চালু করা
-    initZegoCloud();
+    // ZegoCloud কলিং সিস্টেম চালু করা (অবশ্যই প্রথমে করতে হবে)
+    await initZegoCloud();
 
     // হেডার প্রোফাইল লোড করা
     loadMyProfile();
@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initZegoCloud() {
     try {
         const userID = currentUser.id;
+        // নাম না থাকলে ইমেইলের প্রথম অংশ ব্যবহার হবে
         const userName = currentUser.user_metadata.display_name || currentUser.email.split('@')[0];
 
         // কিট টোকেন জেনারেট করা
@@ -99,6 +100,7 @@ async function initZegoCloud() {
         // [IMPORTANT] সিগনালিং প্লাগিন যুক্ত করা (এটি ছাড়া কল রিং হবে না)
         if (typeof ZegoUIKitSignalingPlugin !== 'undefined') {
             zp.addPlugins({ ZegoUIKitSignalingPlugin });
+            console.log("Zego Plugins Loaded");
         } else {
             console.error("Zego Signaling Plugin not found! Please check HTML script tags.");
         }
@@ -207,13 +209,8 @@ async function loadChatList() {
             
             const timeString = timeAgoShort(chat.last_message_time);
             const isUnread = chat.unread_count > 0;
-            let msgPreview = chat.last_message_content;
+            let msgPreview = chat.last_message_content || 'Sent an attachment';
             
-            // মিডিয়া মেসেজের প্রিভিউ টেক্সট সেট করা
-            if (!msgPreview) {
-                // আমরা চেক করতে পারি এটি কি ধরনের মেসেজ ছিল, কিন্তু সহজ করার জন্য:
-                msgPreview = 'Sent an attachment';
-            }
             if (msgPreview === '👍') msgPreview = 'Like 👍';
 
             // অনলাইন চেক (৫ মিনিটের মধ্যে অ্যাক্টিভিটি থাকলে অনলাইন)
@@ -277,7 +274,6 @@ async function openChat(partnerId) {
         
         if (blocked && blocked.length > 0) {
             console.log("This conversation involves a blocked user.");
-            // চাইলে এখানে ইনপুট ডিজেবল করে দেওয়া যেতে পারে
         }
 
         // ২. ইউজারের তথ্য আনা
@@ -516,7 +512,6 @@ function setupRealtimeChat(partnerId) {
             }
             // মেসেজ আপডেট হলে (Delete for Me)
             else if (eventType === 'UPDATE') {
-                // যদি deleted_by অ্যারেতে আমার আইডি যোগ হয়, তাহলে মেসেজ রিমুভ করব
                 if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
                     const el = document.getElementById(`msg-${newMsg.id}`);
                     if (el) el.remove();
@@ -564,10 +559,10 @@ function showTypingIndicator() {
 }
 
 // ================================================================
-// ১০. UI রেন্ডারিং ফাংশন
+// ১০. UI রেন্ডারিং ফাংশন (Audio Fix Included)
 // ================================================================
 function appendMessageToUI(msg) {
-    // যদি মেসেজটি আমি ডিলিট করে থাকি (Delete for me), তবে দেখাবো না
+    // যদি মেসেজটি আমি ডিলিট করে থাকি, তবে দেখাবো না
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
     const container = document.getElementById('messageContainer');
@@ -579,7 +574,6 @@ function appendMessageToUI(msg) {
         const rName = msg.reply_message.sender_id === currentUser.id ? 'You' : document.getElementById('chatHeaderName').innerText;
         let rText = msg.reply_message.content;
         
-        // যদি টেক্সট না থাকে (মিডিয়া মেসেজ)
         if (!rText) {
             if (msg.reply_message.image_url) rText = '📷 Photo';
             else if (msg.reply_message.audio_url) rText = '🎤 Audio';
@@ -600,11 +594,15 @@ function appendMessageToUI(msg) {
         contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')">`;
     }
     
-    // অডিও রেন্ডার
+    // অডিও রেন্ডার (CSS ক্লাসের সাথে মিল রেখে)
     if (msg.audio_url) {
         contentHTML += `
-            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'}; padding: 10px; border-radius: 15px;">
-                <audio controls src="${msg.audio_url}" preload="metadata"></audio>
+            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'};">
+                <audio controls>
+                    <source src="${msg.audio_url}" type="audio/webm">
+                    <source src="${msg.audio_url}" type="audio/mp4">
+                    Your browser does not support the audio element.
+                </audio>
             </div>`;
     }
     
@@ -620,7 +618,8 @@ function appendMessageToUI(msg) {
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
-    const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url)) ? 'bg-transparent' : '';
+    // বাবল ক্লাস লজিক
+    const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url) || msg.audio_url) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
     // লং প্রেস ইভেন্ট সহ মেসেজ রো তৈরি
@@ -633,7 +632,7 @@ function appendMessageToUI(msg) {
                  ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
                  onmouseup="handleMessagePressEnd()" 
                  ontouchend="handleMessagePressEnd()"
-                 oncontextmenu="return false;"> <!-- রাইট ক্লিক মেনু বন্ধ -->
+                 oncontextmenu="return false;"> 
                 ${contentHTML}
             </div>
         </div>`;
@@ -893,7 +892,7 @@ function setupEventListeners() {
     document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
     document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
     
-    // ৫. ভিডিও ও অডিও কল বাটন
+    // ৫. ভিডিও ও অডিও কল বাটন (জেগো কলিং)
     document.getElementById('videoCallBtn').addEventListener('click', () => startZegoCall('video'));
     document.getElementById('audioCallBtn').addEventListener('click', () => startZegoCall('audio'));
 
