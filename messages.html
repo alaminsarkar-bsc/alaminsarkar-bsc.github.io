@@ -197,20 +197,22 @@
         <a id="downloadImgBtn" href="#" download class="fs-download-btn"><i class="fas fa-download"></i></a>
     </div>
 
-    <!-- কল UI কন্টেইনার -->
-    <div id="callContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: #000;">
+    <!-- কল UI কন্টেইনার (z-index issue fixed in CSS) -->
+    <div id="callContainer">
         <!-- ZegoCloud কল UI এখানে লোড হবে -->
     </div>
 
     <!-- ===========================
-       স্ক্রিপ্ট লাইব্রেরি (সঠিক অর্ডার) - FIXED VERSION
+       স্ক্রিপ্ট লাইব্রেরি (সঠিক ভার্সন ব্যবহার করা হয়েছে)
        =========================== -->
     
-    <!-- 1. ZegoCloud Core Library -->
-    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+    <!-- 1. ZegoCloud Core Library (Stable Version) -->
+    <!-- আগের ভার্সনটিতে সমস্যা ছিল, এখানে 2.9.0 ব্যবহার করা হচ্ছে যা বেশি স্টেবল -->
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt@2.9.0/zego-uikit-prebuilt.js"></script>
     
-    <!-- 2. ZIM Plugin (IMPORTANT: এই প্লাগিন ছাড়া কল কাজ করবে না) -->
-    <script src="https://unpkg.com/@zegocloud/zim-sdk-web@latest/dist/index.js"></script>
+    <!-- 2. ZIM Plugin (Calling Feature) -->
+    <!-- ZIM এর লেটেস্ট ভার্সন কল ইনিশিয়ালাইজেশনে কনফ্লিক্ট করতে পারে, তাই কম্প্যাটিবল ভার্সন -->
+    <script src="https://unpkg.com/zegocloud-zim-web@2.10.0/index.js"></script>
     
     <!-- 3. Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
