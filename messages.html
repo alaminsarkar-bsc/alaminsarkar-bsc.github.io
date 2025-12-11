@@ -203,14 +203,14 @@
     </div>
 
     <!-- ===========================
-       স্ক্রিপ্ট লাইব্রেরি (সঠিক অর্ডার)
+       স্ক্রিপ্ট লাইব্রেরি (সঠিক অর্ডার) - FIXED VERSION
        =========================== -->
     
-    <!-- 1. ZegoCloud Core -->
+    <!-- 1. ZegoCloud Core Library -->
     <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
     
-    <!-- 2. ZegoCloud Signaling Plugin (রিং এর জন্য অত্যাবশ্যক) -->
-    <script src="https://unpkg.com/@zegocloud/zego-uikit-signaling-plugin@0.1.3/dist/zego-uikit-signaling-plugin.js"></script>
+    <!-- 2. ZIM Plugin (IMPORTANT: এই প্লাগিন ছাড়া কল কাজ করবে না) -->
+    <script src="https://unpkg.com/@zegocloud/zim-sdk-web@latest/dist/index.js"></script>
     
     <!-- 3. Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

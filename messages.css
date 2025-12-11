@@ -549,3 +549,185 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
     .modal-btn { background: #3a3b3c; color: var(--text-primary); }
     .modal-btn.cancel { background: #3a3b3c; border-color: #4e4f50; }
 }
+
+
+/* ZegoCloud Call Container Styles */
+#callContainer {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 9999;
+}
+
+#callContainer .zego-ui-kit {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+/* Call button hover effects */
+.action-icon {
+    transition: all 0.2s ease;
+}
+
+.action-icon:hover {
+    transform: scale(1.1);
+}
+
+.action-icon:active {
+    transform: scale(0.95);
+}
+
+/* Call status indicators */
+.call-status {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 132, 255, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 10001;
+    animation: fadeInOut 0.3s ease;
+}
+
+@keyframes fadeInOut {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Permission prompt styles */
+.permission-prompt {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000;
+    max-width: 90%;
+    width: 300px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.permission-prompt p {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.permission-prompt button {
+    background: #0084ff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    margin: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.permission-prompt button:hover {
+    background: #0066cc;
+}
+
+/* Loading overlay for call initialization */
+.call-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 10000;
+}
+
+.call-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #0084ff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive call UI */
+@media (max-width: 768px) {
+    #callContainer .zego-ui-kit {
+        /* ZegoCloud automatically handles mobile responsiveness */
+    }
+    
+    .permission-prompt {
+        width: 85%;
+        bottom: 80px;
+    }
+}
+
+/* Call ended screen */
+.call-ended {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 9999;
+}
+
+.call-ended h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.call-ended button {
+    background: #0084ff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+/* Error states */
+.call-error {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 59, 48, 0.9);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 10001;
+    max-width: 80%;
+    animation: popIn 0.3s ease;
+}

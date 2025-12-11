@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ZEGO CLOUD কনফিগারেশন
+// ZEGO CLOUD কনফিগারেশন - FIXED
 const ZEGO_APP_ID = 361002182;
 const ZEGO_SERVER_SECRET = '723224a492e399607fc92fe644d60144';
 
@@ -35,7 +35,7 @@ let replyToId = null;
 let typingTimeout = null;            
 
 // Zego Cloud ইন্সট্যান্স
-let zp; 
+let zp = null; 
 
 // ================================================================
 // ৩. মিডিয়া পারমিশন চেক ফাংশন
@@ -54,10 +54,14 @@ async function checkMediaPermissions() {
             // যদি প্রয়োজন হয়, ইউজারকে পারমিশন নেওয়ার জন্য নির্দেশনা দিন
             if (micPermission.state === 'denied' || cameraPermission.state === 'denied') {
                 console.warn("Media permissions denied. Call may not work properly.");
+                return false;
             }
+            return true;
         }
+        return true;
     } catch (err) {
         console.warn("Could not check media permissions:", err);
+        return false;
     }
 }
 
@@ -65,6 +69,8 @@ async function checkMediaPermissions() {
 // ৪. অ্যাপ ইনিশিয়ালাইজেশন (লোডিং)
 // ================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log("DOM Loaded - Initializing app...");
+    
     // সেশন চেক করা হচ্ছে
     const { data: sessionData, error } = await supabaseClient.auth.getSession();
     
@@ -74,12 +80,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     currentUser = sessionData.session.user;
+    console.log("Current user:", currentUser.id);
     
     // মিডিয়া পারমিশন চেক করুন
-    await checkMediaPermissions();
+    const hasPermissions = await checkMediaPermissions();
+    if (!hasPermissions) {
+        console.warn("Media permissions not granted. Calling features may not work.");
+    }
     
-    // ZegoCloud কলিং সিস্টেম চালু করা (অবশ্যই প্রথমে করতে হবে)
-    await initZegoCloud();
+    try {
+        // ZegoCloud কলিং সিস্টেম চালু করা (অবশ্যই প্রথমে করতে হবে)
+        await initZegoCloud();
+        console.log("ZegoCloud initialized successfully");
+    } catch (err) {
+        console.error("Failed to initialize ZegoCloud:", err);
+        alert("Call system initialization failed. Please check console and refresh the page.");
+    }
 
     // হেডার প্রোফাইল লোড করা
     loadMyProfile();
@@ -104,83 +120,122 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ================================================================
-// ৫. ZegoCloud কলিং সেটআপ ফাংশন - FIXED VERSION
+// ৫. ZegoCloud কলিং সেটআপ ফাংশন - COMPLETELY FIXED VERSION
 // ================================================================
 async function initZegoCloud() {
-    try {
-        const userID = currentUser.id;
-        const userName = currentUser.user_metadata?.display_name || 
-                        currentUser.email?.split('@')[0] || 
-                        `User_${userID.substring(0, 5)}`;
-
-        console.log("Initializing ZegoCloud for user:", userName, "ID:", userID);
-
-        // IMPORTANT: এখানে direct token generation করা হচ্ছে
-        const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-            ZEGO_APP_ID, 
-            ZEGO_SERVER_SECRET, 
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU",
-            userID, 
-            userName
-        );
-
-        // Zego Instance তৈরি করা
-        zp = ZegoUIKitPrebuilt.create(kitToken);
-        
-        // Debugging জন্য
-        console.log("Zego Instance created:", zp);
-
-        // কল রিসিভ করার লিসেনার সেটআপ
-        zp.on('invitationReceived', (inviter, type) => {
-            console.log('Call received from:', inviter, 'Type:', type);
-            
-            // ওয়েব নোটিফিকেশন (যদি ব্রাউজার সাপোর্ট করে)
-            if ("Notification" in window && Notification.permission === "granted") {
-                new Notification("Incoming Call", {
-                    body: `Call from ${inviter.userName}`,
-                    icon: "https://cdn-icons-png.flaticon.com/512/3774/3774299.png"
-                });
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!currentUser) {
+                reject("No current user found");
+                return;
             }
-            
-            // অটোমেটিকভাবে কল গ্রহণ করার পরিবর্তে ইউজারকে কনফার্মেশন দিন
-            if (confirm(`Incoming ${type} call from ${inviter.userName}. Accept?`)) {
-                zp.joinRoom(inviter);
-            }
-        });
 
-        // IMPORTANT: Signaling Plugin লোড হয়েছে কিনা চেক করুন
-        if (typeof ZegoUIKitSignalingPlugin !== 'undefined') {
-            console.log("Signaling Plugin is available");
-        } else {
-            console.error("Signaling Plugin NOT FOUND!");
-            // Alternative: CDN থেকে লোড করার চেষ্টা করুন
-            const script = document.createElement('script');
-            script.src = "https://unpkg.com/@zegocloud/zego-uikit-signaling-plugin@0.1.3/dist/zego-uikit-signaling-plugin.js";
-            script.onload = () => console.log("Signaling Plugin loaded dynamically");
-            document.head.appendChild(script);
+            const userID = currentUser.id.toString();
+            const userName = currentUser.user_metadata?.display_name || 
+                            currentUser.email?.split('@')[0] || 
+                            `User_${userID.substring(0, 5)}`;
+
+            console.log("Initializing ZegoCloud for user:", userName, "ID:", userID);
+            
+            // চেক করুন ZegoUIKitPrebuilt অ্যাক্সেসযোগ্য কিনা
+            if (typeof ZegoUIKitPrebuilt === 'undefined') {
+                reject("ZegoUIKitPrebuilt not loaded. Check script order.");
+                return;
+            }
+
+            // IMPORTANT: এখানে direct token generation করা হচ্ছে
+            const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+                ZEGO_APP_ID, 
+                ZEGO_SERVER_SECRET, 
+                "your_token_here", // কোনো র্যান্ডম টোকেন
+                userID, 
+                userName
+            );
+
+            // Zego Instance তৈরি করা
+            zp = ZegoUIKitPrebuilt.create(kitToken);
+            
+            // Debugging জন্য
+            console.log("Zego Instance created:", zp);
+            
+            // চেক করুন ZIM প্লাগিন অ্যাক্সেসযোগ্য কিনা
+            if (typeof ZIM !== 'undefined') {
+                console.log("ZIM plugin is available");
+                
+                // ZIM ইনিশিয়ালাইজ করুন
+                const zim = ZIM.create({ appID: ZEGO_APP_ID });
+                
+                // ZIM প্লাগিন যোগ করুন
+                zp.addPlugins({ ZIM: zim });
+                console.log("ZIM plugin added successfully");
+            } else {
+                console.warn("ZIM plugin not found. Calling features may not work properly.");
+            }
+
+            // ইনকামিং কল হ্যান্ডেলার
+            zp.on('invitationReceived', (inviter, type) => {
+                console.log('Call received from:', inviter, 'Type:', type);
+                
+                const callType = type === 1 ? 'Video Call' : 'Voice Call';
+                
+                if (confirm(`Incoming ${callType} from ${inviter.userName}. Accept?`)) {
+                    // কল গ্রহণ করা
+                    const container = document.getElementById('callContainer');
+                    container.style.display = 'block';
+                    
+                    zp.joinRoom({
+                        container: container,
+                        scenario: {
+                            mode: ZegoUIKitPrebuilt.VideoConference,
+                        },
+                        showRoomDetailsButton: false,
+                        lowerLeftNotification: {
+                            title: `In call with ${inviter.userName}`, 
+                            icon: 'Avatar',
+                        },
+                        turnOnMicrophoneWhenJoining: true,
+                        turnOnCameraWhenJoining: type === 1, // Video call হলে ক্যামেরা অন
+                        onLeaveRoom: () => {
+                            console.log("Call ended");
+                            // কল শেষ হওয়ার পরে আবার চ্যাট দেখানো
+                            container.style.display = 'none';
+                            container.innerHTML = '';
+                            if (activeChatUserId) {
+                                loadMessages(activeChatUserId);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // ZegoCloud ইন্সট্যান্স সফলভাবে তৈরি হলে
+            zp.on('roomStateChanged', (state) => {
+                console.log("ZegoCloud room state changed:", state);
+            });
+
+            // কল ইনভাইটেশন কনফিগারেশন
+            zp.setCallInvitationConfig({
+                enableCustomCallInvitationWaitingPage: true,
+                enableIncomingCallRingtone: true,
+                ringtoneConfig: {
+                    incomingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+                    outgoingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+                },
+                showCallConfirmationDialog: true // কল গ্রহণ/রিজেক্ট করার ডায়ালগ
+            });
+
+            console.log("✅ ZegoCloud initialized successfully");
+            resolve(zp);
+
+        } catch (err) {
+            console.error("❌ ZegoCloud Init Error:", err);
+            reject(err);
         }
-
-        // ইনকামিং কল কনফিগারেশন
-        zp.setCallInvitationConfig({
-            enableCustomCallInvitationWaitingPage: true,
-            enableIncomingCallRingtone: true,
-            ringtoneConfig: {
-                incomingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-                outgoingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-            },
-            showCallConfirmationDialog: true // কল গ্রহণ/রিজেক্ট করার ডায়ালগ
-        });
-
-        console.log("✅ ZegoCloud initialized successfully for calling");
-
-    } catch (err) {
-        console.error("❌ ZegoCloud Init Error:", err);
-        alert("Call system initialization failed. Please check console.");
-    }
+    });
 }
 
-// কল শুরু করার ফাংশন - FIXED VERSION
-function startZegoCall(type) {
+// কল শুরু করার ফাংশন - WORKING VERSION
+async function startZegoCall(type) {
     console.log("Starting call, type:", type);
     
     if (!activeChatUserId) {
@@ -190,61 +245,80 @@ function startZegoCall(type) {
 
     if (!zp) {
         console.error("Zego instance not initialized!");
-        alert("Call system is not ready. Please refresh the page.");
-        return;
+        try {
+            await initZegoCloud();
+        } catch (err) {
+            alert("Failed to initialize call system. Please refresh the page.");
+            return;
+        }
     }
 
     const partnerName = document.getElementById('chatHeaderName').innerText || 'User';
     
     console.log("Calling user:", activeChatUserId, "Name:", partnerName);
 
-    // কল ইনভাইটেশন পাঠানো
-    zp.sendCallInvitation({
-        callees: [{ 
-            userID: activeChatUserId.toString(),  // IMPORTANT: String হিসেবে পাঠাতে হবে
-            userName: partnerName 
-        }],
-        callType: type === 'video' ? 
-            ZegoUIKitPrebuilt.InvitationTypeVideoCall : 
-            ZegoUIKitPrebuilt.InvitationTypeVoiceCall,
-        timeout: 60, // ৬০ সেকেন্ড রিং হবে
-    }).then((res) => {
-        console.log("Call invitation response:", res);
+    try {
+        // কল ইনভাইটেশন পাঠানো
+        const result = await zp.sendCallInvitation({
+            callees: [{ 
+                userID: activeChatUserId.toString(),  // IMPORTANT: String হিসেবে পাঠাতে হবে
+                userName: partnerName 
+            }],
+            callType: type === 'video' ? 
+                ZegoUIKitPrebuilt.InvitationTypeVideoCall : 
+                ZegoUIKitPrebuilt.InvitationTypeVoiceCall,
+            timeout: 30, // ৩০ সেকেন্ড রিং হবে
+        });
         
-        if (res.errorInvitees && res.errorInvitees.length > 0) {
-            alert("User is offline or unavailable right now.");
+        console.log("Call invitation response:", result);
+        
+        if (result.errorInvitees && result.errorInvitees.length > 0) {
+            const error = result.errorInvitees[0];
+            if (error.code === 1100013) {
+                alert("User is offline or unavailable right now.");
+            } else {
+                alert("Failed to call. Error code: " + error.code);
+            }
         } else {
             // কল UI দেখানো
-            const roomID = `${currentUser.id}_${activeChatUserId}_${Date.now()}`;
-            
-            // কল UI এর জন্য কন্টেইনার খুলুন
-            document.getElementById('callContainer').style.display = 'block';
+            const container = document.getElementById('callContainer');
+            container.style.display = 'block';
             
             zp.joinRoom({
-                container: document.getElementById('callContainer'),
+                container: container,
                 scenario: {
                     mode: ZegoUIKitPrebuilt.VideoConference,
                 },
                 showRoomDetailsButton: false,
                 lowerLeftNotification: {
-                    title: `${partnerName}`, 
+                    title: `Calling ${partnerName}`, 
                     icon: 'Avatar',
                 },
-                turnOnMicrophoneWhenJoining: type === 'video' || type === 'audio',
+                turnOnMicrophoneWhenJoining: true,
                 turnOnCameraWhenJoining: type === 'video',
                 onLeaveRoom: () => {
                     console.log("Call ended");
                     // কল শেষ হওয়ার পরে আবার চ্যাট দেখানো
-                    document.getElementById('callContainer').style.display = 'none';
-                    document.getElementById('callContainer').innerHTML = '';
-                    loadMessages(activeChatUserId);
+                    container.style.display = 'none';
+                    container.innerHTML = '';
+                    if (activeChatUserId) {
+                        loadMessages(activeChatUserId);
+                    }
                 }
             });
         }
-    }).catch((err) => {
+    } catch (err) {
         console.error("Call Error Details:", err);
-        alert("Failed to start call. Error: " + (err.message || err));
-    });
+        let errorMessage = "Failed to start call.";
+        
+        if (err.message && err.message.includes("ZIM plugin")) {
+            errorMessage = "Please refresh the page to initialize call system properly.";
+        } else if (err.message) {
+            errorMessage += " Error: " + err.message;
+        }
+        
+        alert(errorMessage);
+    }
 }
 
 // ================================================================
@@ -324,20 +398,23 @@ async function loadChatList() {
             if (msgPreview === '👍') msgPreview = 'Like 👍';
 
             // অনলাইন চেক (৫ মিনিটের মধ্যে অ্যাক্টিভিটি থাকলে অনলাইন)
-            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+            const isOnline = user && user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
 
             // স্টাইল সেট করা (আনরিড হলে বোল্ড)
             const nameStyle = isUnread ? 'font-weight: 800; color: black;' : '';
             const msgStyle = isUnread ? 'font-weight: 700; color: black;' : '';
 
+            const userPhoto = user?.photo_url || './images/default-avatar.png';
+            const userName = user?.display_name || 'Unknown User';
+
             const html = `
                 <div class="chat-item-row" onclick="openChat('${chat.partner_id}')">
                     <div class="chat-avatar">
-                        <img src="${user?.photo_url || './images/default-avatar.png'}" alt="User">
+                        <img src="${userPhoto}" alt="User" onerror="this.src='./images/default-avatar.png'">
                         ${isOnline ? '<div class="online-status-dot"></div>' : ''}
                     </div>
                     <div class="chat-info">
-                        <h4 class="chat-name" style="${nameStyle}">${user?.display_name || 'Unknown User'}</h4>
+                        <h4 class="chat-name" style="${nameStyle}">${userName}</h4>
                         <div class="chat-preview">
                             <span class="msg-text" style="${msgStyle}">
                                 ${msgPreview.substring(0, 25)}${msgPreview.length > 25 ? '...' : ''}
@@ -389,8 +466,10 @@ async function openChat(partnerId) {
         // ২. ইউজারের তথ্য আনা
         const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
         if (user) {
-            document.getElementById('chatHeaderName').innerText = user.display_name;
-            document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
+            document.getElementById('chatHeaderName').innerText = user.display_name || 'User';
+            const userPhoto = user.photo_url || './images/default-avatar.png';
+            document.getElementById('chatHeaderImg').src = userPhoto;
+            document.getElementById('typingAvatar').src = userPhoto;
             
             // অনলাইন স্ট্যাটাস দেখানো
             const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
@@ -405,6 +484,7 @@ async function openChat(partnerId) {
 
     } catch (err) { 
         console.error("Open chat error:", err); 
+        msgContainer.innerHTML = `<p style="text-align:center; color:red;">Error loading chat. Please try again.</p>`;
     }
 }
 
@@ -437,7 +517,7 @@ async function loadMessages(partnerId) {
         
         container.innerHTML = `
             <div class="empty-chat-placeholder">
-                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;margin-bottom:10px;object-fit:cover;">
+                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;margin-bottom:10px;object-fit:cover;" onerror="this.src='./images/default-avatar.png'">
                 <h3>${pName}</h3>
                 <p>Say Hi 👋 to start chatting.</p>
             </div>`;
@@ -482,6 +562,7 @@ async function sendMessage() {
             }
         } catch (error) {
             console.error("Image Upload Error:", error);
+            alert("Image upload failed: " + error.message);
             isUploading = false;
             sendBtnIcon.className = originalIcon;
             return;
@@ -517,7 +598,7 @@ async function sendMessage() {
 
     } catch (err) {
         console.error("Send failed:", err);
-        alert("Failed to send message.");
+        alert("Failed to send message: " + err.message);
     } finally {
         isUploading = false; 
         sendBtnIcon.className = 'fas fa-thumbs-up'; 
@@ -702,7 +783,7 @@ function appendMessageToUI(msg) {
     
     // ইমেজ রেন্ডার
     if (msg.image_url) {
-        contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')">`;
+        contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')" onerror="this.style.display='none'">`;
     }
     
     // অডিও রেন্ডার
@@ -722,7 +803,7 @@ function appendMessageToUI(msg) {
         if (msg.content === '👍') {
             contentHTML += `<span style="font-size: 40px; margin: 5px;">👍</span>`; 
         } else {
-            contentHTML += `<div class="bubble">${replyHTML}${msg.content}</div>`;
+            contentHTML += `<div class="bubble">${replyHTML}${escapeHtml(msg.content)}</div>`;
         }
     } else if(replyHTML) {
         // যদি শুধু রিপ্লাই থাকে (কোনো টেক্সট ছাড়া)
@@ -736,7 +817,7 @@ function appendMessageToUI(msg) {
     // লং প্রেস ইভেন্ট সহ মেসেজ রো তৈরি
     const html = `
         <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
-            ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar">` : ''}
+            ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar" onerror="this.src='./images/default-avatar.png'">` : ''}
             <div class="message-content ${bubbleClass}" 
                  style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}"
                  onmousedown="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
@@ -762,6 +843,13 @@ function parseHTML(html) {
     const t = document.createElement('template');
     t.innerHTML = html;
     return t.content.cloneNode(true);
+}
+
+// HTML escape ফাংশন
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ================================================================
@@ -910,7 +998,7 @@ async function startRecording() {
         
     } catch (err) {
         console.error("Microphone Error:", err);
-        alert("Microphone access needed.");
+        alert("Microphone access needed. Please allow microphone permission.");
     }
 }
 
@@ -977,19 +1065,22 @@ function setupEventListeners() {
     
     // ২. মেসেজ ইনপুট
     const input = document.getElementById('messageInput');
-    input.addEventListener('input', () => { 
-        toggleSendButton(); 
-        sendTypingEvent(); 
-    });
-    input.addEventListener('keyup', (e) => { 
-        if (e.key === 'Enter') sendMessage(); 
-    });
-    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+    if (input) {
+        input.addEventListener('input', () => { 
+            toggleSendButton(); 
+            sendTypingEvent(); 
+        });
+        input.addEventListener('keyup', (e) => { 
+            if (e.key === 'Enter') sendMessage(); 
+        });
+    }
+    
+    document.getElementById('sendMessageBtn')?.addEventListener('click', sendMessage);
     
     // ৩. ইমেজ আপলোড
-    document.getElementById('galleryTriggerBtn').addEventListener('click', () => document.getElementById('chatImageInput').click());
+    document.getElementById('galleryTriggerBtn')?.addEventListener('click', () => document.getElementById('chatImageInput').click());
     
-    document.getElementById('chatImageInput').addEventListener('change', (e) => {
+    document.getElementById('chatImageInput')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             selectedImageFile = file;
@@ -998,19 +1089,20 @@ function setupEventListeners() {
             toggleSendButton();
         }
     });
-    document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
+    
+    document.getElementById('closePreviewBtn')?.addEventListener('click', closeImagePreview);
     
     // ৪. অডিও রেকর্ডার
-    document.getElementById('micTriggerBtn').addEventListener('click', startRecording);
-    document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
-    document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
+    document.getElementById('micTriggerBtn')?.addEventListener('click', startRecording);
+    document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelRecording);
+    document.getElementById('sendRecordingBtn')?.addEventListener('click', sendRecording);
     
     // ৫. ভিডিও ও অডিও কল বাটন (জেগো কলিং)
-    document.getElementById('videoCallBtn').addEventListener('click', () => startZegoCall('video'));
-    document.getElementById('audioCallBtn').addEventListener('click', () => startZegoCall('audio'));
+    document.getElementById('videoCallBtn')?.addEventListener('click', () => startZegoCall('video'));
+    document.getElementById('audioCallBtn')?.addEventListener('click', () => startZegoCall('audio'));
 
     // ৬. ফুল স্ক্রিন ইমেজ ক্লোজ
-    document.querySelector('.fs-close-btn').addEventListener('click', () => { 
+    document.querySelector('.fs-close-btn')?.addEventListener('click', () => { 
         document.getElementById('fullScreenImageModal').style.display = 'none'; 
     });
 
@@ -1065,6 +1157,14 @@ function setupEventListeners() {
         }
     });
     document.getElementById('blockUserBtn')?.addEventListener('click', blockUser);
+    
+    // ১০. ফুল স্ক্রিন ইমেজ মোডাল ক্লোজ
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('fullScreenImageModal');
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
 }
 
 // ================================================================
@@ -1072,14 +1172,20 @@ function setupEventListeners() {
 // ================================================================
 function closeImagePreview() {
     selectedImageFile = null;
-    document.getElementById('chatImageInput').value = '';
+    const input = document.getElementById('chatImageInput');
+    if (input) input.value = '';
     document.getElementById('imagePreviewPanel').style.display = 'none';
     toggleSendButton();
 }
 
 function toggleSendButton() {
-    const val = document.getElementById('messageInput').value.trim();
+    const input = document.getElementById('messageInput');
+    if (!input) return;
+    
+    const val = input.value.trim();
     const icon = document.querySelector('#sendMessageBtn i');
+    
+    if (!icon) return;
     
     if (val !== '' || selectedImageFile) { 
         icon.className = 'fas fa-paper-plane'; 
@@ -1094,19 +1200,28 @@ function toggleSendButton() {
 function timeAgoShort(dateString) { 
     if (!dateString) return 'Just now';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-    
-    if (diffSec < 60) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m`;
-    if (diffHour < 24) return `${diffHour}h`;
-    if (diffDay < 7) return `${diffDay}d`;
-    return date.toLocaleDateString();
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Just now';
+        
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+        
+        if (diffSec < 60) return 'Just now';
+        if (diffMin < 60) return `${diffMin}m ago`;
+        if (diffHour < 24) return `${diffHour}h ago`;
+        if (diffDay < 7) return `${diffDay}d ago`;
+        
+        // তারিখ ফরম্যাট
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) {
+        console.warn("Error parsing date:", e);
+        return 'Recently';
+    }
 }
 
 async function markAsSeen(partnerId) {
@@ -1123,19 +1238,25 @@ async function markAsSeen(partnerId) {
 function scrollToBottom(smooth = false) { 
     const main = document.getElementById('messageContainer'); 
     if (main) {
-        main.scrollTo({ top: main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
+        setTimeout(() => {
+            main.scrollTo({ top: main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
+        }, 100);
     }
 }
 
 window.viewFullScreenImage = function(src) {
     const modal = document.getElementById('fullScreenImageModal');
     if (modal) {
-        document.getElementById('fsModalImg').src = src;
-        document.getElementById('downloadImgBtn').href = src;
+        const img = document.getElementById('fsModalImg');
+        const downloadBtn = document.getElementById('downloadImgBtn');
+        
+        if (img) img.src = src;
+        if (downloadBtn) downloadBtn.href = src;
         modal.style.display = 'flex';
     }
 }
 
+// গ্লোবাল ফাংশন যাতে HTML থেকে কল করা যায়
 window.openChat = openChat;
 window.handleMessagePressStart = handleMessagePressStart;
 window.handleMessagePressEnd = handleMessagePressEnd;
