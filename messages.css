@@ -24,23 +24,25 @@ body {
 }
 
 /* ============================
-   LAYOUT FIXES (Full Width)
+   LAYOUT FIXES (Fixed Header & Footer)
    ============================ */
 .view-container {
     width: 100vw;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
+    overflow: hidden; /* মেইন কন্টেইনার স্ক্রল হবে না */
     height: 100vh;
+    height: 100dvh; /* মোবাইলের জন্য অপ্টিমাইজড হাইট */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* উপর থেকে নিচে সাজানো */
 }
 
 /* ============================
    1. INBOX VIEW (Chat List)
    ============================ */
 .msg-header {
+    flex-shrink: 0; /* হেডার ছোট হবে না */
     display: flex; justify-content: space-between; align-items: center;
     padding: 15px; background: #fff; 
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -58,16 +60,20 @@ body {
 }
 .icon-circle-btn:active { background: #e4e6eb; }
 
-.msg-search-container { padding: 10px 15px; }
+/* CHAT LIST AREA (Scrollable Part) */
+.chat-list-area { 
+    flex: 1; /* হেডার ও ফুটার বাদে বাকি জায়গা নিবে */
+    overflow-y: auto; /* শুধু এই অংশে স্ক্রল হবে */
+    overflow-x: hidden;
+    width: 100%; 
+    padding-bottom: 0;
+    background: #fff;
+    -webkit-overflow-scrolling: touch; /* আইফোনে স্মুথ স্ক্রল */
+}
+
+.msg-search-container { padding: 10px 15px; background: #fff; }
 .msg-search-box { background: #f0f2f5; border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; gap: 10px; }
 .msg-search-box input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
-
-.chat-list-area { 
-    flex: 1;
-    overflow-y: auto; 
-    padding-bottom: 70px; /* বটম ন্যাভের জন্য জায়গা */
-    width: 100%; 
-}
 
 .chat-item-row { 
     display: flex; align-items: center; 
@@ -93,7 +99,8 @@ body {
 .unread-dot { width: 12px; height: 12px; background: var(--messenger-blue); border-radius: 50%; margin-left: 5px; }
 
 .bottom-nav {
-    position: fixed; bottom: 0; width: 100%; height: 60px;
+    flex-shrink: 0; /* ফিক্সড হাইট */
+    height: 60px;
     background: #fff; border-top: 1px solid #ddd;
     display: flex; justify-content: space-around; align-items: center; z-index: 100;
 }
@@ -104,9 +111,10 @@ body {
    2. CONVERSATION VIEW (Room)
    ============================ */
 .chat-room-header {
+    flex-shrink: 0;
     display: flex; align-items: center; padding: 8px 10px;
     background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    position: fixed; top: 0; width: 100%; z-index: 100; height: 60px; box-sizing: border-box;
+    width: 100%; z-index: 100; height: 60px; box-sizing: border-box;
 }
 .back-btn-chat { background: none; border: none; font-size: 22px; color: var(--messenger-blue); cursor: pointer; margin-right: 10px; padding: 5px; }
 .chat-partner-info { flex: 1; display: flex; align-items: center; gap: 10px; overflow: hidden; }
@@ -145,10 +153,10 @@ body {
 
 /* Message Body */
 .message-body {
-    padding: 70px 0 80px 0; 
-    height: 100vh; height: 100dvh; 
-    overflow-y: auto; 
+    flex: 1; /* বাকি জায়গা নিবে */
+    overflow-y: auto; /* স্ক্রল হবে */
     overflow-x: hidden;
+    padding: 10px 0; /* প্যাডিং কমানো হলো কারণ ফুটার ফিক্সড */
     background: #fff;
     display: flex; 
     flex-direction: column; 
@@ -214,203 +222,58 @@ body {
 }
 
 /* =======================================================
-   🔥🔥 AUDIO PLAYER FIX (100% WORKING) 🔥🔥
+   🔥🔥 AUDIO PLAYER FIX (MESSENGER STYLE) 🔥🔥
    ======================================================= */
 .audio-bubble {
+    width: 260px; /* ফিক্সড সাইজ যাতে বেশি বড় না হয় */
+    height: 54px;
+    border-radius: 20px;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 260px;
-    height: 50px;
-    border-radius: 25px;
-    padding: 2px;
-    margin-bottom: 5px;
     box-sizing: border-box;
-    /* ব্যাকগ্রাউন্ড কালার JS থেকে সেট করা হবে, এখানে ডিফল্ট রাখা হলো */
-    overflow: visible; 
+    overflow: hidden;
 }
 
-/* অডিও ট্যাগ এর স্টাইল ফোর্স করা */
+/* অডিও প্লেয়ারের মেইন ট্যাগ */
 .audio-bubble audio {
     width: 100%;
-    height: 45px;
-    border-radius: 20px;
+    height: 100%;
     outline: none;
-    display: block !important;
+    border-radius: 16px;
+    display: block;
 }
 
-/* Chrome/Android এর জন্য স্পেশাল ফিক্স - যাতে কন্ট্রোল দেখা যায় */
+/* Chrome ব্রাউজারের ডিফল্ট প্লেয়ার স্টাইল ফিক্স */
 audio::-webkit-media-controls-panel {
-    background-color: #f1f3f4 !important; /* হালকা ধূসর ব্যাকগ্রাউন্ড যাতে কন্ট্রোল বোঝা যায় */
-    color: black !important;
-    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.8) !important; /* হালকা সাদা ব্যাকগ্রাউন্ড */
+    border-radius: 16px;
+}
+
+/* আমার পাঠানো অডিও (Sent) - নীল ব্যাকগ্রাউন্ডের সাথে ম্যাচিং */
+.message-row.sent .audio-bubble {
+    background-color: var(--messenger-blue);
 }
 .message-row.sent audio::-webkit-media-controls-panel {
-    background-color: rgba(255,255,255,0.9) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important; /* কিছুটা ট্রান্সপারেন্ট */
+    color: white !important;
+}
+/* অডিও প্লে আইকন এবং টেক্সট সাদা করার চেষ্টা (ব্রাউজার ভেদে ভিন্ন হতে পারে) */
+.message-row.sent audio::-webkit-media-controls-play-button,
+.message-row.sent audio::-webkit-media-controls-current-time-display,
+.message-row.sent audio::-webkit-media-controls-time-remaining-display {
+    filter: invert(1); /* আইকন সাদা করবে */
 }
 
-/* প্লেয়ারের রঙ (ফলব্যাক) */
-.message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
-.message-row.received .audio-bubble { background-color: var(--messenger-gray); }
-
-.empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-
-/* ============================
-   3. FOOTER & INPUT AREA
-   ============================ */
-.chat-footer-area {
-    position: fixed; bottom: 0; width: 100%; background: #fff;
-    padding: 0; display: flex; flex-direction: column;
-    box-shadow: 0 -1px 3px rgba(0,0,0,0.05); z-index: 100;
+/* অন্যের পাঠানো অডিও (Received) - ছাই রঙের ব্যাকগ্রাউন্ড */
+.message-row.received .audio-bubble {
+    background-color: var(--messenger-gray);
 }
-
-/* Reply Preview Bar */
-.reply-preview-bar {
-    background: #f9f9f9;
-    padding: 10px 15px;
-    border-top: 1px solid #eee;
-    border-left: 4px solid var(--messenger-blue);
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 13px; color: #333; animation: slideUp 0.2s ease;
+.message-row.received audio::-webkit-media-controls-panel {
+    background-color: #e4e6eb !important;
+    color: black !important;
 }
-.reply-info { display: flex; flex-direction: column; width: 90%; }
-.reply-to-name { font-weight: bold; font-size: 12px; color: var(--messenger-blue); }
-.reply-text-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666; margin-top: 2px; }
-#cancelReplyBtn { background: none; border: none; font-size: 18px; color: #666; cursor: pointer; padding: 5px; }
-
-/* Main Input Row */
-.footer-input-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; width: 100%; box-sizing: border-box; background: #fff; min-height: 60px;
-}
-
-.footer-actions-left { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
-.footer-btn { background: none; border: none; font-size: 22px; color: var(--messenger-blue); cursor: pointer; padding: 0; }
-
-.input-pill { 
-    flex: 1; background: var(--input-bg); border-radius: 20px; 
-    padding: 8px 12px; display: flex; align-items: center; 
-}
-.input-pill input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
-
-.emoji-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); cursor: pointer; margin-left: 5px; }
-.like-send-btn { background: none; border: none; font-size: 24px; color: var(--messenger-blue); cursor: pointer; padding: 0 5px; flex-shrink: 0; transition: transform 0.1s; }
-.like-send-btn:active { transform: scale(1.2); }
-
-/* Image Preview Panel */
-.image-preview-box {
-    position: fixed; bottom: 70px; left: 10px; right: 10px;
-    background: #fff; padding: 10px; border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 110;
-    display: flex; justify-content: center; animation: slideUp 0.3s ease;
-}
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.preview-content { position: relative; width: fit-content; }
-.preview-content img { max-height: 200px; border-radius: 8px; border: 1px solid #eee; }
-#closePreviewBtn { position: absolute; top: -10px; right: -10px; background: #333; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
-
-/* Emoji Picker Styles */
-.emoji-picker-popup {
-    position: fixed; bottom: 70px; right: 10px; z-index: 200;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2); border-radius: 10px;
-    background: white; max-width: 90vw; animation: popIn 0.2s ease;
-}
-emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 100%; }
-
-/* Audio Recording UI */
-.audio-recording-ui {
-    position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
-    background: #ea4335; color: white; padding: 10px 20px;
-    border-radius: 30px; display: flex; align-items: center; gap: 20px;
-    box-shadow: 0 4px 10px rgba(234, 67, 53, 0.4); z-index: 120;
-    animation: popIn 0.2s ease; white-space: nowrap;
-}
-@keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
-.recording-indicator { display: flex; align-items: center; gap: 10px; }
-.red-dot { width: 10px; height: 10px; background: white; border-radius: 50%; }
-.pulse { animation: pulse 1s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-#recordingTimer { font-weight: bold; font-family: monospace; font-size: 16px; }
-.recording-actions { display: flex; gap: 10px; }
-.rec-btn { width: 35px; height: 35px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.rec-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
-.rec-btn.send { background: white; color: #ea4335; }
-
-/* Delete Modal */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(2px);
-}
-.modal-box {
-    background: white; width: 85%; max-width: 300px;
-    padding: 20px; border-radius: 12px; text-align: center;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3); animation: popIn 0.2s ease;
-}
-.modal-actions { display: flex; flex-direction: column; gap: 10px; }
-.modal-btn {
-    padding: 12px; border: none; background: #f0f2f5;
-    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; color: #000;
-}
-.modal-btn.active { background: #e4e6eb; }
-.modal-btn.danger { color: var(--danger-color); background: #fff0f0; }
-.modal-btn.cancel { background: white; border: 1px solid #ddd; }
-
-/* Full Screen Image */
-.fs-image-modal { 
-    display: none; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0,0,0,0.95); 
-    z-index: 5000; 
-    align-items: center; 
-    justify-content: center; 
-}
-.fs-modal-content { 
-    max-width: 100%; 
-    max-height: 100vh; 
-    object-fit: contain; 
-}
-.fs-close-btn { 
-    position: absolute; 
-    top: 20px; 
-    right: 20px; 
-    font-size: 40px; 
-    color: #fff; 
-    cursor: pointer; 
-    background: rgba(0,0,0,0.5);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.fs-download-btn { 
-    position: absolute; 
-    bottom: 30px; 
-    right: 30px; 
-    background: white; 
-    padding: 10px; 
-    border-radius: 50%; 
-    font-size: 20px; 
-    color: black; 
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Loader & Skeleton */
-.loader-container { display: flex; justify-content: center; align-items: center; width: 100%; padding-top: 50px; }
-.loader { width: 30px; height: 30px; border: 3px solid #0084ff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
-@keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
 /* =======================================================
    FIXED CALL CONTAINER STYLES (z-index বাড়ানো হয়েছে)
    ======================================================= */
