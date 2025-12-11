@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ZEGO CLOUD কনফিগারেশন - FIXED
+// ZEGO CLOUD কনফিগারেশন
 const ZEGO_APP_ID = 361002182;
 const ZEGO_SERVER_SECRET = '723224a492e399607fc92fe644d60144';
 
@@ -42,16 +42,10 @@ let zp = null;
 // ================================================================
 async function checkMediaPermissions() {
     try {
-        // মাইক্রোফোন পারমিশন চেক
         if (navigator.permissions && navigator.permissions.query) {
             const micPermission = await navigator.permissions.query({ name: 'microphone' });
-            console.log("Microphone permission:", micPermission.state);
-            
-            // ক্যামেরা পারমিশন চেক
             const cameraPermission = await navigator.permissions.query({ name: 'camera' });
-            console.log("Camera permission:", cameraPermission.state);
             
-            // যদি প্রয়োজন হয়, ইউজারকে পারমিশন নেওয়ার জন্য নির্দেশনা দিন
             if (micPermission.state === 'denied' || cameraPermission.state === 'denied') {
                 console.warn("Media permissions denied. Call may not work properly.");
                 return false;
@@ -82,25 +76,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser = sessionData.session.user;
     console.log("Current user:", currentUser.id);
     
-    // মিডিয়া পারমিশন চেক করুন
+    // মিডিয়া পারমিশন চেক
     const hasPermissions = await checkMediaPermissions();
     if (!hasPermissions) {
         console.warn("Media permissions not granted. Calling features may not work.");
     }
     
-    try {
-        // ZegoCloud কলিং সিস্টেম চালু করা (অবশ্যই প্রথমে করতে হবে)
-        await initZegoCloud();
-        console.log("ZegoCloud initialized successfully");
-    } catch (err) {
-        console.error("Failed to initialize ZegoCloud:", err);
-        alert("Call system initialization failed. Please check console and refresh the page.");
-    }
+    // ZegoCloud কলিং সিস্টেম চালু করা
+    // [FIX] এখানে একটু অপেক্ষা করা হচ্ছে যাতে স্ক্রিপ্ট লোড হতে পারে
+    setTimeout(async () => {
+        try {
+            await initZegoCloud();
+            console.log("ZegoCloud initialized successfully");
+        } catch (err) {
+            console.error("Failed to initialize ZegoCloud:", err);
+            // আমরা ইউজারকে অ্যালার্ট দিচ্ছি না, শুধু কনসোলে লগ করছি যাতে UX নষ্ট না হয়
+        }
+    }, 1500); // ১.৫ সেকেন্ড ডিলে
 
     // হেডার প্রোফাইল লোড করা
     loadMyProfile();
     
-    // নিজের অনলাইন স্ট্যাটাস আপডেট করা (সাথে সাথে এবং প্রতি মিনিটে)
+    // নিজের অনলাইন স্ট্যাটাস আপডেট করা
     updateMyLastSeen();
     setInterval(updateMyLastSeen, 60000); 
 
@@ -120,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ================================================================
-// ৫. ZegoCloud কলিং সেটআপ ফাংশন - COMPLETELY FIXED VERSION
+// ৫. ZegoCloud কলিং সেটআপ ফাংশন - FIXED VERSION
 // ================================================================
 async function initZegoCloud() {
     return new Promise(async (resolve, reject) => {
@@ -130,24 +127,25 @@ async function initZegoCloud() {
                 return;
             }
 
+            // [FIX] চেক করা হচ্ছে লাইব্রেরি লোড হয়েছে কিনা
+            if (typeof ZegoUIKitPrebuilt === 'undefined') {
+                console.warn("ZegoUIKitPrebuilt not found. Waiting...");
+                reject("Zego library not loaded yet.");
+                return;
+            }
+
             const userID = currentUser.id.toString();
             const userName = currentUser.user_metadata?.display_name || 
                             currentUser.email?.split('@')[0] || 
                             `User_${userID.substring(0, 5)}`;
 
-            console.log("Initializing ZegoCloud for user:", userName, "ID:", userID);
+            console.log("Initializing ZegoCloud for user:", userName);
             
-            // চেক করুন ZegoUIKitPrebuilt অ্যাক্সেসযোগ্য কিনা
-            if (typeof ZegoUIKitPrebuilt === 'undefined') {
-                reject("ZegoUIKitPrebuilt not loaded. Check script order.");
-                return;
-            }
-
-            // IMPORTANT: এখানে direct token generation করা হচ্ছে
+            // টোকেন জেনারেট করা
             const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
                 ZEGO_APP_ID, 
                 ZEGO_SERVER_SECRET, 
-                "your_token_here", // কোনো র্যান্ডম টোকেন
+                "random_room_id_" + userID, // ইউনিক রুম আইডি প্রয়োজন নেই ইনিশিয়ালাইজেশনের জন্য
                 userID, 
                 userName
             );
@@ -155,73 +153,28 @@ async function initZegoCloud() {
             // Zego Instance তৈরি করা
             zp = ZegoUIKitPrebuilt.create(kitToken);
             
-            // Debugging জন্য
-            console.log("Zego Instance created:", zp);
-            
-            // চেক করুন ZIM প্লাগিন অ্যাক্সেসযোগ্য কিনা
+            // ZIM প্লাগিন সেটআপ (কল ইনভাইটেশনের জন্য জরুরি)
             if (typeof ZIM !== 'undefined') {
-                console.log("ZIM plugin is available");
-                
-                // ZIM ইনিশিয়ালাইজ করুন
-                const zim = ZIM.create({ appID: ZEGO_APP_ID });
-                
-                // ZIM প্লাগিন যোগ করুন
-                zp.addPlugins({ ZIM: zim });
-                console.log("ZIM plugin added successfully");
+                // ZIM.create একাধিকবার কল করলে এরর দিতে পারে, তাই চেক করা হয়
+                try {
+                     const zim = ZIM.create({ appID: ZEGO_APP_ID });
+                     zp.addPlugins({ ZIM: zim });
+                     console.log("ZIM plugin added successfully");
+                } catch(zErr) {
+                    console.warn("ZIM Create Warning:", zErr);
+                }
             } else {
                 console.warn("ZIM plugin not found. Calling features may not work properly.");
             }
 
-            // ইনকামিং কল হ্যান্ডেলার
-            zp.on('invitationReceived', (inviter, type) => {
-                console.log('Call received from:', inviter, 'Type:', type);
-                
-                const callType = type === 1 ? 'Video Call' : 'Voice Call';
-                
-                if (confirm(`Incoming ${callType} from ${inviter.userName}. Accept?`)) {
-                    // কল গ্রহণ করা
-                    const container = document.getElementById('callContainer');
-                    container.style.display = 'block';
-                    
-                    zp.joinRoom({
-                        container: container,
-                        scenario: {
-                            mode: ZegoUIKitPrebuilt.VideoConference,
-                        },
-                        showRoomDetailsButton: false,
-                        lowerLeftNotification: {
-                            title: `In call with ${inviter.userName}`, 
-                            icon: 'Avatar',
-                        },
-                        turnOnMicrophoneWhenJoining: true,
-                        turnOnCameraWhenJoining: type === 1, // Video call হলে ক্যামেরা অন
-                        onLeaveRoom: () => {
-                            console.log("Call ended");
-                            // কল শেষ হওয়ার পরে আবার চ্যাট দেখানো
-                            container.style.display = 'none';
-                            container.innerHTML = '';
-                            if (activeChatUserId) {
-                                loadMessages(activeChatUserId);
-                            }
-                        }
-                    });
-                }
-            });
-
-            // ZegoCloud ইন্সট্যান্স সফলভাবে তৈরি হলে
-            zp.on('roomStateChanged', (state) => {
-                console.log("ZegoCloud room state changed:", state);
-            });
-
-            // কল ইনভাইটেশন কনফিগারেশন
+            // ইনকামিং কল রিসিভ করা
             zp.setCallInvitationConfig({
                 enableCustomCallInvitationWaitingPage: true,
                 enableIncomingCallRingtone: true,
                 ringtoneConfig: {
                     incomingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
                     outgoingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-                },
-                showCallConfirmationDialog: true // কল গ্রহণ/রিজেক্ট করার ডায়ালগ
+                }
             });
 
             console.log("✅ ZegoCloud initialized successfully");
@@ -234,7 +187,7 @@ async function initZegoCloud() {
     });
 }
 
-// কল শুরু করার ফাংশন - WORKING VERSION
+// কল শুরু করার ফাংশন - FIXED
 async function startZegoCall(type) {
     console.log("Starting call, type:", type);
     
@@ -243,14 +196,21 @@ async function startZegoCall(type) {
         return;
     }
 
+    // [FIX] যদি zp না থাকে, আবার ইনিশিয়ালাইজ করার চেষ্টা করা
     if (!zp) {
-        console.error("Zego instance not initialized!");
+        console.log("Zego instance missing, trying to init...");
         try {
             await initZegoCloud();
         } catch (err) {
-            alert("Failed to initialize call system. Please refresh the page.");
+            alert("Call system failed to start. Please refresh the page.");
             return;
         }
+    }
+    
+    // আবার চেক করা
+    if (!zp) {
+        alert("Call system unavailable.");
+        return;
     }
 
     const partnerName = document.getElementById('chatHeaderName').innerText || 'User';
@@ -261,63 +221,23 @@ async function startZegoCall(type) {
         // কল ইনভাইটেশন পাঠানো
         const result = await zp.sendCallInvitation({
             callees: [{ 
-                userID: activeChatUserId.toString(),  // IMPORTANT: String হিসেবে পাঠাতে হবে
+                userID: activeChatUserId.toString(), 
                 userName: partnerName 
             }],
             callType: type === 'video' ? 
                 ZegoUIKitPrebuilt.InvitationTypeVideoCall : 
                 ZegoUIKitPrebuilt.InvitationTypeVoiceCall,
-            timeout: 30, // ৩০ সেকেন্ড রিং হবে
+            timeout: 60, 
         });
         
         console.log("Call invitation response:", result);
         
         if (result.errorInvitees && result.errorInvitees.length > 0) {
-            const error = result.errorInvitees[0];
-            if (error.code === 1100013) {
-                alert("User is offline or unavailable right now.");
-            } else {
-                alert("Failed to call. Error code: " + error.code);
-            }
-        } else {
-            // কল UI দেখানো
-            const container = document.getElementById('callContainer');
-            container.style.display = 'block';
-            
-            zp.joinRoom({
-                container: container,
-                scenario: {
-                    mode: ZegoUIKitPrebuilt.VideoConference,
-                },
-                showRoomDetailsButton: false,
-                lowerLeftNotification: {
-                    title: `Calling ${partnerName}`, 
-                    icon: 'Avatar',
-                },
-                turnOnMicrophoneWhenJoining: true,
-                turnOnCameraWhenJoining: type === 'video',
-                onLeaveRoom: () => {
-                    console.log("Call ended");
-                    // কল শেষ হওয়ার পরে আবার চ্যাট দেখানো
-                    container.style.display = 'none';
-                    container.innerHTML = '';
-                    if (activeChatUserId) {
-                        loadMessages(activeChatUserId);
-                    }
-                }
-            });
-        }
+            alert("User is offline or unavailable.");
+        } 
     } catch (err) {
         console.error("Call Error Details:", err);
-        let errorMessage = "Failed to start call.";
-        
-        if (err.message && err.message.includes("ZIM plugin")) {
-            errorMessage = "Please refresh the page to initialize call system properly.";
-        } else if (err.message) {
-            errorMessage += " Error: " + err.message;
-        }
-        
-        alert(errorMessage);
+        alert("Failed to start call. Check console for details.");
     }
 }
 
@@ -392,7 +312,6 @@ async function loadChatList() {
             
             // মিডিয়া মেসেজের প্রিভিউ টেক্সট
             if (!msgPreview) {
-                // ডিফল্ট টেক্সট যদি কন্টেন্ট না থাকে
                 msgPreview = 'Sent an attachment';
             }
             if (msgPreview === '👍') msgPreview = 'Like 👍';
@@ -493,7 +412,6 @@ async function loadMessages(partnerId) {
     const container = document.getElementById('messageContainer');
     
     // ডাটাবেস থেকে মেসেজ আনা
-    // deleted_by কলাম চেক করে আমার ডিলিট করা মেসেজ বাদ দেওয়া
     const { data: messages, error } = await supabaseClient
         .from('messages')
         .select(`
@@ -536,13 +454,11 @@ async function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
-    // যদি ইনপুট এবং ছবি দুটোই খালি থাকে, তবে লাইক পাঠানো হবে
     if (!text && !selectedImageFile) {
         sendLikeEmoji(activeChatUserId); 
         return;
     }
 
-    // আপলোড শুরু
     isUploading = true;
     const sendBtnIcon = document.querySelector('#sendMessageBtn i');
     const originalIcon = sendBtnIcon.className;
@@ -550,7 +466,6 @@ async function sendMessage() {
 
     let imageUrl = null;
 
-    // ছবি থাকলে আপলোড করা
     if (selectedImageFile) {
         try {
             imageUrl = await uploadFile(selectedImageFile, 'chat_images');
@@ -569,31 +484,27 @@ async function sendMessage() {
         }
     }
 
-    // মেসেজ অবজেক্ট তৈরি
     const newMessage = { 
         sender_id: currentUser.id, 
         receiver_id: activeChatUserId, 
         content: text || null, 
         image_url: imageUrl, 
         is_read: false,
-        deleted_by: [], // ডিফল্ট খালি অ্যারে
-        reply_to_id: replyToId // রিপ্লাই আইডি (যদি থাকে)
+        deleted_by: [], 
+        reply_to_id: replyToId
     };
     
     try {
         const { error } = await supabaseClient.from('messages').insert([newMessage]);
         if (error) throw error;
         
-        // সফল হলে UI রিসেট
         input.value = '';
         closeImagePreview();
         cancelReply(); 
         
-        // এম্পটি প্লেসহোল্ডার সরানো
         const empty = document.querySelector('.empty-chat-placeholder');
         if(empty) empty.remove();
         
-        // ইমোজি পিকার বন্ধ করা
         document.getElementById('emojiPickerContainer').style.display = 'none';
 
     } catch (err) {
@@ -606,7 +517,6 @@ async function sendMessage() {
     }
 }
 
-// লাইক পাঠানোর ফাংশন
 async function sendLikeEmoji(partnerId) {
     try {
         const empty = document.querySelector('.empty-chat-placeholder');
@@ -624,12 +534,10 @@ async function sendLikeEmoji(partnerId) {
     }
 }
 
-// ইউনিভার্সাল ফাইল আপলোড ফাংশন (ছবি এবং অডিওর জন্য)
 async function uploadFile(file, bucketName) {
     try {
         let fileToUpload = file;
         
-        // ছবি হলে কমপ্রেশন করা
         if(file.type && file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
             try {
                 const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
@@ -672,7 +580,6 @@ function setupRealtimeChat(partnerId) {
             const newMsg = payload.new;
             const oldMsg = payload.old;
 
-            // নতুন মেসেজ আসলে
             if (eventType === 'INSERT') {
                 if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
                     (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
@@ -680,7 +587,6 @@ function setupRealtimeChat(partnerId) {
                     const empty = document.querySelector('.empty-chat-placeholder'); 
                     if(empty) empty.remove();
                     
-                    // রিপ্লাই ডাটা আনার জন্য আবার ফেচ করা হচ্ছে
                     const { data } = await supabaseClient
                         .from('messages')
                         .select(`*, reply_message:reply_to_id(content, sender_id, image_url, audio_url)`)
@@ -692,16 +598,13 @@ function setupRealtimeChat(partnerId) {
                         scrollToBottom(true);
                     }
                     
-                    // আমি রিসিভার হলে সিন মার্ক করা
                     if (newMsg.sender_id === partnerId) markAsSeen(partnerId);
                 }
             } 
-            // মেসেজ ডিলিট হলে (Delete for Everyone)
             else if (eventType === 'DELETE') {
                 const el = document.getElementById(`msg-${oldMsg.id}`);
                 if (el) el.remove();
             }
-            // মেসেজ আপডেট হলে (Delete for Me)
             else if (eventType === 'UPDATE') {
                 if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
                     const el = document.getElementById(`msg-${newMsg.id}`);
@@ -712,7 +615,6 @@ function setupRealtimeChat(partnerId) {
         }).subscribe();
 }
 
-// টাইপিং ইন্ডিকেটর সেটআপ
 function setupPresence(partnerId) {
     if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
 
@@ -746,26 +648,23 @@ function showTypingIndicator() {
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
         bubble.style.display = 'none';
-    }, 3000); // ৩ সেকেন্ড পর অটোমেটিক বন্ধ হবে
+    }, 3000);
 }
 
 // ================================================================
-// ১১. UI রেন্ডারিং ফাংশন
+// ১১. UI রেন্ডারিং ফাংশন (Audio Player ফিক্সড)
 // ================================================================
 function appendMessageToUI(msg) {
-    // যদি মেসেজটি আমি ডিলিট করে থাকি (Delete for me), তবে দেখাবো না
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
     const container = document.getElementById('messageContainer');
     const isMe = msg.sender_id === currentUser.id;
     
-    // রিপ্লাই অংশ তৈরি
     let replyHTML = '';
     if (msg.reply_message) {
         const rName = msg.reply_message.sender_id === currentUser.id ? 'You' : document.getElementById('chatHeaderName').innerText;
         let rText = msg.reply_message.content;
         
-        // যদি টেক্সট না থাকে (মিডিয়া মেসেজ)
         if (!rText) {
             if (msg.reply_message.image_url) rText = '📷 Photo';
             else if (msg.reply_message.audio_url) rText = '🎤 Audio';
@@ -781,40 +680,37 @@ function appendMessageToUI(msg) {
 
     let contentHTML = '';
     
-    // ইমেজ রেন্ডার
     if (msg.image_url) {
         contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')" onerror="this.style.display='none'">`;
     }
     
-    // অডিও রেন্ডার
+    // [FIXED] অডিও প্লেয়ার রেন্ডারিং
     if (msg.audio_url) {
         contentHTML += `
-            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'};">
-                <audio controls>
+            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#f0f2f5'}; border: 1px solid ${isMe ? '#0084ff' : '#ddd'};">
+                <audio controls controlsList="nodownload noplaybackrate">
                     <source src="${msg.audio_url}" type="audio/webm">
                     <source src="${msg.audio_url}" type="audio/mp4">
+                    <source src="${msg.audio_url}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
             </div>`;
     }
     
-    // টেক্সট রেন্ডার
     if (msg.content) { 
         if (msg.content === '👍') {
             contentHTML += `<span style="font-size: 40px; margin: 5px;">👍</span>`; 
         } else {
             contentHTML += `<div class="bubble">${replyHTML}${escapeHtml(msg.content)}</div>`;
         }
-    } else if(replyHTML) {
-        // যদি শুধু রিপ্লাই থাকে (কোনো টেক্সট ছাড়া)
+    } else if(replyHTML && !msg.image_url && !msg.audio_url) {
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
-    // বাবল ক্লাস লজিক (অডিও বা ইমেজের জন্য ব্যাকগ্রাউন্ড রিমুভ)
+    // বাবল ক্লাস লজিক
     const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url) || msg.audio_url) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
-    // লং প্রেস ইভেন্ট সহ মেসেজ রো তৈরি
     const html = `
         <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
             ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar" onerror="this.src='./images/default-avatar.png'">` : ''}
@@ -824,12 +720,11 @@ function appendMessageToUI(msg) {
                  ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
                  onmouseup="handleMessagePressEnd()" 
                  ontouchend="handleMessagePressEnd()"
-                 oncontextmenu="return false;"> <!-- রাইট ক্লিক মেনু বন্ধ -->
+                 oncontextmenu="return false;"> 
                 ${contentHTML}
             </div>
         </div>`;
     
-    // টাইপিং বাবল থাকলে তার আগে মেসেজ ইনসার্ট করা
     const typingBubble = document.getElementById('typingIndicatorBubble');
     if(typingBubble && typingBubble.parentNode === container) {
         container.insertBefore(parseHTML(html), typingBubble);
@@ -838,14 +733,12 @@ function appendMessageToUI(msg) {
     }
 }
 
-// HTML স্ট্রিং থেকে এলিমেন্ট তৈরির হেল্পার
 function parseHTML(html) {
     const t = document.createElement('template');
     t.innerHTML = html;
     return t.content.cloneNode(true);
 }
 
-// HTML escape ফাংশন
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -859,10 +752,8 @@ function handleMessagePressStart(el, msgId, isMyMessage, msgText) {
     selectedMessageId = msgId;
     selectedMessageText = msgText;
     
-    // ৮০০ মিলিসেকেন্ড চাপলে মেনু আসবে
     pressTimer = setTimeout(() => {
         showDeleteOptions(isMyMessage);
-        // মোবাইলে ভাইব্রেশন দেওয়া
         if (navigator.vibrate) navigator.vibrate(50);
     }, 600);
 }
@@ -875,7 +766,6 @@ function showDeleteOptions(isMyMessage) {
     const modal = document.getElementById('deleteOptionsModal');
     const deleteForEveryoneBtn = document.getElementById('deleteForEveryoneBtn');
     
-    // "Delete for everyone" শুধুমাত্র নিজের পাঠানো মেসেজের জন্য দেখাবে
     if (isMyMessage) {
         deleteForEveryoneBtn.style.display = 'block';
     } else {
@@ -889,7 +779,6 @@ function initiateReply() {
     if (!selectedMessageId) return;
     replyToId = selectedMessageId;
     
-    // রিপ্লাই বার দেখানো
     const bar = document.getElementById('replyPreviewBar');
     bar.style.display = 'flex';
     bar.querySelector('.reply-to-name').innerText = 'Replying...';
@@ -904,23 +793,16 @@ function cancelReply() {
     document.getElementById('replyPreviewBar').style.display = 'none';
 }
 
-// ডিলিট লজিক (Delete for me)
 async function deleteMessageForMe() {
     if (!selectedMessageId || !currentUser) return;
     
     try {
-        // বর্তমান deleted_by অ্যারে আনা
         const { data } = await supabaseClient.from('messages').select('deleted_by').eq('id', selectedMessageId).single();
         let currentDeletedBy = data?.deleted_by || [];
         
-        // যদি আমি আগেই ডিলিট না করে থাকি
         if (!currentDeletedBy.includes(currentUser.id)) {
             currentDeletedBy.push(currentUser.id);
-            
-            // অ্যারে আপডেট করা
             await supabaseClient.from('messages').update({ deleted_by: currentDeletedBy }).eq('id', selectedMessageId);
-            
-            // UI থেকে সরানো
             const el = document.getElementById(`msg-${selectedMessageId}`);
             if(el) el.remove();
         }
@@ -931,15 +813,12 @@ async function deleteMessageForMe() {
     }
 }
 
-// ডিলিট লজিক (Delete for everyone)
 async function deleteMessageForEveryone() {
     if (!selectedMessageId) return;
     if(!confirm("Are you sure you want to delete this message for everyone?")) return;
 
     try {
-        // সরাসরি রেকর্ড ডিলিট করা (Hard Delete)
         await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
-        // Realtime Listener স্বয়ংক্রিয়ভাবে UI আপডেট করবে
         closeDeleteModal();
     } catch (e) {
         console.error("Delete everyone error:", e);
@@ -947,7 +826,6 @@ async function deleteMessageForEveryone() {
     }
 }
 
-// ইউজার ব্লক করা
 async function blockUser() {
     if (!activeChatUserId || !confirm("Block this user?")) return;
     try {
@@ -981,12 +859,9 @@ async function startRecording() {
         mediaRecorder.start();
         isRecording = true;
         
-        // UI আপডেট
         document.getElementById('audioRecordingUI').style.display = 'flex';
-        // ফুটার হাইড করা (শুধুমাত্র ফুটার অংশ, পুরোটা নয়)
         document.querySelector('.footer-input-row').style.display = 'none'; 
         
-        // টাইমার চালু করা
         let seconds = 0;
         document.getElementById('recordingTimer').innerText = "00:00";
         recordingInterval = setInterval(() => {
@@ -1023,7 +898,6 @@ async function sendRecording() {
     mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         
-        // অডিও আপলোড করা
         const audioUrl = await uploadFile(audioBlob, 'chat_audio');
         
         if (audioUrl) {
@@ -1053,7 +927,6 @@ async function sendRecording() {
 // ১৪. ইভেন্ট লিসেনার সেটআপ
 // ================================================================
 function setupEventListeners() {
-    // ১. ব্যাক বাটন
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
@@ -1063,7 +936,6 @@ function setupEventListeners() {
         loadChatList(); 
     });
     
-    // ২. মেসেজ ইনপুট
     const input = document.getElementById('messageInput');
     if (input) {
         input.addEventListener('input', () => { 
@@ -1077,7 +949,6 @@ function setupEventListeners() {
     
     document.getElementById('sendMessageBtn')?.addEventListener('click', sendMessage);
     
-    // ৩. ইমেজ আপলোড
     document.getElementById('galleryTriggerBtn')?.addEventListener('click', () => document.getElementById('chatImageInput').click());
     
     document.getElementById('chatImageInput')?.addEventListener('change', (e) => {
@@ -1092,21 +963,17 @@ function setupEventListeners() {
     
     document.getElementById('closePreviewBtn')?.addEventListener('click', closeImagePreview);
     
-    // ৪. অডিও রেকর্ডার
     document.getElementById('micTriggerBtn')?.addEventListener('click', startRecording);
     document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelRecording);
     document.getElementById('sendRecordingBtn')?.addEventListener('click', sendRecording);
     
-    // ৫. ভিডিও ও অডিও কল বাটন (জেগো কলিং)
     document.getElementById('videoCallBtn')?.addEventListener('click', () => startZegoCall('video'));
     document.getElementById('audioCallBtn')?.addEventListener('click', () => startZegoCall('audio'));
 
-    // ৬. ফুল স্ক্রিন ইমেজ ক্লোজ
     document.querySelector('.fs-close-btn')?.addEventListener('click', () => { 
         document.getElementById('fullScreenImageModal').style.display = 'none'; 
     });
 
-    // ৭. ইমোজি পিকার
     const emojiBtn = document.getElementById('emojiTriggerBtn');
     const picker = document.getElementById('emojiPickerContainer');
     
@@ -1128,7 +995,6 @@ function setupEventListeners() {
         });
     }
 
-    // বাইরে ক্লিক করলে মেনু এবং পিকার বন্ধ করা
     document.addEventListener('click', (e) => {
         if (picker && !picker.contains(e.target) && emojiBtn && !emojiBtn.contains(e.target)) {
             picker.style.display = 'none';
@@ -1141,14 +1007,12 @@ function setupEventListeners() {
         }
     });
 
-    // ৮. ডিলিট এবং রিপ্লাই মডাল লিসেনার
     document.getElementById('deleteForMeBtn')?.addEventListener('click', deleteMessageForMe);
     document.getElementById('deleteForEveryoneBtn')?.addEventListener('click', deleteMessageForEveryone);
     document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal);
     document.getElementById('replyOptionBtn')?.addEventListener('click', initiateReply);
     document.getElementById('cancelReplyBtn')?.addEventListener('click', cancelReply);
     
-    // ৯. হেডার অপশনস (ব্লক)
     document.getElementById('chatOptionsBtn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         const menu = document.getElementById('chatOptionsDropdown');
@@ -1158,7 +1022,6 @@ function setupEventListeners() {
     });
     document.getElementById('blockUserBtn')?.addEventListener('click', blockUser);
     
-    // ১০. ফুল স্ক্রিন ইমেজ মোডাল ক্লোজ
     window.addEventListener('click', (e) => {
         const modal = document.getElementById('fullScreenImageModal');
         if (e.target === modal) {
@@ -1216,7 +1079,6 @@ function timeAgoShort(dateString) {
         if (diffHour < 24) return `${diffHour}h ago`;
         if (diffDay < 7) return `${diffDay}d ago`;
         
-        // তারিখ ফরম্যাট
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } catch (e) {
         console.warn("Error parsing date:", e);
@@ -1256,7 +1118,6 @@ window.viewFullScreenImage = function(src) {
     }
 }
 
-// গ্লোবাল ফাংশন যাতে HTML থেকে কল করা যায়
 window.openChat = openChat;
 window.handleMessagePressStart = handleMessagePressStart;
 window.handleMessagePressEnd = handleMessagePressEnd;

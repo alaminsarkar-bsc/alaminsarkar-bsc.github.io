@@ -299,14 +299,18 @@ async function handleUserLoggedIn(user) {
     try {
         let { data: profile, error } = await supabaseClient.from('users').select('*').eq('id', user.id).single();
         
+        // যদি ইউজার না পাওয়া যায় (PGRST116), তাহলে নতুন তৈরি করবে
         if (error && error.code === 'PGRST116') {
-            const { data: newProfile } = await supabaseClient.from('users').insert([{ 
+            const { data: newProfile, error: insertError } = await supabaseClient.from('users').insert([{ 
                 id: user.id, 
-                email: user.email, 
+                // email কলাম বাদ দেওয়া হয়েছে
                 display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
+                photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+                role: 'user',
+                status: 'active'
             }]).select().single();
-            if (error) throw error;
+            
+            if (insertError) throw insertError;
             profile = newProfile;
         } else if (error) throw error;
         
@@ -336,7 +340,8 @@ async function handleUserLoggedIn(user) {
         
     } catch (err) {
         console.error('🚨 Login Handler Error:', err);
-        handleUserLoggedOut();
+        // এরর হলে লগআউট না করিয়ে কনসোলে দেখাবে, যাতে লুপ না হয়
+        // handleUserLoggedOut(); 
     }
 }
 

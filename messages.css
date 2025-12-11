@@ -213,31 +213,40 @@ body {
     margin-bottom: 2px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); object-fit: cover; 
 }
 
-/* [FIXED] Audio Player CSS */
-/* অডিও প্লেয়ারের কন্টেইনার এবং ভিতরের এলিমেন্টের সাইজ ফিক্স করা হয়েছে */
+/* [UPDATED] Audio Player CSS - FIXED */
 .audio-bubble {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 260px;         /* ফিক্সড প্রস্থ বাড়ানো হয়েছে */
-    height: 50px;         /* ফিক্সড উচ্চতা */
-    border-radius: 25px;
-    padding: 5px;         
+    width: 260px;
+    height: 54px; /* উচ্চতা একটু বাড়ানো হলো */
+    border-radius: 27px;
+    padding: 5px 10px; /* প্যাডিং ফিক্স */
     margin-bottom: 5px;
     box-sizing: border-box;
+    overflow: hidden; /* প্লেয়ার যাতে বাইরে না যায় */
 }
 
 /* প্লেয়ারের রঙ */
 .message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
 .message-row.received .audio-bubble { background-color: var(--messenger-gray); }
 
-/* অডিও ট্যাগ */
+/* অডিও ট্যাগ - FIXED */
 .audio-bubble audio {
     width: 100%;
     height: 40px;
-    border-radius: 20px;
     outline: none;
-    display: block; 
+    display: block;
+    /* মোবাইল ব্রাউজারে ডিফল্ট প্লেয়ার কন্ট্রোলসের কালার সমস্যা ফিক্স */
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1)); 
+}
+/* ক্রোম এবং সাফারির জন্য অডিও প্লেয়ার কাস্টমাইজেশন */
+.audio-bubble audio::-webkit-media-controls-enclosure {
+    background-color: rgba(255, 255, 255, 0.3); /* হালকা সাদা ব্যাকগ্রাউন্ড */
+    border-radius: 20px;
+}
+.message-row.sent .audio-bubble audio::-webkit-media-controls-enclosure {
+    background-color: rgba(255, 255, 255, 0.2); /* সেন্ডারের জন্য একটু বেশি স্বচ্ছ */
 }
 
 .empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -548,4 +557,9 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
     .modal-box { background: #242526; color: var(--text-primary); }
     .modal-btn { background: #3a3b3c; color: var(--text-primary); }
     .modal-btn.cancel { background: #3a3b3c; border-color: #4e4f50; }
+    
+    /* Dark Mode Audio Player Fix */
+    .audio-bubble audio::-webkit-media-controls-enclosure {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
 }
