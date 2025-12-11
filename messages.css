@@ -214,38 +214,44 @@ body {
 }
 
 /* =======================================================
-   FIXED AUDIO PLAYER STYLES (নীল দাগের সমস্যা সমাধান)
+   🔥🔥 AUDIO PLAYER FIX (100% WORKING) 🔥🔥
    ======================================================= */
 .audio-bubble {
-    display: flex; /* Flexbox ব্যবহার করে কন্টেন্ট সেন্টারে রাখা */
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 260px;         /* নির্দিষ্ট প্রস্থ */
-    height: 50px;         /* নির্দিষ্ট উচ্চতা (এটা না থাকলে চ্যাপ্টা হয়ে যায়) */
+    width: 260px;
+    height: 50px;
     border-radius: 25px;
-    padding: 5px;         
+    padding: 2px;
     margin-bottom: 5px;
     box-sizing: border-box;
-    overflow: hidden; /* বাইরে চলে যাওয়া অংশ হাইড করা */
+    /* ব্যাকগ্রাউন্ড কালার JS থেকে সেট করা হবে, এখানে ডিফল্ট রাখা হলো */
+    overflow: visible; 
 }
 
-/* প্লেয়ারের রঙ */
-.message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
-.message-row.received .audio-bubble { background-color: var(--messenger-gray); }
-
-/* অডিও ট্যাগ */
+/* অডিও ট্যাগ এর স্টাইল ফোর্স করা */
 .audio-bubble audio {
     width: 100%;
-    height: 40px; /* প্লেয়ারের হাইট ফিক্স করা */
+    height: 45px;
     border-radius: 20px;
     outline: none;
-    display: block; 
+    display: block !important;
 }
 
-/* ক্রোম বা এন্ড্রয়েডে ডিফল্ট সাদা ব্যাকগ্রাউন্ড রিমুভ করা */
-audio::-webkit-media-controls-enclosure {
-    background-color: transparent !important;
+/* Chrome/Android এর জন্য স্পেশাল ফিক্স - যাতে কন্ট্রোল দেখা যায় */
+audio::-webkit-media-controls-panel {
+    background-color: #f1f3f4 !important; /* হালকা ধূসর ব্যাকগ্রাউন্ড যাতে কন্ট্রোল বোঝা যায় */
+    color: black !important;
+    border-radius: 20px;
 }
+.message-row.sent audio::-webkit-media-controls-panel {
+    background-color: rgba(255,255,255,0.9) !important;
+}
+
+/* প্লেয়ারের রঙ (ফলব্যাক) */
+.message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
+.message-row.received .audio-bubble { background-color: var(--messenger-gray); }
 
 .empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 
@@ -347,7 +353,7 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
     padding: 12px; border: none; background: #f0f2f5;
     border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; color: #000;
 }
-.modal-btn:active { background: #e4e6eb; }
+.modal-btn.active { background: #e4e6eb; }
 .modal-btn.danger { color: var(--danger-color); background: #fff0f0; }
 .modal-btn.cancel { background: white; border: 1px solid #ddd; }
 

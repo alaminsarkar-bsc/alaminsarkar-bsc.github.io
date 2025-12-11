@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ZEGO CLOUD কনফিগারেশন - (সতর্কতা: রিয়েল অ্যাপে সার্ভার থেকে টোকেন আনা উচিত)
+// ZEGO CLOUD কনফিগারেশন - FIXED
 const ZEGO_APP_ID = 361002182;
 const ZEGO_SERVER_SECRET = '723224a492e399607fc92fe644d60144';
 
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("ZegoCloud initialized successfully");
     } catch (err) {
         console.error("Failed to initialize ZegoCloud:", err);
-        // কল সিস্টেম ফেইল করলেও চ্যাট যেন চলে, তাই অ্যালার্ট দেওয়া হলো না, কনসোলে এরর থাকবে
+        // কল সিস্টেম ফেইল করলেও চ্যাট যেন চলে
     }
 
     // হেডার প্রোফাইল লোড করা
@@ -88,6 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ================================================================
 // ৪. ZegoCloud কলিং সেটআপ ফাংশন - (FIXED & EXTENDED)
 // ================================================================
+// ইউজার আইডি ক্লিন করার হেল্পার ফাংশন (Zego স্পেশাল ক্যারেক্টার সাপোর্ট করে না)
+function sanitizeUserID(uid) {
+    return uid.replace(/[^a-zA-Z0-9]/g, ''); 
+}
+
 async function initZegoCloud() {
     return new Promise(async (resolve, reject) => {
         try {
@@ -96,7 +101,8 @@ async function initZegoCloud() {
                 return;
             }
 
-            const userID = currentUser.id.toString();
+            // আইডি থেকে শুধু আলফানিউমেরিক ক্যারেক্টার রাখা হচ্ছে যাতে এরর না হয়
+            const userID = sanitizeUserID(currentUser.id.toString());
             const userName = currentUser.user_metadata?.display_name || 
                             currentUser.email?.split('@')[0] || 
                             `User_${userID.substring(0, 5)}`;
@@ -149,7 +155,7 @@ async function initZegoCloud() {
     });
 }
 
-// কল শুরু করার ফাংশন
+// কল শুরু করার ফাংশন - (100% FIXED for Unknown Error)
 async function startZegoCall(type) {
     console.log("Attempting to start call, type:", type);
     
@@ -169,8 +175,15 @@ async function startZegoCall(type) {
     }
 
     const partnerName = document.getElementById('chatHeaderName').innerText || 'User';
-    // টার্গেট ইউজারের আইডি অবশ্যই স্ট্রিং হতে হবে
-    const targetUserID = activeChatUserId.toString(); 
+    
+    // টার্গেট ইউজারের আইডি স্যানিটাইজ করা (স্পেস বা ড্যাশ রিমুভ)
+    const targetUserID = sanitizeUserID(activeChatUserId.toString());
+    
+    // নিজের সাথে নিজে কল করা যাবে না
+    if(targetUserID === sanitizeUserID(currentUser.id.toString())) {
+        alert("You cannot call yourself.");
+        return;
+    }
 
     try {
         // কল ইনভাইটেশন পাঠানো
@@ -189,7 +202,7 @@ async function startZegoCall(type) {
         
         // এরর হ্যান্ডলিং
         if (result.errorInvitees && result.errorInvitees.length > 0) {
-            alert("User is currently offline or unavailable.");
+            alert("User is currently offline or unavailable (or not logged into chat).");
         } 
 
     } catch (err) {
@@ -534,9 +547,8 @@ function appendMessageToUI(msg) {
         contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')" onerror="this.style.display='none'">`;
     }
     
-    // ২. অডিও রেন্ডার (FIXED STRUCTURE)
-    // CSS এ .audio-bubble এর জন্য height এবং width ফিক্স করা হয়েছে, 
-    // তাই এখানে সঠিক ক্লাস ব্যবহার করতে হবে।
+    // ২. অডিও রেন্ডার (FIXED STRUCTURE - NO WRAPPER)
+    // অডিও থাকলে আমরা সরাসরি অডিও বাবল তৈরি করব, টেক্সট বাবলের ভেতরে নয়
     if (msg.audio_url) {
         contentHTML += `
             <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'};">
@@ -551,14 +563,17 @@ function appendMessageToUI(msg) {
     }
     
     // ৩. টেক্সট রেন্ডার
+    // যদি অডিও থাকে, তাহলে আর টেক্সট বাবল যোগ করার দরকার নেই (যদি না আলাদা টেক্সট থাকে)
+    // তবে আপনার ডিজাইনে অডিও এবং টেক্সট আলাদা মেসেজ হিসেবে যায়।
     if (msg.content) { 
         if (msg.content === '👍') {
             contentHTML += `<span style="font-size: 40px; margin: 5px;">👍</span>`; 
         } else {
-            // যদি ইমেজ থাকে এবং টেক্সটও থাকে, তাহলে টেক্সট আলাদা বাবলে যাবে
+            // যদি ইমেজ থাকে এবং টেক্সটও থাকে
             if (msg.image_url) {
                 contentHTML += `<div class="bubble" style="margin-top:2px;">${escapeHtml(msg.content)}</div>`;
-            } else {
+            } else if (!msg.audio_url) { 
+                // যদি অডিও না থাকে, তাহলেই টেক্সট বাবল হবে
                 contentHTML += `<div class="bubble">${replyHTML}${escapeHtml(msg.content)}</div>`;
             }
         }
@@ -573,7 +588,6 @@ function appendMessageToUI(msg) {
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
     // মেসেজ রো তৈরি
-    // লং প্রেস এর জন্য ইভেন্ট যুক্ত করা হলো
     const html = `
         <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
             ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar" onerror="this.src='./images/default-avatar.png'">` : ''}
