@@ -21,7 +21,7 @@
        ১. ইনবক্স ভিউ (চ্যাট লিস্ট)
        =========================== -->
     <div id="inbox-view" class="view-container">
-        <!-- মেইন হেডার (এটি ফিক্সড থাকবে) -->
+        <!-- মেইন হেডার -->
         <header class="msg-header">
             <div class="header-left">
                 <a href="/index.html" class="my-profile-link">
@@ -36,27 +36,22 @@
             </div>
         </header>
         
-        <!-- চ্যাট লিস্ট কন্টেইনার (এটি স্ক্রল হবে) -->
-        <!-- NOTE: সার্চ বার এখন এই কন্টেইনারের ভেতরে -->
-        <div id="chatListContainer" class="chat-list-area">
-            
-            <!-- সার্চ বার (এখন এটি লিস্টের সাথে স্ক্রল হবে) -->
-            <div class="msg-search-container">
-                <div class="msg-search-box">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="chatSearchInput" placeholder="Search">
-                </div>
+        <!-- সার্চ বার -->
+        <div class="msg-search-container">
+            <div class="msg-search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="chatSearchInput" placeholder="Search">
             </div>
+        </div>
 
-            <!-- লোডার (প্রথমে লোডিং দেখাবে) -->
+        <!-- চ্যাট লিস্ট কন্টেইনার -->
+        <div id="chatListContainer" class="chat-list-area">
             <div class="loader-container" style="padding-top: 50px;">
                 <div class="loader"></div>
             </div>
-            
-            <!-- চ্যাট আইটেমগুলো এখানে JS দিয়ে লোড হবে -->
         </div>
         
-        <!-- বটম নেভিগেশন (এটি ফিক্সড থাকবে) -->
+        <!-- বটম নেভিগেশন -->
         <nav class="bottom-nav">
             <a href="/index.html" class="nav-item"><i class="fas fa-home"></i></a>
             <div class="nav-item active"><i class="fas fa-comment"></i></div>
@@ -203,17 +198,33 @@
     </div>
 
     <!-- কল UI কন্টেইনার -->
-    <div id="callContainer"></div>
+    <div id="callContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: #000;">
+        <!-- ZegoCloud কল UI এখানে লোড হবে -->
+    </div>
 
-    <!-- স্ক্রিপ্ট লাইব্রেরি -->
-    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt@2.9.0/zego-uikit-prebuilt.js"></script>
-    <script src="https://unpkg.com/zegocloud-zim-web@2.10.0/index.js"></script>
+    <!-- ===========================
+       স্ক্রিপ্ট লাইব্রেরি (সঠিক অর্ডার) - FIXED VERSION
+       =========================== -->
+    
+    <!-- 1. ZegoCloud Core Library -->
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+    
+    <!-- 2. ZIM Plugin (IMPORTANT: এই প্লাগিন ছাড়া কল কাজ করবে না) -->
+    <script src="https://unpkg.com/@zegocloud/zim-sdk-web@latest/dist/index.js"></script>
+    
+    <!-- 3. Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- 4. Image Compression -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    
+    <!-- 5. Emoji Picker -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
     
-    <!-- Main Logic -->
+    <!-- 6. Main Logic -->
     <script src="messages.js"></script>
+    
+    <!-- 7. Permission Check -->
     <script src="permission-check.js"></script>
 </body>
 </html>

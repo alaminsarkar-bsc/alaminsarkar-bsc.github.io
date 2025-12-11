@@ -24,25 +24,23 @@ body {
 }
 
 /* ============================
-   LAYOUT FIXES (Fixed Header & Footer)
+   LAYOUT FIXES (Full Width)
    ============================ */
 .view-container {
     width: 100vw;
     max-width: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* মেইন কন্টেইনার স্ক্রল হবে না */
+    overflow-x: hidden;
     height: 100vh;
-    height: 100dvh; /* মোবাইলের জন্য অপ্টিমাইজড হাইট */
     display: flex;
-    flex-direction: column; /* উপর থেকে নিচে সাজানো */
+    flex-direction: column;
 }
 
 /* ============================
    1. INBOX VIEW (Chat List)
    ============================ */
 .msg-header {
-    flex-shrink: 0; /* হেডার ছোট হবে না */
     display: flex; justify-content: space-between; align-items: center;
     padding: 15px; background: #fff; 
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -60,20 +58,16 @@ body {
 }
 .icon-circle-btn:active { background: #e4e6eb; }
 
-/* CHAT LIST AREA (Scrollable Part) */
-.chat-list-area { 
-    flex: 1; /* হেডার ও ফুটার বাদে বাকি জায়গা নিবে */
-    overflow-y: auto; /* শুধু এই অংশে স্ক্রল হবে */
-    overflow-x: hidden;
-    width: 100%; 
-    padding-bottom: 0;
-    background: #fff;
-    -webkit-overflow-scrolling: touch; /* আইফোনে স্মুথ স্ক্রল */
-}
-
-.msg-search-container { padding: 10px 15px; background: #fff; }
+.msg-search-container { padding: 10px 15px; }
 .msg-search-box { background: #f0f2f5; border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; gap: 10px; }
 .msg-search-box input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
+
+.chat-list-area { 
+    flex: 1;
+    overflow-y: auto; 
+    padding-bottom: 70px; /* বটম ন্যাভের জন্য জায়গা */
+    width: 100%; 
+}
 
 .chat-item-row { 
     display: flex; align-items: center; 
@@ -99,8 +93,7 @@ body {
 .unread-dot { width: 12px; height: 12px; background: var(--messenger-blue); border-radius: 50%; margin-left: 5px; }
 
 .bottom-nav {
-    flex-shrink: 0; /* ফিক্সড হাইট */
-    height: 60px;
+    position: fixed; bottom: 0; width: 100%; height: 60px;
     background: #fff; border-top: 1px solid #ddd;
     display: flex; justify-content: space-around; align-items: center; z-index: 100;
 }
@@ -111,10 +104,9 @@ body {
    2. CONVERSATION VIEW (Room)
    ============================ */
 .chat-room-header {
-    flex-shrink: 0;
     display: flex; align-items: center; padding: 8px 10px;
     background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    width: 100%; z-index: 100; height: 60px; box-sizing: border-box;
+    position: fixed; top: 0; width: 100%; z-index: 100; height: 60px; box-sizing: border-box;
 }
 .back-btn-chat { background: none; border: none; font-size: 22px; color: var(--messenger-blue); cursor: pointer; margin-right: 10px; padding: 5px; }
 .chat-partner-info { flex: 1; display: flex; align-items: center; gap: 10px; overflow: hidden; }
@@ -153,10 +145,10 @@ body {
 
 /* Message Body */
 .message-body {
-    flex: 1; /* বাকি জায়গা নিবে */
-    overflow-y: auto; /* স্ক্রল হবে */
+    padding: 70px 0 80px 0; 
+    height: 100vh; height: 100dvh; 
+    overflow-y: auto; 
     overflow-x: hidden;
-    padding: 10px 0; /* প্যাডিং কমানো হলো কারণ ফুটার ফিক্সড */
     background: #fff;
     display: flex; 
     flex-direction: column; 
@@ -221,62 +213,199 @@ body {
     margin-bottom: 2px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); object-fit: cover; 
 }
 
-/* =======================================================
-   🔥🔥 AUDIO PLAYER FIX (MESSENGER STYLE) 🔥🔥
-   ======================================================= */
+/* [FIXED] Audio Player CSS */
+/* অডিও প্লেয়ারের কন্টেইনার এবং ভিতরের এলিমেন্টের সাইজ ফিক্স করা হয়েছে */
 .audio-bubble {
-    width: 260px; /* ফিক্সড সাইজ যাতে বেশি বড় না হয় */
-    height: 54px;
-    border-radius: 20px;
-    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 260px;         /* ফিক্সড প্রস্থ বাড়ানো হয়েছে */
+    height: 50px;         /* ফিক্সড উচ্চতা */
+    border-radius: 25px;
+    padding: 5px;         
+    margin-bottom: 5px;
     box-sizing: border-box;
-    overflow: hidden;
 }
 
-/* অডিও প্লেয়ারের মেইন ট্যাগ */
+/* প্লেয়ারের রঙ */
+.message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
+.message-row.received .audio-bubble { background-color: var(--messenger-gray); }
+
+/* অডিও ট্যাগ */
 .audio-bubble audio {
     width: 100%;
-    height: 100%;
+    height: 40px;
+    border-radius: 20px;
     outline: none;
-    border-radius: 16px;
-    display: block;
+    display: block; 
 }
 
-/* Chrome ব্রাউজারের ডিফল্ট প্লেয়ার স্টাইল ফিক্স */
-audio::-webkit-media-controls-panel {
-    background-color: rgba(255, 255, 255, 0.8) !important; /* হালকা সাদা ব্যাকগ্রাউন্ড */
-    border-radius: 16px;
+.empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+/* ============================
+   3. FOOTER & INPUT AREA
+   ============================ */
+.chat-footer-area {
+    position: fixed; bottom: 0; width: 100%; background: #fff;
+    padding: 0; display: flex; flex-direction: column;
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.05); z-index: 100;
 }
 
-/* আমার পাঠানো অডিও (Sent) - নীল ব্যাকগ্রাউন্ডের সাথে ম্যাচিং */
-.message-row.sent .audio-bubble {
-    background-color: var(--messenger-blue);
+/* Reply Preview Bar */
+.reply-preview-bar {
+    background: #f9f9f9;
+    padding: 10px 15px;
+    border-top: 1px solid #eee;
+    border-left: 4px solid var(--messenger-blue);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: #333; animation: slideUp 0.2s ease;
 }
-.message-row.sent audio::-webkit-media-controls-panel {
-    background-color: rgba(255, 255, 255, 0.2) !important; /* কিছুটা ট্রান্সপারেন্ট */
-    color: white !important;
-}
-/* অডিও প্লে আইকন এবং টেক্সট সাদা করার চেষ্টা (ব্রাউজার ভেদে ভিন্ন হতে পারে) */
-.message-row.sent audio::-webkit-media-controls-play-button,
-.message-row.sent audio::-webkit-media-controls-current-time-display,
-.message-row.sent audio::-webkit-media-controls-time-remaining-display {
-    filter: invert(1); /* আইকন সাদা করবে */
+.reply-info { display: flex; flex-direction: column; width: 90%; }
+.reply-to-name { font-weight: bold; font-size: 12px; color: var(--messenger-blue); }
+.reply-text-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #666; margin-top: 2px; }
+#cancelReplyBtn { background: none; border: none; font-size: 18px; color: #666; cursor: pointer; padding: 5px; }
+
+/* Main Input Row */
+.footer-input-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; width: 100%; box-sizing: border-box; background: #fff; min-height: 60px;
 }
 
-/* অন্যের পাঠানো অডিও (Received) - ছাই রঙের ব্যাকগ্রাউন্ড */
-.message-row.received .audio-bubble {
-    background-color: var(--messenger-gray);
+.footer-actions-left { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.footer-btn { background: none; border: none; font-size: 22px; color: var(--messenger-blue); cursor: pointer; padding: 0; }
+
+.input-pill { 
+    flex: 1; background: var(--input-bg); border-radius: 20px; 
+    padding: 8px 12px; display: flex; align-items: center; 
 }
-.message-row.received audio::-webkit-media-controls-panel {
-    background-color: #e4e6eb !important;
-    color: black !important;
+.input-pill input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
+
+.emoji-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); cursor: pointer; margin-left: 5px; }
+.like-send-btn { background: none; border: none; font-size: 24px; color: var(--messenger-blue); cursor: pointer; padding: 0 5px; flex-shrink: 0; transition: transform 0.1s; }
+.like-send-btn:active { transform: scale(1.2); }
+
+/* Image Preview Panel */
+.image-preview-box {
+    position: fixed; bottom: 70px; left: 10px; right: 10px;
+    background: #fff; padding: 10px; border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 110;
+    display: flex; justify-content: center; animation: slideUp 0.3s ease;
 }
-/* =======================================================
-   FIXED CALL CONTAINER STYLES (z-index বাড়ানো হয়েছে)
-   ======================================================= */
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.preview-content { position: relative; width: fit-content; }
+.preview-content img { max-height: 200px; border-radius: 8px; border: 1px solid #eee; }
+#closePreviewBtn { position: absolute; top: -10px; right: -10px; background: #333; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
+
+/* Emoji Picker Styles */
+.emoji-picker-popup {
+    position: fixed; bottom: 70px; right: 10px; z-index: 200;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2); border-radius: 10px;
+    background: white; max-width: 90vw; animation: popIn 0.2s ease;
+}
+emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 100%; }
+
+/* Audio Recording UI */
+.audio-recording-ui {
+    position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+    background: #ea4335; color: white; padding: 10px 20px;
+    border-radius: 30px; display: flex; align-items: center; gap: 20px;
+    box-shadow: 0 4px 10px rgba(234, 67, 53, 0.4); z-index: 120;
+    animation: popIn 0.2s ease; white-space: nowrap;
+}
+@keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+.recording-indicator { display: flex; align-items: center; gap: 10px; }
+.red-dot { width: 10px; height: 10px; background: white; border-radius: 50%; }
+.pulse { animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+#recordingTimer { font-weight: bold; font-family: monospace; font-size: 16px; }
+.recording-actions { display: flex; gap: 10px; }
+.rec-btn { width: 35px; height: 35px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.rec-btn.cancel { background: rgba(255,255,255,0.2); color: white; }
+.rec-btn.send { background: white; color: #ea4335; }
+
+/* Delete Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+}
+.modal-box {
+    background: white; width: 85%; max-width: 300px;
+    padding: 20px; border-radius: 12px; text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3); animation: popIn 0.2s ease;
+}
+.modal-actions { display: flex; flex-direction: column; gap: 10px; }
+.modal-btn {
+    padding: 12px; border: none; background: #f0f2f5;
+    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; color: #000;
+}
+.modal-btn:active { background: #e4e6eb; }
+.modal-btn.danger { color: var(--danger-color); background: #fff0f0; }
+.modal-btn.cancel { background: white; border: 1px solid #ddd; }
+
+/* Full Screen Image */
+.fs-image-modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.95); 
+    z-index: 5000; 
+    align-items: center; 
+    justify-content: center; 
+}
+.fs-modal-content { 
+    max-width: 100%; 
+    max-height: 100vh; 
+    object-fit: contain; 
+}
+.fs-close-btn { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    font-size: 40px; 
+    color: #fff; 
+    cursor: pointer; 
+    background: rgba(0,0,0,0.5);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fs-download-btn { 
+    position: absolute; 
+    bottom: 30px; 
+    right: 30px; 
+    background: white; 
+    padding: 10px; 
+    border-radius: 50%; 
+    font-size: 20px; 
+    color: black; 
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Loader & Skeleton */
+.loader-container { display: flex; justify-content: center; align-items: center; width: 100%; padding-top: 50px; }
+.loader { width: 30px; height: 30px; border: 3px solid #0084ff; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
+@keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.skeleton-chat-item { display: flex; align-items: center; padding: 10px 15px; gap: 12px; border-bottom: 1px solid #f0f2f5; }
+.skeleton-animate { background: #f0f2f5; background: linear-gradient(to right, #f0f2f5 8%, #e4e6eb 18%, #f0f2f5 33%); background-size: 800px 100%; animation: shimmer 1.5s infinite linear; }
+@keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+.skeleton-avatar-circle { width: 55px; height: 55px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-text-group { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton-name-line { width: 50%; height: 14px; border-radius: 4px; }
+.skeleton-msg-line { width: 80%; height: 10px; border-radius: 4px; }
+
+/* কল কন্টেইনার স্টাইলস */
 #callContainer {
     display: none;
     position: fixed;
@@ -285,70 +414,81 @@ audio::-webkit-media-controls-panel {
     width: 100%;
     height: 100%;
     background: #000;
-    z-index: 99999; /* সবার উপরে থাকার জন্য */
+    z-index: 9999;
 }
 
 #callContainer .zego-ui-kit {
     width: 100%;
     height: 100%;
-    background: #000;
 }
 
-/* Call button hover effects */
+/* কল বাটনে হোভার ইফেক্ট */
 .action-icon {
-    transition: all 0.2s ease;
-}
-
-.action-icon:hover {
-    transform: scale(1.1);
+    transition: transform 0.2s ease;
 }
 
 .action-icon:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 
-/* Call status indicators */
-.call-status {
+/* ইনকামিং কল নোটিফিকেশন */
+.call-notification {
     position: fixed;
-    top: 70px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 132, 255, 0.9);
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.call-notification-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.call-accept-btn {
+    background: #31a24c;
     color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    z-index: 10001;
-    animation: fadeInOut 0.3s ease;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-@keyframes fadeInOut {
-    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+.call-reject-btn {
+    background: #ff3b30;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-/* Permission prompt styles */
+/* পারমিশন প্রম্পট স্টাইল */
 .permission-prompt {
     position: fixed;
     bottom: 100px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0,0,0,0.8);
     color: white;
     padding: 15px;
     border-radius: 10px;
     text-align: center;
     z-index: 1000;
-    max-width: 90%;
-    width: 300px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    animation: slideUp 0.3s ease;
-}
-
-.permission-prompt p {
-    margin: 0 0 15px 0;
-    font-size: 14px;
-    line-height: 1.4;
+    max-width: 80%;
 }
 
 .permission-prompt button {
@@ -357,104 +497,8 @@ audio::-webkit-media-controls-panel {
     border: none;
     padding: 8px 15px;
     border-radius: 5px;
-    margin: 5px;
+    margin-top: 10px;
     cursor: pointer;
-    font-size: 14px;
-    transition: background 0.2s;
-}
-
-.permission-prompt button:hover {
-    background: #0066cc;
-}
-
-/* Loading overlay for call initialization */
-.call-loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    z-index: 10000;
-}
-
-.call-loading .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #0084ff;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Responsive call UI */
-@media (max-width: 768px) {
-    #callContainer .zego-ui-kit {
-        /* ZegoCloud automatically handles mobile responsiveness */
-    }
-    
-    .permission-prompt {
-        width: 85%;
-        bottom: 80px;
-    }
-}
-
-/* Call ended screen */
-.call-ended {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    z-index: 9999;
-}
-
-.call-ended h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-}
-
-.call-ended button {
-    background: #0084ff;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 20px;
-}
-
-/* Error states */
-.call-error {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 59, 48, 0.9);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    z-index: 10001;
-    max-width: 80%;
-    animation: popIn 0.3s ease;
 }
 
 /* Responsive Adjustments */
