@@ -122,7 +122,8 @@ body {
 .partner-text span { font-size: 12px; color: var(--text-secondary); }
 
 .chat-actions { display: flex; gap: 15px; margin-left: 5px; flex-shrink: 0; }
-.action-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); cursor: pointer; padding: 5px; }
+.action-icon { background: none; border: none; font-size: 20px; color: var(--messenger-blue); cursor: pointer; padding: 5px; transition: transform 0.2s ease; }
+.action-icon:active { transform: scale(0.9); }
 
 /* Dropdown Menu (Block/Report) */
 .dropdown-menu-chat {
@@ -169,6 +170,7 @@ body {
     max-width: 80%; padding: 8px 12px; border-radius: 18px; 
     font-size: 15px; line-height: 1.4; position: relative; 
     word-wrap: break-word; 
+    /* টেক্সট কপি করার পারমিশন */
     user-select: text; -webkit-user-select: text;
 }
 .message-row.sent .bubble { background-color: var(--messenger-blue); color: white; border-bottom-right-radius: 4px; }
@@ -211,26 +213,31 @@ body {
     margin-bottom: 2px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); object-fit: cover; 
 }
 
-/* [UPDATED] Audio Player CSS - FIXED */
-/* অডিও বাবলের জন্য নির্দিষ্ট ডিজাইন যাতে এটি চুপসে না যায় */
+/* [FIXED] Audio Player CSS */
+/* অডিও প্লেয়ারের কন্টেইনার এবং ভিতরের এলিমেন্টের সাইজ ফিক্স করা হয়েছে */
 .audio-bubble {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 260px; /* ফিক্সড প্রস্থ */
-    height: 50px; /* ফিক্সড উচ্চতা */
+    width: 260px;         /* ফিক্সড প্রস্থ বাড়ানো হয়েছে */
+    height: 50px;         /* ফিক্সড উচ্চতা */
     border-radius: 25px;
-    overflow: hidden;
+    padding: 5px;         
     margin-bottom: 5px;
+    box-sizing: border-box;
 }
-/* অডিও প্লেয়ারের কালার বাবলের মতো করা */
+
+/* প্লেয়ারের রঙ */
 .message-row.sent .audio-bubble { background-color: var(--messenger-blue); }
 .message-row.received .audio-bubble { background-color: var(--messenger-gray); }
 
+/* অডিও ট্যাগ */
 .audio-bubble audio {
     width: 100%;
-    height: 100%;
+    height: 40px;
+    border-radius: 20px;
     outline: none;
+    display: block; 
 }
 
 .empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -240,8 +247,7 @@ body {
    ============================ */
 .chat-footer-area {
     position: fixed; bottom: 0; width: 100%; background: #fff;
-    padding: 0; 
-    display: flex; flex-direction: column;
+    padding: 0; display: flex; flex-direction: column;
     box-shadow: 0 -1px 3px rgba(0,0,0,0.05); z-index: 100;
 }
 
@@ -339,10 +345,53 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
 .modal-btn.cancel { background: white; border: 1px solid #ddd; }
 
 /* Full Screen Image */
-.fs-image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; align-items: center; justify-content: center; }
-.fs-modal-content { max-width: 100%; max-height: 100vh; object-fit: contain; }
-.fs-close-btn { position: absolute; top: 20px; right: 20px; font-size: 40px; color: #fff; cursor: pointer; }
-.fs-download-btn { position: absolute; bottom: 30px; right: 30px; background: white; padding: 10px; border-radius: 50%; font-size: 20px; color: black; }
+.fs-image-modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.95); 
+    z-index: 5000; 
+    align-items: center; 
+    justify-content: center; 
+}
+.fs-modal-content { 
+    max-width: 100%; 
+    max-height: 100vh; 
+    object-fit: contain; 
+}
+.fs-close-btn { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    font-size: 40px; 
+    color: #fff; 
+    cursor: pointer; 
+    background: rgba(0,0,0,0.5);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fs-download-btn { 
+    position: absolute; 
+    bottom: 30px; 
+    right: 30px; 
+    background: white; 
+    padding: 10px; 
+    border-radius: 50%; 
+    font-size: 20px; 
+    color: black; 
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 /* Loader & Skeleton */
 .loader-container { display: flex; justify-content: center; align-items: center; width: 100%; padding-top: 50px; }
@@ -355,3 +404,148 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
 .skeleton-text-group { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .skeleton-name-line { width: 50%; height: 14px; border-radius: 4px; }
 .skeleton-msg-line { width: 80%; height: 10px; border-radius: 4px; }
+
+/* কল কন্টেইনার স্টাইলস */
+#callContainer {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 9999;
+}
+
+#callContainer .zego-ui-kit {
+    width: 100%;
+    height: 100%;
+}
+
+/* কল বাটনে হোভার ইফেক্ট */
+.action-icon {
+    transition: transform 0.2s ease;
+}
+
+.action-icon:active {
+    transform: scale(0.9);
+}
+
+/* ইনকামিং কল নোটিফিকেশন */
+.call-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.call-notification-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.call-accept-btn {
+    background: #31a24c;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.call-reject-btn {
+    background: #ff3b30;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* পারমিশন প্রম্পট স্টাইল */
+.permission-prompt {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000;
+    max-width: 80%;
+}
+
+.permission-prompt button {
+    background: #0084ff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+    .page-title { font-size: 20px; }
+    .chat-name { font-size: 15px; }
+    .chat-preview { font-size: 13px; }
+    .bubble { max-width: 85%; font-size: 14px; }
+    .emoji-picker-popup { right: 5px; bottom: 60px; }
+    emoji-picker { width: 280px; height: 300px; }
+}
+
+@media (max-width: 360px) {
+    .msg-header { padding: 12px; }
+    .chat-item-row { padding: 8px 12px; }
+    .chat-avatar { width: 50px; height: 50px; }
+    .bubble-image { max-width: 200px; }
+    .audio-bubble { width: 220px; }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --messenger-bg: #1a1a1a;
+        --messenger-gray: #2d2d2d;
+        --text-primary: #e4e6eb;
+        --text-secondary: #b0b3b8;
+        --input-bg: #3a3b3c;
+    }
+    
+    body { background-color: var(--messenger-bg); }
+    .msg-header { background: #242526; }
+    .msg-search-box { background: var(--input-bg); }
+    .msg-search-box input { color: var(--text-primary); }
+    .chat-item-row:active { background-color: #3a3b3c; }
+    .bottom-nav { background: #242526; border-top-color: #3a3b3c; }
+    .chat-room-header { background: #242526; }
+    .message-body { background: #1a1a1a; }
+    .message-row.received .bubble { background-color: var(--messenger-gray); color: var(--text-primary); }
+    .dropdown-menu-chat { background: #242526; }
+    .dropdown-menu-chat button { color: var(--text-primary); border-bottom-color: #3a3b3c; }
+    .dropdown-menu-chat button:hover { background: #3a3b3c; }
+    .chat-footer-area { background: #242526; }
+    .reply-preview-bar { background: #3a3b3c; border-top-color: #4e4f50; }
+    .input-pill { background: var(--input-bg); }
+    .input-pill input { color: var(--text-primary); }
+    .modal-box { background: #242526; color: var(--text-primary); }
+    .modal-btn { background: #3a3b3c; color: var(--text-primary); }
+    .modal-btn.cancel { background: #3a3b3c; border-color: #4e4f50; }
+}
