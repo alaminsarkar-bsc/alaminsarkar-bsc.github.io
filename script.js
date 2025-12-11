@@ -297,41 +297,28 @@ async function initializeApp() {
 
 async function handleUserLoggedIn(user) {
     try {
-        // ১. ইউজারের তথ্য তৈরি করা
-        // আপনার ডাটাবেজে এখন 'email' কলাম আছে, তাই আমরা নির্ভয়ে পাঠাতে পারি
-        const userUpdates = {
-            id: user.id,
-            email: user.email, 
-            display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-            last_seen: new Date().toISOString(), // লাস্ট সিন আপডেট হবে
-            status: 'active' // স্ট্যাটাস একটিভ থাকবে
-        };
-
-        // ২. Upsert ব্যবহার করা (থাকলে আপডেট, না থাকলে ইনসার্ট)
-        // এটিই সবচেয়ে নিরাপদ উপায়
-        const { data, error } = await supabaseClient
-            .from('users')
-            .upsert(userUpdates, { onConflict: 'id' })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        const profile = data;
-
-        // ৩. একাউন্ট স্ট্যাটাস চেক
+        let { data: profile, error } = await supabaseClient.from('users').select('*').eq('id', user.id).single();
+        
+        if (error && error.code === 'PGRST116') {
+            const { data: newProfile } = await supabaseClient.from('users').insert([{ 
+                id: user.id, 
+                email: user.email, 
+                display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
+            }]).select().single();
+            if (error) throw error;
+            profile = newProfile;
+        } else if (error) throw error;
+        
         if (profile && profile.status === 'SUSPENDED') {
             alert('আপনার অ্যাকাউন্টটি সাসপেন্ড করা হয়েছে।');
             await supabaseClient.auth.signOut();
             return;
         }
-
-        // ৪. গ্লোবাল ইউজার সেট করা
+        
         currentUser = { ...user, profile };
         updateHeaderProfileIcon(profile.photo_url);
 
-        // ৫. বাকি ডাটা লোড করা
         await Promise.all([
             fetchSavedPostIds(),
             fetchUserReactions() 
@@ -346,18 +333,10 @@ async function handleUserLoggedIn(user) {
         
         showAdminUI();
         loadNotifications();
-
+        
     } catch (err) {
-        console.error('🚨 Login Sync Error:', err);
-        // ডাটাবেজ এরর দিলেও অ্যাপ যাতে না থামে, তাই লোকাল ডাটা দিয়ে চালানো হবে
-        currentUser = { 
-            ...user, 
-            profile: {
-                id: user.id,
-                display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                photo_url: user.user_metadata?.avatar_url
-            }
-        };
+        console.error('🚨 Login Handler Error:', err);
+        handleUserLoggedOut();
     }
 }
 
