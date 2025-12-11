@@ -239,13 +239,14 @@ async function updateMyLastSeen() {
 }
 
 // ================================================================
-// ৬. চ্যাট লিস্ট লোড এবং রেন্ডার (Inbox)
+// ৬. চ্যাট লিস্ট লোড এবং রেন্ডার (Inbox) - UPDATED FOR SCROLL FIX
 // ================================================================
 async function loadChatList() {
+    // এখন আমরা নির্দিষ্ট কন্টেইনার টার্গেট করছি যেটা সার্চ বক্সের নিচে আছে
     const container = document.getElementById('chatListContainer');
     if(!container) return;
     
-    // লোডার দেখানো
+    // আগের লোডার বা মেসেজ ক্লিয়ার করি
     container.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
 
     try {
@@ -259,7 +260,7 @@ async function loadChatList() {
         // যদি কোনো চ্যাট না থাকে
         if (!partners || partners.length === 0) {
             container.innerHTML = `
-                <div style="text-align:center; padding:50px 20px; color:#999;">
+                <div class="empty-chat-placeholder">
                     <i class="fas fa-comment-dots" style="font-size: 30px; margin-bottom:10px;"></i>
                     <h3 style="margin:0;">No Messages</h3>
                     <p>Start a conversation with someone.</p>
