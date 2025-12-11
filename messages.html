@@ -8,12 +8,11 @@
     <!-- মোবাইল অ্যাপ কালার থিম -->
     <meta name="theme-color" content="#ffffff">
     
-    <!-- আইকন ও স্টাইল -->
+    <!-- আইকন -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- গ্লোবাল স্টাইল -->
+    <!-- স্টাইলশীট -->
     <link rel="stylesheet" href="style.css"> 
-    <!-- চ্যাট স্পেসিফিক স্টাইল -->
     <link rel="stylesheet" href="messages.css"> 
 </head>
 <body id="chat-page">
@@ -22,6 +21,7 @@
        ১. ইনবক্স ভিউ (Inbox View)
        =========================== -->
     <div id="inbox-view" class="view-container">
+        <!-- হেডার -->
         <header class="msg-header">
             <div class="header-left">
                 <a href="/index.html" class="my-profile-link">
@@ -35,6 +35,7 @@
             </div>
         </header>
         
+        <!-- সার্চ বার -->
         <div class="msg-search-container">
             <div class="msg-search-box">
                 <i class="fas fa-search search-icon"></i>
@@ -42,12 +43,14 @@
             </div>
         </div>
 
+        <!-- চ্যাট লিস্ট -->
         <div id="chatListContainer" class="chat-list-area">
             <div class="loader-container" style="padding-top: 50px;">
                 <div class="loader"></div>
             </div>
         </div>
         
+        <!-- বটম নেভিগেশন -->
         <nav class="bottom-nav">
             <a href="/index.html" class="nav-item"><i class="fas fa-home"></i></a>
             <div class="nav-item active"><i class="fas fa-comment"></i></div>
@@ -76,13 +79,13 @@
             </div>
             
             <div class="chat-actions">
-                <button class="action-icon"><i class="fas fa-phone-alt"></i></button>
-                <button class="action-icon"><i class="fas fa-video"></i></button>
-                <!-- [NEW] More Options Menu Trigger -->
+                <button class="action-icon" id="audioCallBtn"><i class="fas fa-phone-alt"></i></button>
+                <button class="action-icon" id="videoCallBtn"><i class="fas fa-video"></i></button>
+                <!-- অপশন মেনু ট্রিগার (Block/Report) -->
                 <button class="action-icon info-icon" id="chatOptionsBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
 
-            <!-- [NEW] Chat Options Dropdown (Block/Report) -->
+            <!-- চ্যাট অপশন ড্রপডাউন -->
             <div id="chatOptionsDropdown" class="dropdown-menu-chat" style="display: none;">
                 <button id="blockUserBtn"><i class="fas fa-ban"></i> Block User</button>
                 <button id="reportUserBtn"><i class="fas fa-flag"></i> Report</button>
@@ -94,7 +97,7 @@
             <!-- মেসেজগুলো এখানে আসবে -->
         </main>
 
-        <!-- [NEW] Typing Indicator Bubble -->
+        <!-- টাইপিং ইন্ডিকেটর বাবল -->
         <div id="typingIndicatorBubble" class="message-row received typing-bubble" style="display: none;">
             <img id="typingAvatar" src="./images/default-avatar.png" class="msg-avatar">
             <div class="bubble">
@@ -129,12 +132,11 @@
             <emoji-picker></emoji-picker>
         </div>
 
-        <!-- মেসেজ ডিলিট মডাল -->
+        <!-- ডিলিট এবং রিপ্লাই অপশন মডাল (লং প্রেস করলে আসবে) -->
         <div id="deleteOptionsModal" class="modal-overlay" style="display: none;">
             <div class="modal-box">
                 <h3 style="margin-bottom: 15px; font-size: 16px; color: #333;">Message Options</h3>
                 <div class="modal-actions">
-                    <!-- [NEW] Reply Option added to modal for Long Press -->
                     <button id="replyOptionBtn" class="modal-btn">Reply</button>
                     <button id="deleteForMeBtn" class="modal-btn">Delete for me</button>
                     <button id="deleteForEveryoneBtn" class="modal-btn danger" style="display: none;">Delete for everyone</button>
@@ -146,7 +148,7 @@
         <!-- চ্যাট ফুটার -->
         <footer class="chat-footer-area">
             
-            <!-- [NEW] Reply Preview Bar (ইনপুট বক্সের ঠিক উপরে) -->
+            <!-- রিপ্লাই প্রিভিউ বার (ইনপুটের উপরে দেখাবে) -->
             <div id="replyPreviewBar" class="reply-preview-bar" style="display: none;">
                 <div class="reply-info">
                     <span class="reply-to-name">Replying to...</span>
@@ -160,6 +162,7 @@
                     <button class="footer-btn"><i class="fas fa-plus-circle" style="color: #0084ff;"></i></button>
                     <button class="footer-btn" id="galleryTriggerBtn"><i class="fas fa-image"></i></button>
                     <button class="footer-btn" id="micTriggerBtn"><i class="fas fa-microphone"></i></button>
+                    <!-- Hidden Input -->
                     <input type="file" id="chatImageInput" accept="image/*" hidden>
                 </div>
 
@@ -177,7 +180,7 @@
         </footer>
     </div>
 
-    <!-- ইমেজ ভিউয়ার মডাল -->
+    <!-- ফুল স্ক্রিন ইমেজ মডাল -->
     <div id="fullScreenImageModal" class="fs-image-modal">
         <span class="fs-close-btn">&times;</span>
         <img class="fs-modal-content" id="fsModalImg">
@@ -186,8 +189,12 @@
 
     <!-- লাইব্রেরি -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- ইমেজ কমপ্রেশন -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <!-- ইমোজি পিকার -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
+    <!-- ZegoCloud কলিং -->
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
 
     <!-- মেইন লজিক -->
     <script src="messages.js"></script>
