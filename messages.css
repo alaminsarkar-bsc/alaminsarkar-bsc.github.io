@@ -147,7 +147,7 @@ body {
     /* উপরে হেডার এবং নিচে ফুটার বাদ দিয়ে বাকি জায়গা */
     padding: 70px 0 80px 0; 
     height: 100vh; /* fallback */
-    height: 100dvh; /* dynamic viewport height for mobile */
+    height: 100dvh; /* dynamic viewport height */
     overflow-y: auto; 
     overflow-x: hidden;
     background: #fff;
@@ -214,8 +214,18 @@ body {
     max-width: 240px; width: 100%; border-radius: 12px; 
     margin-bottom: 2px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); object-fit: cover; 
 }
-.audio-bubble { display: flex; align-items: center; gap: 5px; min-width: 200px; max-width: 100%; }
-.audio-bubble audio { height: 40px; width: 100%; border-radius: 20px; }
+/* [NEW] Audio Bubble Styling */
+.audio-bubble { 
+    display: flex; align-items: center; gap: 5px; 
+    min-width: 200px; max-width: 250px; 
+    padding: 5px;
+}
+.audio-bubble audio { 
+    height: 40px; width: 100%; 
+    border-radius: 20px; 
+    outline: none;
+}
+
 .empty-chat-placeholder { text-align: center; margin-top: 50px; opacity: 0.6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 
 /* ============================
