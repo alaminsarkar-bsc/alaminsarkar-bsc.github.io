@@ -297,29 +297,45 @@ async function initializeApp() {
 
 async function handleUserLoggedIn(user) {
     try {
-        let { data: profile, error } = await supabaseClient.from('users').select('*').eq('id', user.id).single();
+        // ১. প্রোফাইল খোঁজার চেষ্টা
+        let { data: profile, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
         
-        // যদি ইউজার না পাওয়া যায় (PGRST116), তাহলে নতুন তৈরি করবে
+        // ২. যদি প্রোফাইল না থাকে, নতুন তৈরি করবে (email ছাড়া)
         if (error && error.code === 'PGRST116') {
-            const { data: newProfile, error: insertError } = await supabaseClient.from('users').insert([{ 
-                id: user.id, 
-                // email কলাম বাদ দেওয়া হয়েছে
-                display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-                role: 'user',
-                status: 'active'
-            }]).select().single();
+            const { data: newProfile, error: insertError } = await supabaseClient
+                .from('users')
+                .insert([{ 
+                    id: user.id,
+                    // এইখানে আগে email ছিল, যা এখন বাদ দেওয়া হয়েছে
+                    display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                    photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+                    status: 'active',
+                    role: 'user'
+                }])
+                .select()
+                .single();
             
-            if (insertError) throw insertError;
+            if (insertError) {
+                console.error("Insert Error:", insertError);
+                throw insertError;
+            }
             profile = newProfile;
-        } else if (error) throw error;
+        } else if (error) {
+            throw error;
+        }
         
+        // ৩. একাউন্ট স্ট্যাটাস চেক
         if (profile && profile.status === 'SUSPENDED') {
             alert('আপনার অ্যাকাউন্টটি সাসপেন্ড করা হয়েছে।');
             await supabaseClient.auth.signOut();
             return;
         }
         
+        // ৪. গ্লোবাল ইউজার সেট করা
         currentUser = { ...user, profile };
         updateHeaderProfileIcon(profile.photo_url);
 
@@ -340,11 +356,9 @@ async function handleUserLoggedIn(user) {
         
     } catch (err) {
         console.error('🚨 Login Handler Error:', err);
-        // এরর হলে লগআউট না করিয়ে কনসোলে দেখাবে, যাতে লুপ না হয়
-        // handleUserLoggedOut(); 
+        // এরর হলে এলার্ট দিবে না, যাতে সাইট ক্র্যাশ না করে
     }
 }
-
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
