@@ -297,38 +297,46 @@ async function initializeApp() {
 
 async function handleUserLoggedIn(user) {
     try {
-        // ১. প্রোফাইল খোঁজার চেষ্টা
+        // ১. প্রথমে প্রোফাইল ডাকার চেষ্টা করি
         let { data: profile, error } = await supabaseClient
             .from('users')
             .select('*')
             .eq('id', user.id)
             .single();
         
-        // ২. যদি প্রোফাইল না থাকে, নতুন তৈরি করবে (email ছাড়া)
+        // ২. যদি প্রোফাইল না থাকে (PGRST116 এরর), তবে নতুন তৈরি করব
         if (error && error.code === 'PGRST116') {
+            console.log("Creating new profile for user...");
+            
             const { data: newProfile, error: insertError } = await supabaseClient
                 .from('users')
                 .insert([{ 
-                    id: user.id,
-                    // এইখানে আগে email ছিল, যা এখন বাদ দেওয়া হয়েছে
+                    id: user.id, 
+                    email: user.email, // এখন এটি কাজ করবে কারণ আমরা কলাম ফিরিয়ে এনেছি
                     display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                     photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-                    status: 'active',
-                    role: 'user'
+                    role: 'user',
+                    status: 'active'
                 }])
                 .select()
                 .single();
             
             if (insertError) {
-                console.error("Insert Error:", insertError);
-                throw insertError;
+                console.error("Insert failed:", insertError);
+                // ইনসার্ট ফেইল করলেও অ্যাপ থামাবো না, টেম্পোরারি ডাটা দিয়ে চালাবো
+                profile = {
+                    id: user.id,
+                    display_name: user.email?.split('@')[0] || 'User',
+                    photo_url: user.user_metadata?.avatar_url
+                };
+            } else {
+                profile = newProfile;
             }
-            profile = newProfile;
         } else if (error) {
-            throw error;
+            console.error("Fetch error:", error);
         }
         
-        // ৩. একাউন্ট স্ট্যাটাস চেক
+        // ৩. সাসপেন্ডেড কিনা চেক করা
         if (profile && profile.status === 'SUSPENDED') {
             alert('আপনার অ্যাকাউন্টটি সাসপেন্ড করা হয়েছে।');
             await supabaseClient.auth.signOut();
@@ -337,8 +345,11 @@ async function handleUserLoggedIn(user) {
         
         // ৪. গ্লোবাল ইউজার সেট করা
         currentUser = { ...user, profile };
-        updateHeaderProfileIcon(profile.photo_url);
+        
+        // ৫. হেডারে ছবি আপডেট
+        updateHeaderProfileIcon(profile?.photo_url);
 
+        // ৬. ডাটা লোড করা
         await Promise.all([
             fetchSavedPostIds(),
             fetchUserReactions() 
@@ -355,10 +366,10 @@ async function handleUserLoggedIn(user) {
         loadNotifications();
         
     } catch (err) {
-        console.error('🚨 Login Handler Error:', err);
-        // এরর হলে এলার্ট দিবে না, যাতে সাইট ক্র্যাশ না করে
+        console.error('🚨 Critical Login Error:', err);
     }
 }
+
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
