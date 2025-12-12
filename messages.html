@@ -18,12 +18,15 @@
 </head>
 <body id="chat-page">
 
+    <!-- নোটিফিকেশন সাউন্ড প্লেয়ার (লুকানো থাকবে) -->
+    <audio id="notificationSound" src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" preload="auto"></audio>
+
     <!-- ===========================
        ১. ইনবক্স ভিউ (Inbox View) - Messenger Style
        =========================== -->
     <div id="inbox-view" class="view-container">
         
-        <!-- ফিক্সড টপ এরিয়া (হেডার) -->
+        <!-- ফিক্সড টপ এরিয়া (হেডার + সার্চ বাটন) -->
         <div class="fixed-top-area">
             <header class="msg-header-modern">
                 <div class="header-top-row">
@@ -45,7 +48,7 @@
                 </div>
             </header>
 
-            <!-- ফ্লটিং সার্চ বার (ডিফল্টভাবে লুকানো থাকবে) -->
+            <!-- ফ্লটিং সার্চ বার (ডিফল্টভাবে লুকানো থাকবে, বাটন চাপলে আসবে) -->
             <div id="floatingSearchBar" class="floating-search-wrapper" style="display: none;">
                 <div class="search-inner">
                     <button class="back-icon-btn" id="closeSearchBtn">
@@ -61,7 +64,7 @@
         <!-- স্ক্রলেবল মেইন এরিয়া (হেডারের নিচ থেকে শুরু হবে) -->
         <div class="scrollable-content-area">
             
-            <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (Active Users) -->
+            <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (Active Users / Stories) -->
             <div id="activeUsersBar" class="active-users-bar">
                 <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে ইউজার লোড হবে -->
                 <div class="loader-horizontal" style="display: none;"></div> 
@@ -122,7 +125,7 @@
             </div>
         </header>
 
-        <!-- মেসেজ বডি -->
+        <!-- মেসেজ বডি (এখানে চ্যাট মেসেজ আসবে) -->
         <main class="message-body" id="messageContainer">
             <!-- মেসেজগুলো এখানে ডাইনামিকলি আসবে -->
         </main>
@@ -137,7 +140,7 @@
             </div>
         </div>
 
-        <!-- ইমেজ প্রিভিউ প্যানেল -->
+        <!-- ইমেজ প্রিভিউ প্যানেল (ছবি পাঠানোর আগে) -->
         <div id="imagePreviewPanel" class="image-preview-box" style="display: none;">
             <div class="preview-content">
                 <img id="uploadPreviewImg" src="" alt="Preview">
@@ -145,7 +148,7 @@
             </div>
         </div>
 
-        <!-- অডিও রেকর্ডিং UI -->
+        <!-- অডিও রেকর্ডিং UI (রেকর্ড চলাকালীন) -->
         <div id="audioRecordingUI" class="audio-recording-ui" style="display: none;">
             <div class="recording-indicator">
                 <div class="red-dot pulse"></div>
@@ -162,7 +165,7 @@
             <emoji-picker></emoji-picker>
         </div>
 
-        <!-- মেসেজ ডিলিট মডাল -->
+        <!-- মেসেজ ডিলিট/অপশন মডাল (লং প্রেস করলে আসবে) -->
         <div id="deleteOptionsModal" class="modal-overlay" style="display: none;">
             <div class="modal-box">
                 <h3 style="margin-bottom: 15px; font-size: 16px; color: #333;">Message Options</h3>
@@ -175,7 +178,7 @@
             </div>
         </div>
 
-        <!-- চ্যাট ফুটার -->
+        <!-- চ্যাট ফুটার (ইনপুট সেকশন) -->
         <footer class="chat-footer-area">
             
             <!-- Reply Preview Bar (ইনপুট বক্সের ঠিক উপরে) -->
@@ -209,7 +212,7 @@
         </footer>
     </div>
 
-    <!-- ইমেজ ভিউয়ার মডাল (Full Screen) -->
+    <!-- ইমেজ ভিউয়ার মডাল (Full Screen Image Viewer) -->
     <div id="fullScreenImageModal" class="fs-image-modal">
         <span class="fs-close-btn">&times;</span>
         <img class="fs-modal-content" id="fsModalImg">

@@ -27,34 +27,38 @@ let selectedMessageText = null;
 let pressTimer;
 
 // ==========================
-// ১. অ্যাপ লোডিং
+// ১. অ্যাপ লোডিং ও ইনিশিয়ালাইজেশন
 // ==========================
 document.addEventListener('DOMContentLoaded', async () => {
     // সেশন চেক
     const { data: { session }, error } = await supabaseClient.auth.getSession();
+    
     if (error || !session) { 
+        // লগইন না থাকলে হোমপেজে ফেরত পাঠাবে
         window.location.href = '/index.html'; 
         return; 
     }
     
     currentUser = session.user;
     
-    // ডাটা লোড
+    // ডাটা লোড করা
     loadMyProfile();
     updateMyLastSeen();
-    setInterval(updateMyLastSeen, 60000); // প্রতি ১ মিনিটে লাস্ট সিন আপডেট
+    
+    // প্রতি ১ মিনিটে লাস্ট সিন আপডেট হবে
+    setInterval(updateMyLastSeen, 60000); 
 
-    // UI লোড
+    // UI লোড করা
     loadActiveUsersHorizontal();
     loadChatList();
     
-    // রিয়েলটাইম স্ট্যাটাস লিসেনার (Green Dot)
+    // রিয়েলটাইম স্ট্যাটাস লিসেনার (Green Dot এর জন্য)
     setupUserStatusListener();
 
-    // ইভেন্ট লিসেনার সেটআপ
+    // সব ইভেন্ট লিসেনার সেটআপ
     setupEventListeners();
     
-    // --- সার্চ বাটন লজিক (Floating) ---
+    // --- সার্চ বাটন লজিক (Floating Search Bar) ---
     document.getElementById('openSearchBtn').addEventListener('click', () => {
         document.getElementById('floatingSearchBar').style.display = 'flex';
         document.getElementById('chatSearchInput').focus();
@@ -76,22 +80,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ==========================
 async function loadMyProfile() {
     try {
-        const { data } = await supabaseClient.from('users').select('photo_url').eq('id', currentUser.id).single();
+        const { data } = await supabaseClient
+            .from('users')
+            .select('photo_url')
+            .eq('id', currentUser.id)
+            .single();
+            
         const el = document.getElementById('myHeaderAvatar');
         if (el) {
-            el.innerHTML = data?.photo_url ? `<img src="${data.photo_url}">` : '<img src="./images/default-avatar.png">';
+            if (data?.photo_url) {
+                el.innerHTML = `<img src="${data.photo_url}" alt="Profile">`;
+            } else {
+                el.innerHTML = '<img src="./images/default-avatar.png" alt="Profile">';
+            }
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Profile load error:", e);
+    }
 }
 
 async function updateMyLastSeen() {
     if (!currentUser) return;
     try {
-        await supabaseClient.from('users').update({ last_seen: new Date() }).eq('id', currentUser.id);
-    } catch (e) {}
+        await supabaseClient
+            .from('users')
+            .update({ last_seen: new Date() })
+            .eq('id', currentUser.id);
+    } catch (e) {
+        // Silent fail
+    }
 }
 
-// সময় ঠিক করা (Fix for "Just now")
+// সময় ফরম্যাটিং (Time Fix: m, h, d)
 function timeAgoShort(dateString) {
     if (!dateString) return '';
     const now = new Date();
@@ -113,7 +133,7 @@ function timeAgoShort(dateString) {
     return `${weeks}w`;
 }
 
-// রিয়েলটাইম অনলাইন স্ট্যাটাস লিসেনার (Green Dot Fix)
+// রিয়েলটাইম অনলাইন স্ট্যাটাস লিসেনার (Green Dot Logic)
 function setupUserStatusListener() {
     supabaseClient.channel('public-users-status')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
@@ -141,7 +161,7 @@ function setupUserStatusListener() {
     .subscribe();
 }
 
-// চ্যাট ফিল্টার লজিক (Search Function)
+// চ্যাট ফিল্টার লজিক (Search Functionality)
 function filterChatList(term) {
     const rows = document.querySelectorAll('.chat-item-row');
     rows.forEach(row => {
@@ -155,23 +175,28 @@ function filterChatList(term) {
 }
 
 // ==========================
-// ৩. হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট
+// ৩. হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (Stories Bar)
 // ==========================
 async function loadActiveUsersHorizontal() {
     const container = document.getElementById('activeUsersBar');
     if(!container) return;
 
+    // লোডার দেখানো (CSS এ display:none থাকলে JS দিয়ে অন করছি)
+    const loader = container.querySelector('.loader-horizontal');
+    if(loader) loader.style.display = 'block';
+
     try {
+        // লাস্ট সিন অনুযায়ী ইউজারদের আনা
         const { data: users, error } = await supabaseClient
             .from('users')
             .select('id, display_name, photo_url, last_seen')
             .neq('id', currentUser.id)
-            .order('last_seen', { ascending: false }) // রিসেন্টলি অ্যাক্টিভ আগে
+            .order('last_seen', { ascending: false })
             .limit(15);
 
         if (error) throw error;
 
-        // ডিফল্ট "Your Note" বাটন
+        // লোডার সরিয়ে কনটেন্ট বসানো
         container.innerHTML = `
             <div class="story-avatar-item">
                 <div class="story-img-wrapper" style="border:none; box-shadow:none;">
@@ -186,6 +211,7 @@ async function loadActiveUsersHorizontal() {
         if (users && users.length > 0) {
             users.forEach(u => {
                 const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 3 * 60 * 1000);
+                // নামের প্রথম অংশ নেওয়া
                 const name = u.display_name ? u.display_name.split(' ')[0] : 'User';
                 
                 container.innerHTML += `
@@ -204,7 +230,7 @@ async function loadActiveUsersHorizontal() {
 }
 
 // ==========================
-// ৪. ভার্টিকাল চ্যাট লিস্ট
+// ৪. ভার্টিকাল চ্যাট লিস্ট (Inbox)
 // ==========================
 async function loadChatList() {
     const container = document.getElementById('chatListContainer');
@@ -216,11 +242,14 @@ async function loadChatList() {
         
         container.innerHTML = '';
         if (error || !partners || partners.length === 0) {
-            container.innerHTML = `<div style="text-align:center;padding:50px;color:#999;"><h3>No messages yet</h3><p>Start chatting with someone!</p></div>`;
+            container.innerHTML = `<div style="text-align:center;padding:50px;color:#999;">
+                <i class="fas fa-comment-dots" style="font-size:30px;margin-bottom:10px;"></i>
+                <h3>No messages yet</h3>
+                <p>Start chatting with someone!</p>
+            </div>`;
             return;
         }
 
-        // প্রত্যেক পার্টনারের ডিটেইলস লোড করা
         for (const chat of partners) {
             const { data: user } = await supabaseClient.from('users').select('*').eq('id', chat.partner_id).single();
             if (!user) continue;
@@ -232,7 +261,6 @@ async function loadChatList() {
             let preview = chat.last_message_content || 'Attachment';
             if (chat.last_message_content === '👍') preview = 'Like 👍';
 
-            // HTML তৈরি
             const html = `
                 <div class="chat-item-row" onclick="openChat('${chat.partner_id}')" data-user-id="${chat.partner_id}">
                     <div class="chat-avatar">
@@ -240,7 +268,7 @@ async function loadChatList() {
                         <div class="online-status-dot" style="display:${isOnline ? 'block' : 'none'}"></div>
                     </div>
                     <div class="chat-info">
-                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700' : ''}">${user.display_name}</h4>
+                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${user.display_name}</h4>
                         <div class="chat-preview">
                             <span class="msg-text" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${preview}</span>
                             <span class="msg-dot">· ${timeStr}</span>
@@ -267,14 +295,17 @@ async function openChat(partnerId) {
     document.getElementById('messageContainer').innerHTML = '<div style="display:flex;justify-content:center;height:100%;align-items:center;"><div class="loader"></div></div>';
 
     // হেডার আপডেট
-    const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
-    if (user) {
-        document.getElementById('chatHeaderName').innerText = user.display_name;
-        document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
-        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
-        document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
-        document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
-    }
+    try {
+        const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
+        if (user) {
+            document.getElementById('chatHeaderName').innerText = user.display_name;
+            document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
+            
+            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
+            document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
+            document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
+        }
+    } catch(e) {}
 
     // মেসেজ লোড
     loadMessages(partnerId);
@@ -307,12 +338,13 @@ async function loadMessages(partnerId) {
     
     scrollToBottom(false);
     
-    // Mark as read
+    // মেসেজ সিন (Read) করা
     await supabaseClient.from('messages').update({ is_read: true }).match({ sender_id: partnerId, receiver_id: currentUser.id, is_read: false });
 }
 
 // মেসেজ রেন্ডারিং
 function appendMessageToUI(msg) {
+    // ডিলিট করা মেসেজ ফিল্টার
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
     const isMe = msg.sender_id === currentUser.id;
@@ -358,6 +390,7 @@ function appendMessageToUI(msg) {
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
+    // বাবলের ব্যাকগ্রাউন্ড মুছে ফেলার লজিক
     const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url)) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
@@ -373,7 +406,7 @@ function appendMessageToUI(msg) {
             </div>
         </div>`;
     
-    // টাইপিং বাবল নিচে রাখার লজিক
+    // টাইপিং বাবল নিচে রাখা
     const typingBubble = document.getElementById('typingIndicatorBubble');
     if (typingBubble && typingBubble.parentNode === container) {
         container.insertBefore(parseHTML(html), typingBubble);
@@ -388,10 +421,20 @@ function scrollToBottom(smooth) {
     c.scrollTo({ top: c.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
 }
 
+// সাউন্ড প্লে করা
+function playMessageSound() {
+    const sound = document.getElementById('notificationSound');
+    if (sound) {
+        sound.play().catch(e => console.log("Sound play blocked:", e));
+    }
+    if (navigator.vibrate) navigator.vibrate(200);
+}
+
 // ==========================
 // ৬. ইনপুট ও ইভেন্ট হ্যান্ডলার
 // ==========================
 function setupEventListeners() {
+    // ব্যাক বাটন
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
@@ -400,6 +443,7 @@ function setupEventListeners() {
         loadChatList();
     });
 
+    // ইনপুট টাইপিং
     const input = document.getElementById('messageInput');
     input.addEventListener('input', () => {
         document.querySelector('#sendMessageBtn i').className = input.value.trim() ? 'fas fa-paper-plane' : 'fas fa-thumbs-up';
@@ -409,7 +453,7 @@ function setupEventListeners() {
     document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
     input.addEventListener('keyup', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // লং প্রেস
+    // লং প্রেস হ্যান্ডলার (ডিলিট/রিপ্লাই)
     window.handleMessagePressStart = (el, id, isMe, text) => {
         selectedMessageId = id; selectedMessageText = text;
         pressTimer = setTimeout(() => {
@@ -421,7 +465,7 @@ function setupEventListeners() {
 
     document.getElementById('cancelDeleteBtn').addEventListener('click', () => document.getElementById('deleteOptionsModal').style.display = 'none');
     
-    // রিপ্লাই
+    // রিপ্লাই বাটন
     document.getElementById('replyOptionBtn').addEventListener('click', () => {
         replyToId = selectedMessageId;
         document.getElementById('replyPreviewBar').style.display = 'flex';
@@ -435,7 +479,7 @@ function setupEventListeners() {
         document.getElementById('replyPreviewBar').style.display = 'none';
     });
 
-    // ডিলিট
+    // ডিলিট অ্যাকশন
     document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
     document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
 
@@ -451,7 +495,7 @@ function setupEventListeners() {
 }
 
 // ==========================
-// ৭. মেসেজ সেন্ডিং (ইমেজ ও টেক্সট)
+// ৭. মেসেজ সেন্ডিং লজিক
 // ==========================
 async function sendMessage() {
     if (isUploading) return;
@@ -459,7 +503,6 @@ async function sendMessage() {
     const text = input.value.trim();
 
     if (!text && !selectedImageFile) {
-        // Send Like
         await supabaseClient.from('messages').insert([{ sender_id: currentUser.id, receiver_id: activeChatUserId, content: '👍' }]);
         return;
     }
@@ -473,11 +516,7 @@ async function sendMessage() {
     }
 
     await supabaseClient.from('messages').insert([{
-        sender_id: currentUser.id,
-        receiver_id: activeChatUserId,
-        content: text || null,
-        image_url: imgUrl,
-        reply_to_id: replyToId
+        sender_id: currentUser.id, receiver_id: activeChatUserId, content: text || null, image_url: imgUrl, reply_to_id: replyToId
     }]);
 
     input.value = '';
@@ -508,7 +547,7 @@ function closeImagePreview() {
 }
 
 // ==========================
-// ৮. ভয়েস রেকর্ডিং (ফিক্সড)
+// ৮. ভয়েস রেকর্ডিং (FIXED: Direct Blob Upload)
 // ==========================
 async function startRecording() {
     try {
@@ -544,13 +583,13 @@ function closeRecordingUI() {
     isRecording = false;
 }
 
-// ** FIX: Direct Blob Upload for Audio **
+// ** FIX: Blob আপলোড লজিক আপডেট করা হয়েছে **
 async function sendRecording() {
     if (!mediaRecorder) return;
     
     const sendBtn = document.querySelector('#sendRecordingBtn i');
     const originalIcon = sendBtn.className;
-    sendBtn.className = 'fas fa-spinner fa-spin'; // লোডিং আইকন
+    sendBtn.className = 'fas fa-spinner fa-spin'; // লোডিং
 
     mediaRecorder.onstop = async () => {
         try {
@@ -564,14 +603,12 @@ async function sendRecording() {
 
             if (error) throw error;
 
-            // URL সংগ্রহ
             const { data: urlData } = supabaseClient.storage
                 .from('chat_audio')
                 .getPublicUrl(fileName);
 
             const audioUrl = urlData.publicUrl;
 
-            // ডাটাবেজে ইনসার্ট
             if (audioUrl) {
                 const empty = document.querySelector('.empty-chat-placeholder');
                 if(empty) empty.remove();
@@ -604,7 +641,6 @@ async function sendRecording() {
 async function uploadFile(file, bucket) {
     try {
         let uploadFile = file;
-        // ইমেজ হলে কম্প্রেস করব
         if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
             uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
         }
@@ -623,6 +659,7 @@ async function uploadFile(file, bucket) {
 // ==========================
 function setupRealtimeChat(partnerId) {
     if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
+    
     realtimeSubscription = supabaseClient.channel('chat-room')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
             const { eventType, new: newMsg, old: oldMsg } = payload;
@@ -635,7 +672,9 @@ function setupRealtimeChat(partnerId) {
                     appendMessageToUI(data || newMsg);
                     scrollToBottom(true);
                     
-                    if(newMsg.sender_id === partnerId) {
+                    // --- SOUND & VIBRATION ---
+                    if (newMsg.sender_id === partnerId) {
+                        playMessageSound();
                         await supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
                     }
                 }
@@ -666,6 +705,14 @@ function setupPresence(partnerId) {
             }
         })
         .subscribe();
+}
+
+function playMessageSound() {
+    const sound = document.getElementById('notificationSound');
+    if (sound) {
+        sound.play().catch(e => console.log("Sound error:", e));
+    }
+    if (navigator.vibrate) navigator.vibrate(200);
 }
 
 async function deleteMessageForMe() {
