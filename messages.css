@@ -402,3 +402,62 @@ emoji-picker { width: 320px; height: 350px; --border-radius: 10px; max-width: 10
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes popIn { from { transform: translateX(-50%) scale(0.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+
+/* --- Message Reactions Styles --- */
+
+/* ইমোজি সিলেকশন বার (মডালের ভেতরে) */
+.reaction-bar {
+    display: flex;
+    justify-content: space-around;
+    background: #fff;
+    padding: 10px;
+    border-radius: 30px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
+}
+
+.reaction-emoji {
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    user-select: none;
+}
+
+.reaction-emoji:hover {
+    transform: scale(1.3);
+}
+
+/* মেসেজ বাবলের গায়ে রিয়্যাকশন */
+.message-content {
+    position: relative; /* রিয়্যাকশন পজিশন করার জন্য */
+    margin-bottom: 15px !important; /* রিয়্যাকশনের জন্য নিচে একটু জায়গা */
+}
+
+.msg-reaction-display {
+    position: absolute;
+    bottom: -12px;
+    right: 0;
+    background: #fff;
+    border-radius: 10px;
+    padding: 2px 4px;
+    font-size: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    border: 1px solid #f0f2f5;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.message-row.received .msg-reaction-display {
+    right: auto;
+    left: 0;
+}
+
+/* নিজের দেওয়া রিয়্যাকশন হাইলাইট */
+.msg-reaction-display.active {
+    border-color: var(--messenger-blue);
+    background: #e7f3ff;
+}
