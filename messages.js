@@ -80,12 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ==========================
 async function loadMyProfile() {
     try {
-        const { data } = await supabaseClient
-            .from('users')
-            .select('photo_url')
-            .eq('id', currentUser.id)
-            .single();
-            
+        const { data } = await supabaseClient.from('users').select('photo_url').eq('id', currentUser.id).single();
         const el = document.getElementById('myHeaderAvatar');
         if (el) {
             if (data?.photo_url) {
@@ -138,8 +133,8 @@ function setupUserStatusListener() {
     supabaseClient.channel('public-users-status')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
         const user = payload.new;
-        // ৩ মিনিটের মধ্যে অ্যাক্টিভ থাকলে অনলাইন ধরব
-        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
+        // ৫ মিনিটের মধ্যে অ্যাক্টিভ থাকলে অনলাইন ধরব
+        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
         
         // ১. চ্যাট লিস্টে ডট আপডেট
         const listDot = document.querySelector(`.chat-item-row[data-user-id="${user.id}"] .online-status-dot`);
@@ -181,7 +176,7 @@ async function loadActiveUsersHorizontal() {
     const container = document.getElementById('activeUsersBar');
     if(!container) return;
 
-    // লোডার দেখানো (CSS এ display:none থাকলে JS দিয়ে অন করছি)
+    // লোডার দেখানো
     const loader = container.querySelector('.loader-horizontal');
     if(loader) loader.style.display = 'block';
 
@@ -210,7 +205,7 @@ async function loadActiveUsersHorizontal() {
 
         if (users && users.length > 0) {
             users.forEach(u => {
-                const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 3 * 60 * 1000);
+                const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 5 * 60 * 1000);
                 // নামের প্রথম অংশ নেওয়া
                 const name = u.display_name ? u.display_name.split(' ')[0] : 'User';
                 
@@ -254,7 +249,7 @@ async function loadChatList() {
             const { data: user } = await supabaseClient.from('users').select('*').eq('id', chat.partner_id).single();
             if (!user) continue;
 
-            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
+            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
             const timeStr = timeAgoShort(chat.last_message_time);
             const isUnread = chat.unread_count > 0;
             
@@ -301,7 +296,7 @@ async function openChat(partnerId) {
             document.getElementById('chatHeaderName').innerText = user.display_name;
             document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
             
-            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
+            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
             document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
             document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
         }
@@ -583,32 +578,35 @@ function closeRecordingUI() {
     isRecording = false;
 }
 
-// ** FIX: Blob আপলোড লজিক আপডেট করা হয়েছে **
+// ** FIX: Direct Blob Upload for Audio **
 async function sendRecording() {
     if (!mediaRecorder) return;
     
     const sendBtn = document.querySelector('#sendRecordingBtn i');
     const originalIcon = sendBtn.className;
-    sendBtn.className = 'fas fa-spinner fa-spin'; // লোডিং
+    sendBtn.className = 'fas fa-spinner fa-spin'; // লোডিং আইকন
 
     mediaRecorder.onstop = async () => {
         try {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            // ফাইলের নাম ইউনিক করা হলো
             const fileName = `${currentUser.id}/${Date.now()}.webm`;
             
-            // সরাসরি স্টোরেজে আপলোড
+            // সরাসরি স্টোরেজে আপলোড (File Object হিসেবে নয়, Blob হিসেবে)
             const { data, error } = await supabaseClient.storage
                 .from('chat_audio')
                 .upload(fileName, audioBlob, { cacheControl: '3600', upsert: false });
 
             if (error) throw error;
 
+            // URL সংগ্রহ
             const { data: urlData } = supabaseClient.storage
                 .from('chat_audio')
                 .getPublicUrl(fileName);
 
             const audioUrl = urlData.publicUrl;
 
+            // ডাটাবেজে ইনসার্ট
             if (audioUrl) {
                 const empty = document.querySelector('.empty-chat-placeholder');
                 if(empty) empty.remove();
@@ -644,11 +642,9 @@ async function uploadFile(file, bucket) {
         if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
             uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
         }
-        
         const fileName = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
         const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, uploadFile);
         if (error) throw error;
-        
         const { data: url } = supabaseClient.storage.from(bucket).getPublicUrl(fileName);
         return url.publicUrl;
     } catch (e) { return null; }
@@ -672,7 +668,7 @@ function setupRealtimeChat(partnerId) {
                     appendMessageToUI(data || newMsg);
                     scrollToBottom(true);
                     
-                    // --- SOUND & VIBRATION ---
+                    // --- SOUND & VIBRATION ALERT ---
                     if (newMsg.sender_id === partnerId) {
                         playMessageSound();
                         await supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
@@ -705,14 +701,6 @@ function setupPresence(partnerId) {
             }
         })
         .subscribe();
-}
-
-function playMessageSound() {
-    const sound = document.getElementById('notificationSound');
-    if (sound) {
-        sound.play().catch(e => console.log("Sound error:", e));
-    }
-    if (navigator.vibrate) navigator.vibrate(200);
 }
 
 async function deleteMessageForMe() {
