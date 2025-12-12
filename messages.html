@@ -5,53 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Messages - iPray</title>
     
-    <!-- মোবাইল অ্যাপ থিম কালার -->
+    <!-- মোবাইল অ্যাপ কালার থিম -->
     <meta name="theme-color" content="#ffffff">
     
-    <!-- ফন্ট অসাম আইকন -->
+    <!-- আইকন ও স্টাইল -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- স্টাইলশীট -->
+    <!-- গ্লোবাল স্টাইল -->
     <link rel="stylesheet" href="style.css"> 
+    <!-- চ্যাট স্পেসিফিক স্টাইল -->
     <link rel="stylesheet" href="messages.css"> 
 </head>
 <body id="chat-page">
 
     <!-- ===========================
-       ১. ইনবক্স ভিউ (চ্যাট লিস্ট)
+       ১. ইনবক্স ভিউ (Inbox View) - Messenger Style Updated
        =========================== -->
     <div id="inbox-view" class="view-container">
-        <!-- মেইন হেডার -->
-        <header class="msg-header">
-            <div class="header-left">
-                <a href="/index.html" class="my-profile-link">
-                    <!-- নিজের প্রোফাইল ছবি -->
-                    <div id="myHeaderAvatar" class="avatar-small"></div>
-                </a>
-                <h1 class="page-title">Chats</h1>
-            </div>
-            <div class="header-right">
-                <button class="icon-circle-btn"><i class="fas fa-camera"></i></button>
-                <button class="icon-circle-btn" id="newChatBtn"><i class="fas fa-edit"></i></button>
-            </div>
-        </header>
         
-        <!-- সার্চ বার -->
-        <div class="msg-search-container">
-            <div class="msg-search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="chatSearchInput" placeholder="Search">
-            </div>
+        <!-- ফিক্সড টপ এরিয়া (হেডার + সার্চ বক্স) -->
+        <div class="fixed-top-area">
+            <header class="msg-header-modern">
+                <div class="header-top-row">
+                    <div class="header-left">
+                        <a href="/index.html" class="my-profile-link">
+                            <div id="myHeaderAvatar" class="avatar-small"></div>
+                        </a>
+                        <h1 class="page-title">Chats</h1>
+                    </div>
+                    <div class="header-right">
+                        <button class="icon-circle-btn"><i class="fas fa-camera"></i></button>
+                        <button class="icon-circle-btn" id="newChatBtn"><i class="fas fa-edit"></i></button>
+                    </div>
+                </div>
+                
+                <!-- সার্চ বক্স এখন হেডারের অংশ -->
+                <div class="msg-search-box-modern">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="chatSearchInput" placeholder="Search">
+                </div>
+            </header>
         </div>
 
-        <!-- চ্যাট লিস্ট কন্টেইনার -->
-        <div id="chatListContainer" class="chat-list-area">
-            <div class="loader-container" style="padding-top: 50px;">
-                <div class="loader"></div>
+        <!-- স্ক্রলেবল মেইন এরিয়া (হেডারের নিচ থেকে শুরু হবে) -->
+        <div class="scrollable-content-area">
+            
+            <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (New Feature) -->
+            <div id="activeUsersBar" class="active-users-bar">
+                <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে ইউজার আসবে -->
+                <div class="loader-horizontal" style="display: none;"></div> 
+            </div>
+
+            <!-- ভার্টিকাল চ্যাট লিস্ট -->
+            <div id="chatListContainer" class="chat-list-area">
+                <div class="loader-container" style="padding-top: 50px;">
+                    <div class="loader"></div>
+                </div>
             </div>
         </div>
         
-        <!-- বটম নেভিগেশন -->
+        <!-- বটম নেভিগেশন (ফিক্সড) -->
         <nav class="bottom-nav">
             <a href="/index.html" class="nav-item"><i class="fas fa-home"></i></a>
             <div class="nav-item active"><i class="fas fa-comment"></i></div>
@@ -60,11 +73,11 @@
     </div>
 
     <!-- ===========================
-       ২. কনভারসেশন ভিউ (চ্যাট রুম)
+       ২. কনভারসেশন ভিউ (Chat Room) - আগের মতোই আছে
        =========================== -->
     <div id="conversation-view" class="view-container" style="display: none;">
         
-        <!-- চ্যাট রুম হেডার -->
+        <!-- চ্যাট হেডার -->
         <header class="chat-room-header">
             <button id="backToInboxBtn" class="back-btn-chat"><i class="fas fa-arrow-left"></i></button>
             
@@ -80,27 +93,25 @@
             </div>
             
             <div class="chat-actions">
-                <!-- ভিডিও এবং অডিও কল বাটন -->
-                <button class="action-icon" id="audioCallBtn"><i class="fas fa-phone-alt"></i></button>
-                <button class="action-icon" id="videoCallBtn"><i class="fas fa-video"></i></button>
-                
-                <!-- মোর অপশনস মেনু -->
+                <button class="action-icon"><i class="fas fa-phone-alt"></i></button>
+                <button class="action-icon"><i class="fas fa-video"></i></button>
+                <!-- More Options Menu Trigger -->
                 <button class="action-icon info-icon" id="chatOptionsBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
 
-            <!-- ড্রপডাউন মেনু (ব্লক/রিপোর্ট) -->
+            <!-- Chat Options Dropdown (Block/Report) -->
             <div id="chatOptionsDropdown" class="dropdown-menu-chat" style="display: none;">
                 <button id="blockUserBtn"><i class="fas fa-ban"></i> Block User</button>
                 <button id="reportUserBtn"><i class="fas fa-flag"></i> Report</button>
             </div>
         </header>
 
-        <!-- মেসেজ বডি (চ্যাট এরিয়া) -->
+        <!-- মেসেজ বডি -->
         <main class="message-body" id="messageContainer">
-            <!-- ডাইনামিক মেসেজ লোড হবে -->
+            <!-- মেসেজগুলো এখানে আসবে -->
         </main>
 
-        <!-- টাইপিং ইন্ডিকেটর বাবল -->
+        <!-- Typing Indicator Bubble -->
         <div id="typingIndicatorBubble" class="message-row received typing-bubble" style="display: none;">
             <img id="typingAvatar" src="./images/default-avatar.png" class="msg-avatar">
             <div class="bubble">
@@ -135,11 +146,12 @@
             <emoji-picker></emoji-picker>
         </div>
 
-        <!-- ডিলিট এবং রিপ্লাই অপশন মডাল -->
+        <!-- মেসেজ ডিলিট মডাল -->
         <div id="deleteOptionsModal" class="modal-overlay" style="display: none;">
             <div class="modal-box">
                 <h3 style="margin-bottom: 15px; font-size: 16px; color: #333;">Message Options</h3>
                 <div class="modal-actions">
+                    <!-- Reply Option added to modal for Long Press -->
                     <button id="replyOptionBtn" class="modal-btn">Reply</button>
                     <button id="deleteForMeBtn" class="modal-btn">Delete for me</button>
                     <button id="deleteForEveryoneBtn" class="modal-btn danger" style="display: none;">Delete for everyone</button>
@@ -151,7 +163,7 @@
         <!-- চ্যাট ফুটার -->
         <footer class="chat-footer-area">
             
-            <!-- রিপ্লাই প্রিভিউ বার -->
+            <!-- Reply Preview Bar (ইনপুট বক্সের ঠিক উপরে) -->
             <div id="replyPreviewBar" class="reply-preview-bar" style="display: none;">
                 <div class="reply-info">
                     <span class="reply-to-name">Replying to...</span>
@@ -163,25 +175,17 @@
             <div class="footer-input-row">
                 <div class="footer-actions-left">
                     <button class="footer-btn"><i class="fas fa-plus-circle" style="color: #0084ff;"></i></button>
-                    
-                    <!-- গ্যালারি বাটন -->
                     <button class="footer-btn" id="galleryTriggerBtn"><i class="fas fa-image"></i></button>
-                    
-                    <!-- ভয়েস বাটন -->
                     <button class="footer-btn" id="micTriggerBtn"><i class="fas fa-microphone"></i></button>
-                    
-                    <!-- হিডেন ইনপুট -->
                     <input type="file" id="chatImageInput" accept="image/*" hidden>
                 </div>
 
                 <div class="input-pill">
                     <input type="text" id="messageInput" placeholder="Message..." autocomplete="off">
-                    <!-- ইমোজি বাটন -->
                     <button class="emoji-icon" id="emojiTriggerBtn"><i class="fas fa-smile"></i></button>
                 </div>
 
                 <div class="footer-action-right">
-                    <!-- সেন্ড বাটন -->
                     <button id="sendMessageBtn" class="like-send-btn">
                         <i class="fas fa-thumbs-up"></i>
                     </button>
@@ -190,41 +194,19 @@
         </footer>
     </div>
 
-    <!-- ফুল স্ক্রিন ইমেজ ভিউয়ার -->
+    <!-- ইমেজ ভিউয়ার মডাল -->
     <div id="fullScreenImageModal" class="fs-image-modal">
         <span class="fs-close-btn">&times;</span>
         <img class="fs-modal-content" id="fsModalImg">
         <a id="downloadImgBtn" href="#" download class="fs-download-btn"><i class="fas fa-download"></i></a>
     </div>
 
-    <!-- কল UI কন্টেইনার -->
-    <div id="callContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: #000;">
-        <!-- ZegoCloud কল UI এখানে লোড হবে -->
-    </div>
-
-    <!-- ===========================
-       স্ক্রিপ্ট লাইব্রেরি (সঠিক অর্ডার) - FIXED VERSION
-       =========================== -->
-    
-    <!-- 1. ZegoCloud Core Library -->
-    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
-    
-    <!-- 2. ZIM Plugin (IMPORTANT: এই প্লাগিন ছাড়া কল কাজ করবে না) -->
-    <script src="https://unpkg.com/@zegocloud/zim-sdk-web@latest/dist/index.js"></script>
-    
-    <!-- 3. Supabase JS -->
+    <!-- লাইব্রেরি -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- 4. Image Compression -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
-    
-    <!-- 5. Emoji Picker -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1"></script>
-    
-    <!-- 6. Main Logic -->
+
+    <!-- মেইন লজিক -->
     <script src="messages.js"></script>
-    
-    <!-- 7. Permission Check -->
-    <script src="permission-check.js"></script>
 </body>
 </html>

@@ -1,25 +1,21 @@
 /* --- START OF FILE messages.js --- */
 
-// ================================================================
-// ১. কনফিগারেশন এবং ক্রেডেনশিয়াল সেটআপ
-// ================================================================
+// ==========================
+// কনফিগারেশন এবং সেটআপ
+// ==========================
 const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ZEGO CLOUD কনফিগারেশন
-const ZEGO_APP_ID = 361002182;
-const ZEGO_SERVER_SECRET = '723224a492e399607fc92fe644d60144';
-
-// ================================================================
-// ২. গ্লোবাল ভ্যারিয়েবল ডিক্লারেশন
-// ================================================================
-let currentUser = null;              // বর্তমান ইউজার
-let activeChatUserId = null;         // যার সাথে চ্যাট চলছে
-let realtimeSubscription = null;     // মেসেজ লিসেনার
-let presenceChannel = null;          // টাইপিং লিসেনার
-let selectedImageFile = null;        // সিলেক্ট করা ছবি
-let isUploading = false;             // আপলোড স্ট্যাটাস
+// ==========================
+// গ্লোবাল ভ্যারিয়েবল
+// ==========================
+let currentUser = null;
+let activeChatUserId = null;
+let realtimeSubscription = null;
+let presenceChannel = null;
+let selectedImageFile = null;
+let isUploading = false;
 
 // ভয়েস রেকর্ডিং ভ্যারিয়েবল
 let mediaRecorder = null;
@@ -27,226 +23,59 @@ let audioChunks = [];
 let recordingInterval = null;
 let isRecording = false;
 
-// লং প্রেস, ডিলিট এবং রিপ্লাই ভ্যারিয়েবল
-let pressTimer;                      
-let selectedMessageId = null;        
-let selectedMessageText = null;      
-let replyToId = null;                
-let typingTimeout = null;            
+// লং প্রেস এবং রিপ্লাই ভ্যারিয়েবল
+let pressTimer;
+let selectedMessageId = null;
+let selectedMessageText = null; 
+let replyToId = null;
+let typingTimeout = null;
 
-// Zego Cloud ইন্সট্যান্স
-let zp = null; 
-
-// ================================================================
-// ৩. মিডিয়া পারমিশন চেক ফাংশন
-// ================================================================
-async function checkMediaPermissions() {
-    try {
-        if (navigator.permissions && navigator.permissions.query) {
-            const micPermission = await navigator.permissions.query({ name: 'microphone' });
-            const cameraPermission = await navigator.permissions.query({ name: 'camera' });
-            
-            if (micPermission.state === 'denied' || cameraPermission.state === 'denied') {
-                console.warn("Media permissions denied. Call may not work properly.");
-                return false;
-            }
-            return true;
-        }
-        return true;
-    } catch (err) {
-        console.warn("Could not check media permissions:", err);
-        return false;
-    }
-}
-
-// ================================================================
-// ৪. অ্যাপ ইনিশিয়ালাইজেশন (লোডিং)
-// ================================================================
+// ==========================
+// ১. অ্যাপ লোডিং এবং অথেন্টিকেশন
+// ==========================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOM Loaded - Initializing app...");
+    // সেশন চেক করা
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
     
-    // সেশন চেক করা হচ্ছে
-    const { data: sessionData, error } = await supabaseClient.auth.getSession();
-    
-    if (error || !sessionData.session) {
-        window.location.href = '/index.html';
+    if (error || !session) {
+        window.location.href = '/index.html'; // লগইন না থাকলে ফেরত
         return;
     }
     
-    currentUser = sessionData.session.user;
-    console.log("Current user:", currentUser.id);
+    currentUser = session.user;
     
-    // মিডিয়া পারমিশন চেক
-    const hasPermissions = await checkMediaPermissions();
-    if (!hasPermissions) {
-        console.warn("Media permissions not granted. Calling features may not work.");
-    }
-    
-    // ZegoCloud কলিং সিস্টেম চালু করা
-    // [FIX] এখানে একটু অপেক্ষা করা হচ্ছে যাতে স্ক্রিপ্ট লোড হতে পারে
-    setTimeout(async () => {
-        try {
-            await initZegoCloud();
-            console.log("ZegoCloud initialized successfully");
-        } catch (err) {
-            console.error("Failed to initialize ZegoCloud:", err);
-            // আমরা ইউজারকে অ্যালার্ট দিচ্ছি না, শুধু কনসোলে লগ করছি যাতে UX নষ্ট না হয়
-        }
-    }, 1500); // ১.৫ সেকেন্ড ডিলে
-
-    // হেডার প্রোফাইল লোড করা
+    // নিজের প্রোফাইল লোড করা
     loadMyProfile();
     
-    // নিজের অনলাইন স্ট্যাটাস আপডেট করা
+    // লাস্ট সিন আপডেট করা (প্রতি মিনিটে)
     updateMyLastSeen();
     setInterval(updateMyLastSeen, 60000); 
 
-    // অন্য পেজ থেকে চ্যাট শুরু করতে চাইলে সেই ইউজার আইডি চেক করা
+    // নতুন ফিচার: হরাইজন্টাল অ্যাক্টিভ ইউজার লোড করা
+    loadActiveUsersHorizontal();
+
+    // অন্য পেজ থেকে চ্যাট শুরু করতে চাইলে
     const startChatUser = localStorage.getItem('startChatWith');
-    
     if (startChatUser) {
         localStorage.removeItem('startChatWith');
         openChat(startChatUser);
     } else {
-        // ডিফল্টভাবে চ্যাট লিস্ট লোড করা
         loadChatList();
     }
     
-    // সকল বাটন এবং ইভেন্ট লিসেনার সেটআপ করা
+    // ইভেন্ট লিসেনার চালু করা
     setupEventListeners();
 });
 
-// ================================================================
-// ৫. ZegoCloud কলিং সেটআপ ফাংশন - FIXED VERSION
-// ================================================================
-async function initZegoCloud() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            if (!currentUser) {
-                reject("No current user found");
-                return;
-            }
-
-            // [FIX] চেক করা হচ্ছে লাইব্রেরি লোড হয়েছে কিনা
-            if (typeof ZegoUIKitPrebuilt === 'undefined') {
-                console.warn("ZegoUIKitPrebuilt not found. Waiting...");
-                reject("Zego library not loaded yet.");
-                return;
-            }
-
-            const userID = currentUser.id.toString();
-            const userName = currentUser.user_metadata?.display_name || 
-                            currentUser.email?.split('@')[0] || 
-                            `User_${userID.substring(0, 5)}`;
-
-            console.log("Initializing ZegoCloud for user:", userName);
-            
-            // টোকেন জেনারেট করা
-            const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-                ZEGO_APP_ID, 
-                ZEGO_SERVER_SECRET, 
-                "random_room_id_" + userID, // ইউনিক রুম আইডি প্রয়োজন নেই ইনিশিয়ালাইজেশনের জন্য
-                userID, 
-                userName
-            );
-
-            // Zego Instance তৈরি করা
-            zp = ZegoUIKitPrebuilt.create(kitToken);
-            
-            // ZIM প্লাগিন সেটআপ (কল ইনভাইটেশনের জন্য জরুরি)
-            if (typeof ZIM !== 'undefined') {
-                // ZIM.create একাধিকবার কল করলে এরর দিতে পারে, তাই চেক করা হয়
-                try {
-                     const zim = ZIM.create({ appID: ZEGO_APP_ID });
-                     zp.addPlugins({ ZIM: zim });
-                     console.log("ZIM plugin added successfully");
-                } catch(zErr) {
-                    console.warn("ZIM Create Warning:", zErr);
-                }
-            } else {
-                console.warn("ZIM plugin not found. Calling features may not work properly.");
-            }
-
-            // ইনকামিং কল রিসিভ করা
-            zp.setCallInvitationConfig({
-                enableCustomCallInvitationWaitingPage: true,
-                enableIncomingCallRingtone: true,
-                ringtoneConfig: {
-                    incomingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-                    outgoingCallFileName: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-                }
-            });
-
-            console.log("✅ ZegoCloud initialized successfully");
-            resolve(zp);
-
-        } catch (err) {
-            console.error("❌ ZegoCloud Init Error:", err);
-            reject(err);
-        }
-    });
-}
-
-// কল শুরু করার ফাংশন - FIXED
-async function startZegoCall(type) {
-    console.log("Starting call, type:", type);
-    
-    if (!activeChatUserId) {
-        alert("Please select a user to call.");
-        return;
-    }
-
-    // [FIX] যদি zp না থাকে, আবার ইনিশিয়ালাইজ করার চেষ্টা করা
-    if (!zp) {
-        console.log("Zego instance missing, trying to init...");
-        try {
-            await initZegoCloud();
-        } catch (err) {
-            alert("Call system failed to start. Please refresh the page.");
-            return;
-        }
-    }
-    
-    // আবার চেক করা
-    if (!zp) {
-        alert("Call system unavailable.");
-        return;
-    }
-
-    const partnerName = document.getElementById('chatHeaderName').innerText || 'User';
-    
-    console.log("Calling user:", activeChatUserId, "Name:", partnerName);
-
-    try {
-        // কল ইনভাইটেশন পাঠানো
-        const result = await zp.sendCallInvitation({
-            callees: [{ 
-                userID: activeChatUserId.toString(), 
-                userName: partnerName 
-            }],
-            callType: type === 'video' ? 
-                ZegoUIKitPrebuilt.InvitationTypeVideoCall : 
-                ZegoUIKitPrebuilt.InvitationTypeVoiceCall,
-            timeout: 60, 
-        });
-        
-        console.log("Call invitation response:", result);
-        
-        if (result.errorInvitees && result.errorInvitees.length > 0) {
-            alert("User is offline or unavailable.");
-        } 
-    } catch (err) {
-        console.error("Call Error Details:", err);
-        alert("Failed to start call. Check console for details.");
-    }
-}
-
-// ================================================================
-// ৬. প্রোফাইল এবং স্ট্যাটাস ম্যানেজমেন্ট
-// ================================================================
+// নিজের ছবি লোড করা
 async function loadMyProfile() {
     try {
-        const { data } = await supabaseClient.from('users').select('photo_url').eq('id', currentUser.id).single();
+        const { data } = await supabaseClient
+            .from('users')
+            .select('photo_url')
+            .eq('id', currentUser.id)
+            .single();
+            
         const el = document.getElementById('myHeaderAvatar');
         if (el) {
             if (data?.photo_url) {
@@ -256,21 +85,90 @@ async function loadMyProfile() {
             }
         }
     } catch(e) {
-        console.warn("Failed to load profile picture:", e);
+        console.error("Profile load error", e);
     }
 }
 
+// নিজের অনলাইন স্ট্যাটাস আপডেট করা
 async function updateMyLastSeen() {
+    if (!currentUser) return;
     try {
-        await supabaseClient.from('users').update({ last_seen: new Date() }).eq('id', currentUser.id);
-    } catch(e){
-        console.warn("Failed to update last seen:", e);
+        await supabaseClient
+            .from('users')
+            .update({ last_seen: new Date() })
+            .eq('id', currentUser.id);
+    } catch (e) {
+        console.error("Last seen update error", e);
     }
 }
 
-// ================================================================
-// ৭. চ্যাট লিস্ট লোড এবং রেন্ডার (Inbox)
-// ================================================================
+// ==========================
+// ২. [NEW] হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট
+// ==========================
+async function loadActiveUsersHorizontal() {
+    const container = document.getElementById('activeUsersBar');
+    if (!container || !currentUser) return;
+
+    // লোডার দেখানো (CSS এ display:none থাকলে JS দিয়ে অন করছি)
+    const loader = container.querySelector('.loader-horizontal');
+    if(loader) loader.style.display = 'block';
+
+    try {
+        // লাস্ট সিন অনুযায়ী ইউজারদের আনা (সর্বশেষ ১৫ জন)
+        // নিজের আইডি বাদে বাকিদের আনা
+        const { data: users, error } = await supabaseClient
+            .from('users')
+            .select('id, display_name, photo_url, last_seen')
+            .neq('id', currentUser.id) 
+            .order('last_seen', { ascending: false })
+            .limit(15);
+
+        if (error) throw error;
+
+        container.innerHTML = ''; // ক্লিয়ার কন্টেইনার
+
+        // নিজের নোট বা স্ট্যাটাস এড করার বাটন (অপশনাল)
+        const myHtml = `
+            <div class="story-avatar-item">
+                <div class="story-img-wrapper" style="border:none; box-shadow:none;">
+                    <div style="width:100%; height:100%; background:#f0f2f5; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:#050505;">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                </div>
+                <span class="story-name">Your Note</span>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', myHtml);
+
+        if (users && users.length > 0) {
+            users.forEach(user => {
+                // ৫ মিনিটের মধ্যে অনলাইন থাকলে সবুজ বাতি
+                const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+                
+                // শুধুমাত্র নামের প্রথম অংশ দেখানো
+                const firstName = user.display_name ? user.display_name.split(' ')[0] : 'User';
+
+                const html = `
+                    <div class="story-avatar-item" onclick="openChat('${user.id}')">
+                        <div class="story-img-wrapper">
+                            <img src="${user.photo_url || './images/default-avatar.png'}" alt="${firstName}">
+                            ${isOnline ? '<div class="story-online-dot"></div>' : ''}
+                        </div>
+                        <span class="story-name" style="${isOnline ? 'font-weight:600; color:#050505;' : ''}">${firstName}</span>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+    } catch (error) {
+        console.error("Error loading active users:", error);
+    }
+}
+
+// ==========================
+// ৩. চ্যাট লিস্ট লোড করা (ভার্টিকাল)
+// ==========================
 async function loadChatList() {
     const container = document.getElementById('chatListContainer');
     if(!container) return;
@@ -279,14 +177,13 @@ async function loadChatList() {
     container.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
 
     try {
-        // ডাটাবেস থেকে চ্যাট পার্টনারদের লিস্ট আনা (RPC ফাংশন কল)
+        // ডাটাবেস থেকে পার্টনারদের লিস্ট আনা
         const { data: partners, error } = await supabaseClient.rpc('get_chat_partners', { user_id: currentUser.id });
 
         if (error) throw error;
 
-        container.innerHTML = ''; // লোডার পরিষ্কার করা
+        container.innerHTML = ''; // লোডার সরানো
 
-        // যদি কোনো চ্যাট না থাকে
         if (!partners || partners.length === 0) {
             container.innerHTML = `
                 <div style="text-align:center; padding:50px 20px; color:#999;">
@@ -297,9 +194,8 @@ async function loadChatList() {
             return;
         }
 
-        // চ্যাট লিস্ট লুপ চালিয়ে রেন্ডার করা
+        // চ্যাট লিস্ট রেন্ডার করা
         for (const chat of partners) {
-            // ইউজারের নাম, ছবি এবং লাস্ট সিন আনা
             const { data: user } = await supabaseClient
                 .from('users')
                 .select('display_name, photo_url, last_seen')
@@ -308,35 +204,25 @@ async function loadChatList() {
             
             const timeString = timeAgoShort(chat.last_message_time);
             const isUnread = chat.unread_count > 0;
-            let msgPreview = chat.last_message_content;
+            let msgPreview = chat.last_message_content || 'Sent an attachment';
             
-            // মিডিয়া মেসেজের প্রিভিউ টেক্সট
-            if (!msgPreview) {
-                msgPreview = 'Sent an attachment';
-            }
             if (msgPreview === '👍') msgPreview = 'Like 👍';
 
-            // অনলাইন চেক (৫ মিনিটের মধ্যে অ্যাক্টিভিটি থাকলে অনলাইন)
-            const isOnline = user && user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+            // অনলাইন চেক (৫ মিনিটের মধ্যে অ্যাক্টিভ থাকলে)
+            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
 
-            // স্টাইল সেট করা (আনরিড হলে বোল্ড)
-            const nameStyle = isUnread ? 'font-weight: 800; color: black;' : '';
-            const msgStyle = isUnread ? 'font-weight: 700; color: black;' : '';
-
-            const userPhoto = user?.photo_url || './images/default-avatar.png';
-            const userName = user?.display_name || 'Unknown User';
-
+            // HTML তৈরি
             const html = `
                 <div class="chat-item-row" onclick="openChat('${chat.partner_id}')">
                     <div class="chat-avatar">
-                        <img src="${userPhoto}" alt="User" onerror="this.src='./images/default-avatar.png'">
+                        <img src="${user?.photo_url || './images/default-avatar.png'}" alt="User">
                         ${isOnline ? '<div class="online-status-dot"></div>' : ''}
                     </div>
                     <div class="chat-info">
-                        <h4 class="chat-name" style="${nameStyle}">${userName}</h4>
+                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${user?.display_name || 'Unknown'}</h4>
                         <div class="chat-preview">
-                            <span class="msg-text" style="${msgStyle}">
-                                ${msgPreview.substring(0, 25)}${msgPreview.length > 25 ? '...' : ''}
+                            <span class="msg-text" style="${isUnread ? 'font-weight:700;color:black;' : ''}">
+                                ${msgPreview.substring(0, 30)}${msgPreview.length > 30 ? '...' : ''}
                             </span>
                             <span class="msg-dot">· ${timeString}</span>
                         </div>
@@ -348,25 +234,25 @@ async function loadChatList() {
 
     } catch (err) {
         console.error("Chat list error:", err);
-        container.innerHTML = `<p style="text-align:center; color:red;">Error loading chats. Please refresh.</p>`;
+        container.innerHTML = `<p style="text-align:center; color:red;">Error loading chats.</p>`;
     }
 }
 
-// ================================================================
-// ৮. চ্যাট রুম ওপেন এবং কনফিগারেশন
-// ================================================================
+// ==========================
+// ৪. চ্যাট রুম ওপেন করা
+// ==========================
 async function openChat(partnerId) {
     activeChatUserId = partnerId;
     
-    // ভিউ পরিবর্তন করা (ইনবক্স হাইড, চ্যাট রুম শো)
+    // ভিউ পরিবর্তন
     document.getElementById('inbox-view').style.display = 'none';
     document.getElementById('conversation-view').style.display = 'flex';
     
-    // মেসেজ কন্টেইনারে লোডার দেখানো
+    // চ্যাট লোডার
     const msgContainer = document.getElementById('messageContainer');
     msgContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%;"><div class="loader"></div></div>';
     
-    // আগের রিপ্লাই আইডি রিসেট করা
+    // রিপ্লাই রিসেট
     replyToId = null;
     document.getElementById('replyPreviewBar').style.display = 'none';
 
@@ -379,16 +265,19 @@ async function openChat(partnerId) {
             .or(`blocker_id.eq.${partnerId},blocked_id.eq.${partnerId}`);
         
         if (blocked && blocked.length > 0) {
-            console.log("This conversation involves a blocked user.");
+            console.log("This user conversation is blocked.");
         }
 
         // ২. ইউজারের তথ্য আনা
-        const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
+        const { data: user } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('id', partnerId)
+            .single();
+            
         if (user) {
-            document.getElementById('chatHeaderName').innerText = user.display_name || 'User';
-            const userPhoto = user.photo_url || './images/default-avatar.png';
-            document.getElementById('chatHeaderImg').src = userPhoto;
-            document.getElementById('typingAvatar').src = userPhoto;
+            document.getElementById('chatHeaderName').innerText = user.display_name;
+            document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
             
             // অনলাইন স্ট্যাটাস দেখানো
             const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
@@ -403,15 +292,14 @@ async function openChat(partnerId) {
 
     } catch (err) { 
         console.error("Open chat error:", err); 
-        msgContainer.innerHTML = `<p style="text-align:center; color:red;">Error loading chat. Please try again.</p>`;
     }
 }
 
-// মেসেজ লোড করার ফাংশন
+// মেসেজ লোড ফাংশন
 async function loadMessages(partnerId) {
     const container = document.getElementById('messageContainer');
     
-    // ডাটাবেস থেকে মেসেজ আনা
+    // ডিলিট করা মেসেজ বাদে বাকিগুলো আনা
     const { data: messages, error } = await supabaseClient
         .from('messages')
         .select(`
@@ -420,84 +308,86 @@ async function loadMessages(partnerId) {
         `)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .or(`sender_id.eq.${partnerId},receiver_id.eq.${partnerId}`)
-        .not('deleted_by', 'cs', `{"${currentUser.id}"}`) 
+        .not('deleted_by', 'cs', `{"${currentUser.id}"}`) // ডিলিটেড ফিল্টার
         .order('created_at', { ascending: true });
 
-    container.innerHTML = ''; // লোডার সরানো
+    container.innerHTML = ''; // ক্লিয়ার লোডার
 
     if (messages && messages.length > 0) {
         messages.forEach(msg => appendMessageToUI(msg));
         scrollToBottom(false); 
     } else {
-        // কোনো মেসেজ না থাকলে এম্পটি স্টেট দেখানো
         const pImg = document.getElementById('chatHeaderImg').src;
         const pName = document.getElementById('chatHeaderName').innerText;
         
         container.innerHTML = `
             <div class="empty-chat-placeholder">
-                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;margin-bottom:10px;object-fit:cover;" onerror="this.src='./images/default-avatar.png'">
+                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;margin-bottom:10px;object-fit:cover;">
                 <h3>${pName}</h3>
                 <p>Say Hi 👋 to start chatting.</p>
             </div>`;
     }
     
-    // মেসেজ সিন (Seen) করা
     markAsSeen(partnerId);
 }
 
-// ================================================================
-// ৯. মেসেজ পাঠানো (টেক্সট, ছবি, রিপ্লাই)
-// ================================================================
+// ==========================
+// ৫. মেসেজ পাঠানো (টেক্সট, ছবি, রিপ্লাই)
+// ==========================
 async function sendMessage() {
     if (isUploading) return;
 
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
+    // খালি মেসেজ হ্যান্ডলিং
     if (!text && !selectedImageFile) {
         sendLikeEmoji(activeChatUserId); 
         return;
     }
 
+    // লোডিং শুরু
     isUploading = true;
     const sendBtnIcon = document.querySelector('#sendMessageBtn i');
     const originalIcon = sendBtnIcon.className;
-    sendBtnIcon.className = 'fas fa-spinner fa-spin'; // লোডিং আইকন
+    sendBtnIcon.className = 'fas fa-spinner fa-spin';
 
     let imageUrl = null;
 
+    // ইমেজ আপলোড
     if (selectedImageFile) {
         try {
             imageUrl = await uploadFile(selectedImageFile, 'chat_images');
             if (!imageUrl) {
-                alert("Image upload failed. Please try again.");
+                alert("ছবি আপলোড ব্যর্থ হয়েছে।");
                 isUploading = false;
                 sendBtnIcon.className = originalIcon;
                 return;
             }
         } catch (error) {
             console.error("Image Upload Error:", error);
-            alert("Image upload failed: " + error.message);
             isUploading = false;
             sendBtnIcon.className = originalIcon;
             return;
         }
     }
 
+    // মেসেজ অবজেক্ট
     const newMessage = { 
         sender_id: currentUser.id, 
         receiver_id: activeChatUserId, 
         content: text || null, 
         image_url: imageUrl, 
         is_read: false,
-        deleted_by: [], 
-        reply_to_id: replyToId
+        deleted_by: [], // ডিফল্ট খালি অ্যারে
+        reply_to_id: replyToId // রিপ্লাই আইডি (যদি থাকে)
     };
     
     try {
         const { error } = await supabaseClient.from('messages').insert([newMessage]);
         if (error) throw error;
         
+        // সফল হলে UI রিসেট
         input.value = '';
         closeImagePreview();
         cancelReply(); 
@@ -509,7 +399,7 @@ async function sendMessage() {
 
     } catch (err) {
         console.error("Send failed:", err);
-        alert("Failed to send message: " + err.message);
+        alert("মেসেজ পাঠানো যায়নি।");
     } finally {
         isUploading = false; 
         sendBtnIcon.className = 'fas fa-thumbs-up'; 
@@ -517,6 +407,7 @@ async function sendMessage() {
     }
 }
 
+// লাইক পাঠানো
 async function sendLikeEmoji(partnerId) {
     try {
         const empty = document.querySelector('.empty-chat-placeholder');
@@ -529,16 +420,16 @@ async function sendLikeEmoji(partnerId) {
             is_read: false, 
             deleted_by: [] 
         }]);
-    } catch (e) {
-        console.error("Like send failed", e);
-    }
+    } catch (e) {}
 }
 
+// ফাইল আপলোড ফাংশন
 async function uploadFile(file, bucketName) {
     try {
         let fileToUpload = file;
         
-        if(file.type && file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
+        // ইমেজ হলে কম্প্রেস করা
+        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
             try {
                 const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
                 fileToUpload = await imageCompression(file, options);
@@ -567,9 +458,9 @@ async function uploadFile(file, bucketName) {
     }
 }
 
-// ================================================================
-// ১০. Realtime, Typing Indicator & Presence
-// ================================================================
+// ==========================
+// ৬. Realtime & Presence
+// ==========================
 function setupRealtimeChat(partnerId) {
     if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
     
@@ -580,6 +471,7 @@ function setupRealtimeChat(partnerId) {
             const newMsg = payload.new;
             const oldMsg = payload.old;
 
+            // নতুন মেসেজ আসলে
             if (eventType === 'INSERT') {
                 if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
                     (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
@@ -587,6 +479,7 @@ function setupRealtimeChat(partnerId) {
                     const empty = document.querySelector('.empty-chat-placeholder'); 
                     if(empty) empty.remove();
                     
+                    // রিপ্লাই ডাটা আনার জন্য আবার ফেচ করা
                     const { data } = await supabaseClient
                         .from('messages')
                         .select(`*, reply_message:reply_to_id(content, sender_id, image_url, audio_url)`)
@@ -601,10 +494,12 @@ function setupRealtimeChat(partnerId) {
                     if (newMsg.sender_id === partnerId) markAsSeen(partnerId);
                 }
             } 
+            // মেসেজ ডিলিট হলে (Delete for Everyone)
             else if (eventType === 'DELETE') {
                 const el = document.getElementById(`msg-${oldMsg.id}`);
                 if (el) el.remove();
             }
+            // মেসেজ আপডেট হলে (Delete for Me)
             else if (eventType === 'UPDATE') {
                 if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
                     const el = document.getElementById(`msg-${newMsg.id}`);
@@ -615,6 +510,7 @@ function setupRealtimeChat(partnerId) {
         }).subscribe();
 }
 
+// টাইপিং ইন্ডিকেটর সেটআপ
 function setupPresence(partnerId) {
     if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
 
@@ -651,15 +547,17 @@ function showTypingIndicator() {
     }, 3000);
 }
 
-// ================================================================
-// ১১. UI রেন্ডারিং ফাংশন (Audio Player ফিক্সড)
-// ================================================================
+// ==========================
+// ৭. UI রেন্ডারিং (মেসেজ)
+// ==========================
 function appendMessageToUI(msg) {
+    // যদি ডিলিট করা থাকে তবে দেখাবো না
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
     const container = document.getElementById('messageContainer');
     const isMe = msg.sender_id === currentUser.id;
     
+    // রিপ্লাই অংশ তৈরি
     let replyHTML = '';
     if (msg.reply_message) {
         const rName = msg.reply_message.sender_id === currentUser.id ? 'You' : document.getElementById('chatHeaderName').innerText;
@@ -681,19 +579,13 @@ function appendMessageToUI(msg) {
     let contentHTML = '';
     
     if (msg.image_url) {
-        contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')" onerror="this.style.display='none'">`;
+        contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')">`;
     }
     
-    // [FIXED] অডিও প্লেয়ার রেন্ডারিং
     if (msg.audio_url) {
         contentHTML += `
-            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#f0f2f5'}; border: 1px solid ${isMe ? '#0084ff' : '#ddd'};">
-                <audio controls controlsList="nodownload noplaybackrate">
-                    <source src="${msg.audio_url}" type="audio/webm">
-                    <source src="${msg.audio_url}" type="audio/mp4">
-                    <source src="${msg.audio_url}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
+            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'}; padding: 10px; border-radius: 15px;">
+                <audio controls src="${msg.audio_url}" preload="metadata"></audio>
             </div>`;
     }
     
@@ -701,30 +593,32 @@ function appendMessageToUI(msg) {
         if (msg.content === '👍') {
             contentHTML += `<span style="font-size: 40px; margin: 5px;">👍</span>`; 
         } else {
-            contentHTML += `<div class="bubble">${replyHTML}${escapeHtml(msg.content)}</div>`;
+            contentHTML += `<div class="bubble">${replyHTML}${msg.content}</div>`;
         }
-    } else if(replyHTML && !msg.image_url && !msg.audio_url) {
+    } else if(replyHTML) {
+        // শুধু রিপ্লাই থাকলে
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
-    // বাবল ক্লাস লজিক
-    const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url) || msg.audio_url) ? 'bg-transparent' : '';
+    const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url)) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
+    // লং প্রেস ইভেন্ট সহ মেসেজ রো
     const html = `
         <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
-            ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar" onerror="this.src='./images/default-avatar.png'">` : ''}
+            ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar">` : ''}
             <div class="message-content ${bubbleClass}" 
                  style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}"
                  onmousedown="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
                  ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
                  onmouseup="handleMessagePressEnd()" 
                  ontouchend="handleMessagePressEnd()"
-                 oncontextmenu="return false;"> 
+                 oncontextmenu="return false;"> <!-- রাইট ক্লিক বন্ধ -->
                 ${contentHTML}
             </div>
         </div>`;
     
+    // টাইপিং বাবল সবসময় নিচে রাখতে হবে
     const typingBubble = document.getElementById('typingIndicatorBubble');
     if(typingBubble && typingBubble.parentNode === container) {
         container.insertBefore(parseHTML(html), typingBubble);
@@ -739,21 +633,17 @@ function parseHTML(html) {
     return t.content.cloneNode(true);
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// ================================================================
-// ১২. লং প্রেস এবং রিপ্লাই লজিক
-// ================================================================
+// ==========================
+// ৮. লং প্রেস ও রিপ্লাই লজিক
+// ==========================
 function handleMessagePressStart(el, msgId, isMyMessage, msgText) {
     selectedMessageId = msgId;
     selectedMessageText = msgText;
     
+    // ৮০০ মিলি সেকেন্ড চাপলে মেনু আসবে
     pressTimer = setTimeout(() => {
         showDeleteOptions(isMyMessage);
+        // ভাইব্রেশন
         if (navigator.vibrate) navigator.vibrate(50);
     }, 600);
 }
@@ -793,35 +683,36 @@ function cancelReply() {
     document.getElementById('replyPreviewBar').style.display = 'none';
 }
 
+// ডিলিট লজিক
 async function deleteMessageForMe() {
-    if (!selectedMessageId || !currentUser) return;
-    
+    if (!selectedMessageId) return;
     try {
         const { data } = await supabaseClient.from('messages').select('deleted_by').eq('id', selectedMessageId).single();
-        let currentDeletedBy = data?.deleted_by || [];
+        let current = data?.deleted_by || [];
         
-        if (!currentDeletedBy.includes(currentUser.id)) {
-            currentDeletedBy.push(currentUser.id);
-            await supabaseClient.from('messages').update({ deleted_by: currentDeletedBy }).eq('id', selectedMessageId);
+        if (!current.includes(currentUser.id)) {
+            current.push(currentUser.id);
+            await supabaseClient.from('messages').update({ deleted_by: current }).eq('id', selectedMessageId);
+            
             const el = document.getElementById(`msg-${selectedMessageId}`);
             if(el) el.remove();
         }
         closeDeleteModal();
     } catch (e) {
-        console.error("Delete for me error:", e);
+        console.error(e);
         alert("Failed to delete.");
     }
 }
 
 async function deleteMessageForEveryone() {
     if (!selectedMessageId) return;
-    if(!confirm("Are you sure you want to delete this message for everyone?")) return;
+    if(!confirm("Are you sure you want to delete this for everyone?")) return;
 
     try {
         await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
         closeDeleteModal();
     } catch (e) {
-        console.error("Delete everyone error:", e);
+        console.error(e);
         alert("Failed to delete.");
     }
 }
@@ -830,10 +721,9 @@ async function blockUser() {
     if (!activeChatUserId || !confirm("Block this user?")) return;
     try {
         await supabaseClient.from('user_blocks').insert({ blocker_id: currentUser.id, blocked_id: activeChatUserId });
-        alert("User blocked successfully.");
+        alert("User blocked.");
         location.reload();
     } catch (e) {
-        console.error("Block error:", e);
         alert("Error blocking user.");
     }
 }
@@ -843,9 +733,9 @@ function closeDeleteModal() {
     selectedMessageId = null;
 }
 
-// ================================================================
-// ১৩. ভয়েস রেকর্ডিং ফাংশনালিটি
-// ================================================================
+// ==========================
+// ৯. ভয়েস রেকর্ডিং
+// ==========================
 async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -860,7 +750,8 @@ async function startRecording() {
         isRecording = true;
         
         document.getElementById('audioRecordingUI').style.display = 'flex';
-        document.querySelector('.footer-input-row').style.display = 'none'; 
+        // ফুটার হাইড করা (শুধুমাত্র ফুটার অংশ, পুরোটা নয়)
+        document.querySelector('.footer-input-row').style.display = 'none';
         
         let seconds = 0;
         document.getElementById('recordingTimer').innerText = "00:00";
@@ -872,8 +763,8 @@ async function startRecording() {
         }, 1000);
         
     } catch (err) {
-        console.error("Microphone Error:", err);
-        alert("Microphone access needed. Please allow microphone permission.");
+        console.error(err);
+        alert("Microphone access needed.");
     }
 }
 
@@ -888,7 +779,7 @@ function cancelRecording() {
 
 function closeRecordingUI() {
     document.getElementById('audioRecordingUI').style.display = 'none';
-    document.querySelector('.footer-input-row').style.display = 'flex'; 
+    document.querySelector('.footer-input-row').style.display = 'flex'; // ফুটার আবার দেখানো
     isRecording = false;
 }
 
@@ -897,7 +788,6 @@ async function sendRecording() {
     
     mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        
         const audioUrl = await uploadFile(audioBlob, 'chat_audio');
         
         if (audioUrl) {
@@ -910,7 +800,7 @@ async function sendRecording() {
                 audio_url: audioUrl,
                 content: null,
                 is_read: false,
-                deleted_by: [] 
+                deleted_by: []
             }]);
         } else {
             alert("Audio send failed.");
@@ -923,35 +813,33 @@ async function sendRecording() {
     closeRecordingUI();
 }
 
-// ================================================================
-// ১৪. ইভেন্ট লিসেনার সেটআপ
-// ================================================================
+// ==========================
+// ১০. ইভেন্ট লিসেনার
+// ==========================
 function setupEventListeners() {
+    // ব্যাক বাটন
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
         activeChatUserId = null;
-        if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
-        if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
         loadChatList(); 
     });
     
+    // মেসেজ ইনপুট
     const input = document.getElementById('messageInput');
-    if (input) {
-        input.addEventListener('input', () => { 
-            toggleSendButton(); 
-            sendTypingEvent(); 
-        });
-        input.addEventListener('keyup', (e) => { 
-            if (e.key === 'Enter') sendMessage(); 
-        });
-    }
+    input.addEventListener('input', () => { 
+        toggleSendButton(); 
+        sendTypingEvent(); 
+    });
+    input.addEventListener('keyup', (e) => { 
+        if (e.key === 'Enter') sendMessage(); 
+    });
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
     
-    document.getElementById('sendMessageBtn')?.addEventListener('click', sendMessage);
+    // ইমেজ আপলোড
+    document.getElementById('galleryTriggerBtn').addEventListener('click', () => document.getElementById('chatImageInput').click());
     
-    document.getElementById('galleryTriggerBtn')?.addEventListener('click', () => document.getElementById('chatImageInput').click());
-    
-    document.getElementById('chatImageInput')?.addEventListener('change', (e) => {
+    document.getElementById('chatImageInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             selectedImageFile = file;
@@ -960,95 +848,75 @@ function setupEventListeners() {
             toggleSendButton();
         }
     });
+    document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
     
-    document.getElementById('closePreviewBtn')?.addEventListener('click', closeImagePreview);
+    // অডিও রেকর্ডার
+    document.getElementById('micTriggerBtn').addEventListener('click', startRecording);
+    document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
+    document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
     
-    document.getElementById('micTriggerBtn')?.addEventListener('click', startRecording);
-    document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelRecording);
-    document.getElementById('sendRecordingBtn')?.addEventListener('click', sendRecording);
-    
-    document.getElementById('videoCallBtn')?.addEventListener('click', () => startZegoCall('video'));
-    document.getElementById('audioCallBtn')?.addEventListener('click', () => startZegoCall('audio'));
-
-    document.querySelector('.fs-close-btn')?.addEventListener('click', () => { 
+    // ফুল স্ক্রিন ইমেজ ক্লোজ
+    document.querySelector('.fs-close-btn').addEventListener('click', () => { 
         document.getElementById('fullScreenImageModal').style.display = 'none'; 
     });
 
+    // ইমোজি পিকার
     const emojiBtn = document.getElementById('emojiTriggerBtn');
     const picker = document.getElementById('emojiPickerContainer');
     
-    if (emojiBtn) {
-        emojiBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
-        });
-    }
+    emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+    });
 
-    const emojiPickerElement = document.querySelector('emoji-picker');
-    if (emojiPickerElement) {
-        emojiPickerElement.addEventListener('emoji-click', event => {
-            if (input) {
-                input.value += event.detail.unicode;
-                toggleSendButton();
-                input.focus();
-            }
-        });
-    }
+    document.querySelector('emoji-picker').addEventListener('emoji-click', e => {
+        input.value += e.detail.unicode;
+        toggleSendButton();
+        input.focus();
+    });
 
+    // বাইরে ক্লিক করলে মেনু বন্ধ
     document.addEventListener('click', (e) => {
-        if (picker && !picker.contains(e.target) && emojiBtn && !emojiBtn.contains(e.target)) {
+        if (!picker.contains(e.target) && !emojiBtn.contains(e.target)) {
             picker.style.display = 'none';
         }
         
         const optsMenu = document.getElementById('chatOptionsDropdown');
         const optsBtn = document.getElementById('chatOptionsBtn');
-        if(optsMenu && optsBtn && !optsMenu.contains(e.target) && !optsBtn.contains(e.target)) {
+        if(!optsMenu.contains(e.target) && !optsBtn.contains(e.target)) {
             optsMenu.style.display = 'none';
         }
     });
 
-    document.getElementById('deleteForMeBtn')?.addEventListener('click', deleteMessageForMe);
-    document.getElementById('deleteForEveryoneBtn')?.addEventListener('click', deleteMessageForEveryone);
-    document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal);
-    document.getElementById('replyOptionBtn')?.addEventListener('click', initiateReply);
-    document.getElementById('cancelReplyBtn')?.addEventListener('click', cancelReply);
-    
-    document.getElementById('chatOptionsBtn')?.addEventListener('click', (e) => {
+    // ডিলিট এবং রিপ্লাই মডাল লিসেনার
+    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
+    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
+    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+    document.getElementById('replyOptionBtn').addEventListener('click', initiateReply);
+    document.getElementById('cancelReplyBtn').addEventListener('click', cancelReply);
+
+    // হেডার অপশন
+    document.getElementById('chatOptionsBtn').addEventListener('click', (e) => {
         e.stopPropagation();
         const menu = document.getElementById('chatOptionsDropdown');
-        if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        }
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
     });
-    document.getElementById('blockUserBtn')?.addEventListener('click', blockUser);
-    
-    window.addEventListener('click', (e) => {
-        const modal = document.getElementById('fullScreenImageModal');
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
+    document.getElementById('blockUserBtn').addEventListener('click', blockUser);
 }
 
-// ================================================================
-// ১৫. হেল্পার ফাংশনস
-// ================================================================
+// ==========================
+// ১১. হেল্পার ফাংশনস
+// ==========================
 function closeImagePreview() {
     selectedImageFile = null;
-    const input = document.getElementById('chatImageInput');
-    if (input) input.value = '';
+    document.getElementById('chatImageInput').value = '';
     document.getElementById('imagePreviewPanel').style.display = 'none';
     toggleSendButton();
 }
 
 function toggleSendButton() {
-    const input = document.getElementById('messageInput');
-    if (!input) return;
-    
-    const val = input.value.trim();
+    const val = document.getElementById('messageInput').value.trim();
     const icon = document.querySelector('#sendMessageBtn i');
-    
-    if (!icon) return;
     
     if (val !== '' || selectedImageFile) { 
         icon.className = 'fas fa-paper-plane'; 
@@ -1060,31 +928,7 @@ function toggleSendButton() {
     }
 }
 
-function timeAgoShort(dateString) { 
-    if (!dateString) return 'Just now';
-    
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return 'Just now';
-        
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSec = Math.floor(diffMs / 1000);
-        const diffMin = Math.floor(diffSec / 60);
-        const diffHour = Math.floor(diffMin / 60);
-        const diffDay = Math.floor(diffHour / 24);
-        
-        if (diffSec < 60) return 'Just now';
-        if (diffMin < 60) return `${diffMin}m ago`;
-        if (diffHour < 24) return `${diffHour}h ago`;
-        if (diffDay < 7) return `${diffDay}d ago`;
-        
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch (e) {
-        console.warn("Error parsing date:", e);
-        return 'Recently';
-    }
-}
+function timeAgoShort(dateString) { return dateString ? 'Just now' : ''; } // সিম্পলিফাইড
 
 async function markAsSeen(partnerId) {
     try { 
@@ -1092,32 +936,17 @@ async function markAsSeen(partnerId) {
             .from('messages')
             .update({ is_read: true })
             .match({ sender_id: partnerId, receiver_id: currentUser.id, is_read: false }); 
-    } catch (e) {
-        console.warn("Mark as seen error:", e);
-    }
+    } catch (e) {}
 }
 
 function scrollToBottom(smooth = false) { 
     const main = document.getElementById('messageContainer'); 
-    if (main) {
-        setTimeout(() => {
-            main.scrollTo({ top: main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
-        }, 100);
-    }
+    main.scrollTo({ top: main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
 }
 
 window.viewFullScreenImage = function(src) {
     const modal = document.getElementById('fullScreenImageModal');
-    if (modal) {
-        const img = document.getElementById('fsModalImg');
-        const downloadBtn = document.getElementById('downloadImgBtn');
-        
-        if (img) img.src = src;
-        if (downloadBtn) downloadBtn.href = src;
-        modal.style.display = 'flex';
-    }
+    document.getElementById('fsModalImg').src = src;
+    document.getElementById('downloadImgBtn').href = src;
+    modal.style.display = 'flex';
 }
-
-window.openChat = openChat;
-window.handleMessagePressStart = handleMessagePressStart;
-window.handleMessagePressEnd = handleMessagePressEnd;
