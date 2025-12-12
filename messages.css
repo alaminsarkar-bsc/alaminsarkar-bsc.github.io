@@ -122,7 +122,7 @@ body {
 /* --- Scrollable Content Area --- */
 .scrollable-content-area {
     margin-top: 60px; /* হেডারের উচ্চতা */
-    height: calc(100vh - 120px); /* হেডার (60px) + ফুটার (60px) বাদ দিয়ে */
+    height: calc(100vh - 120px); /* হেডার + ফুটার বাদ দিয়ে */
     overflow-y: auto;
     padding-bottom: 10px;
     background: #fff;
@@ -265,11 +265,19 @@ body {
 .chat-actions { display: flex; gap: 15px; margin-left: 5px; }
 .action-icon { background: none; border: none; font-size: 22px; color: var(--messenger-blue); cursor: pointer; padding: 5px; }
 
-/* Message Body */
+/* === Message Body (Updated for Visibility) === */
 .message-body {
-    padding: 70px 0 80px 0; height: calc(100vh - 140px); /* ইনপুট ও হেডার বাদ দিয়ে */
-    overflow-y: auto; background: #fff; display: flex; flex-direction: column; width: 100%;
+    /* প্যাডিং বাড়ানো হয়েছে যাতে শেষ মেসেজ নিচে চাপা না পড়ে */
+    padding: 70px 0 120px 0; 
+    height: calc(100vh - 140px);
+    overflow-y: auto; 
+    background: #fff; 
+    display: flex; 
+    flex-direction: column; 
+    width: 100%;
+    scroll-behavior: smooth; /* স্মুথ স্ক্রলিং */
 }
+
 .message-row { display: flex; margin-bottom: 2px; align-items: flex-end; padding: 2px 10px; }
 .message-row.sent { justify-content: flex-end; }
 .message-row.received { justify-content: flex-start; }

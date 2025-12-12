@@ -27,7 +27,7 @@ let selectedMessageText = null;
 let pressTimer;
 
 // ==========================
-// ১. ইনিশিয়ালাইজেশন
+// ১. অ্যাপ লোডিং
 // ==========================
 document.addEventListener('DOMContentLoaded', async () => {
     // সেশন চেক
@@ -42,19 +42,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ডাটা লোড
     loadMyProfile();
     updateMyLastSeen();
-    setInterval(updateMyLastSeen, 60000); // প্রতি মিনিটে লাস্ট সিন আপডেট
+    setInterval(updateMyLastSeen, 60000); // প্রতি ১ মিনিটে লাস্ট সিন আপডেট
 
     // UI লোড
     loadActiveUsersHorizontal();
     loadChatList();
     
-    // রিয়েলটাইম স্ট্যাটাস লিসেনার (গ্রিন ডটের জন্য)
+    // রিয়েলটাইম স্ট্যাটাস লিসেনার (Green Dot)
     setupUserStatusListener();
 
     // ইভেন্ট লিসেনার সেটআপ
     setupEventListeners();
     
-    // --- সার্চ বাটন লজিক ---
+    // --- সার্চ বাটন লজিক (Floating) ---
     document.getElementById('openSearchBtn').addEventListener('click', () => {
         document.getElementById('floatingSearchBar').style.display = 'flex';
         document.getElementById('chatSearchInput').focus();
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ==========================
-// ২. প্রোফাইল ও স্ট্যাটাস
+// ২. প্রোফাইল ও স্ট্যাটাস ম্যানেজমেন্ট
 // ==========================
 async function loadMyProfile() {
     try {
@@ -118,8 +118,8 @@ function setupUserStatusListener() {
     supabaseClient.channel('public-users-status')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
         const user = payload.new;
-        // ৫ মিনিটের মধ্যে অ্যাক্টিভ থাকলে অনলাইন ধরব
-        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+        // ৩ মিনিটের মধ্যে অ্যাক্টিভ থাকলে অনলাইন ধরব
+        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
         
         // ১. চ্যাট লিস্টে ডট আপডেট
         const listDot = document.querySelector(`.chat-item-row[data-user-id="${user.id}"] .online-status-dot`);
@@ -166,7 +166,7 @@ async function loadActiveUsersHorizontal() {
             .from('users')
             .select('id, display_name, photo_url, last_seen')
             .neq('id', currentUser.id)
-            .order('last_seen', { ascending: false }) // যারা রিসেন্টলি অ্যাক্টিভ তারা আগে থাকবে
+            .order('last_seen', { ascending: false }) // রিসেন্টলি অ্যাক্টিভ আগে
             .limit(15);
 
         if (error) throw error;
@@ -185,7 +185,7 @@ async function loadActiveUsersHorizontal() {
 
         if (users && users.length > 0) {
             users.forEach(u => {
-                const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 5 * 60 * 1000);
+                const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 3 * 60 * 1000);
                 const name = u.display_name ? u.display_name.split(' ')[0] : 'User';
                 
                 container.innerHTML += `
@@ -211,6 +211,7 @@ async function loadChatList() {
     container.innerHTML = `<div class="loader-container" style="padding-top:50px;"><div class="loader"></div></div>`;
     
     try {
+        // RPC Call to get chat partners
         const { data: partners, error } = await supabaseClient.rpc('get_chat_partners', { user_id: currentUser.id });
         
         container.innerHTML = '';
@@ -224,11 +225,11 @@ async function loadChatList() {
             const { data: user } = await supabaseClient.from('users').select('*').eq('id', chat.partner_id).single();
             if (!user) continue;
 
-            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
             const timeStr = timeAgoShort(chat.last_message_time);
             const isUnread = chat.unread_count > 0;
             
-            let preview = chat.last_message_content || 'Sent an attachment';
+            let preview = chat.last_message_content || 'Attachment';
             if (chat.last_message_content === '👍') preview = 'Like 👍';
 
             // HTML তৈরি
@@ -239,7 +240,7 @@ async function loadChatList() {
                         <div class="online-status-dot" style="display:${isOnline ? 'block' : 'none'}"></div>
                     </div>
                     <div class="chat-info">
-                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${user.display_name}</h4>
+                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700' : ''}">${user.display_name}</h4>
                         <div class="chat-preview">
                             <span class="msg-text" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${preview}</span>
                             <span class="msg-dot">· ${timeStr}</span>
@@ -261,43 +262,34 @@ async function loadChatList() {
 async function openChat(partnerId) {
     activeChatUserId = partnerId;
     
-    // ভিউ পরিবর্তন
     document.getElementById('inbox-view').style.display = 'none';
     document.getElementById('conversation-view').style.display = 'flex';
-    
-    // লোডার
-    const msgContainer = document.getElementById('messageContainer');
-    msgContainer.innerHTML = '<div style="display:flex;justify-content:center;height:100%;align-items:center;"><div class="loader"></div></div>';
+    document.getElementById('messageContainer').innerHTML = '<div style="display:flex;justify-content:center;height:100%;align-items:center;"><div class="loader"></div></div>';
 
-    // হেডার ইনফো আপডেট
-    try {
-        const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
-        if (user) {
-            document.getElementById('chatHeaderName').innerText = user.display_name;
-            document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
-            
-            const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
-            document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
-            document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
-        }
-    } catch(e) {}
+    // হেডার আপডেট
+    const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
+    if (user) {
+        document.getElementById('chatHeaderName').innerText = user.display_name;
+        document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
+        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 3 * 60 * 1000);
+        document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
+        document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
+    }
 
-    // মেসেজ লোড এবং সেটআপ
+    // মেসেজ লোড
     loadMessages(partnerId);
     setupRealtimeChat(partnerId);
     setupPresence(partnerId);
 }
 
 async function loadMessages(partnerId) {
-    const container = document.getElementById('messageContainer');
-    
-    const { data: messages } = await supabaseClient
-        .from('messages')
+    const { data: messages } = await supabaseClient.from('messages')
         .select(`*, reply_message:reply_to_id(content, image_url, audio_url)`)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .or(`sender_id.eq.${partnerId},receiver_id.eq.${partnerId}`)
         .order('created_at', { ascending: true });
 
+    const container = document.getElementById('messageContainer');
     container.innerHTML = '';
     
     if (messages && messages.length > 0) {
@@ -309,19 +301,18 @@ async function loadMessages(partnerId) {
             <div class="empty-chat-placeholder" style="text-align:center;margin-top:50px;opacity:0.6;">
                 <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
                 <h3 style="margin-top:10px;">${pName}</h3>
-                <p>Say Hi 👋 to start chatting.</p>
+                <p>Say Hi 👋</p>
             </div>`;
     }
     
     scrollToBottom(false);
     
-    // মেসেজ সিন করা
+    // Mark as read
     await supabaseClient.from('messages').update({ is_read: true }).match({ sender_id: partnerId, receiver_id: currentUser.id, is_read: false });
 }
 
 // মেসেজ রেন্ডারিং
 function appendMessageToUI(msg) {
-    // ডিলিট করা মেসেজ ফিল্টার
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
     const isMe = msg.sender_id === currentUser.id;
@@ -334,7 +325,11 @@ function appendMessageToUI(msg) {
         if (!msg.reply_message.content && msg.reply_message.image_url) rText = '📷 Photo';
         if (!msg.reply_message.content && msg.reply_message.audio_url) rText = '🎤 Audio';
         
-        replyHTML = `<div class="reply-context"><span class="reply-sender-name">${isMe ? 'You replied' : 'Replied to you'}</span><span class="reply-text-content">${rText}</span></div>`;
+        replyHTML = `
+            <div class="reply-context">
+                <span class="reply-sender-name">${isMe ? 'You replied' : 'Replied to you'}</span>
+                <span class="reply-text-content">${rText}</span>
+            </div>`;
     }
 
     let contentHTML = '';
@@ -344,9 +339,12 @@ function appendMessageToUI(msg) {
         contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')">`;
     }
     
-    // অডিও
+    // অডিও (প্লেয়ার সহ)
     if (msg.audio_url) {
-        contentHTML += `<div class="audio-bubble" style="background:${isMe?'#0084ff':'#e4e6eb'};padding:10px;border-radius:15px;"><audio controls src="${msg.audio_url}"></audio></div>`;
+        contentHTML += `
+            <div class="audio-bubble" style="background:${isMe?'#0084ff':'#e4e6eb'};padding:10px;border-radius:15px;">
+                <audio controls src="${msg.audio_url}" style="height:35px; width:200px;"></audio>
+            </div>`;
     }
     
     // টেক্সট
@@ -360,7 +358,6 @@ function appendMessageToUI(msg) {
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
-    // বাবলের ব্যাকগ্রাউন্ড মুছে ফেলার লজিক (শুধু ইমোজি বা ছবির জন্য)
     const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url)) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
@@ -376,7 +373,7 @@ function appendMessageToUI(msg) {
             </div>
         </div>`;
     
-    // টাইপিং বাবল নিচে রাখার জন্য
+    // টাইপিং বাবল নিচে রাখার লজিক
     const typingBubble = document.getElementById('typingIndicatorBubble');
     if (typingBubble && typingBubble.parentNode === container) {
         container.insertBefore(parseHTML(html), typingBubble);
@@ -386,37 +383,33 @@ function appendMessageToUI(msg) {
 }
 
 function parseHTML(html) { const t = document.createElement('template'); t.innerHTML = html; return t.content.cloneNode(true); }
-function scrollToBottom(smooth) { const c = document.getElementById('messageContainer'); c.scrollTo({ top: c.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); }
+function scrollToBottom(smooth) { 
+    const c = document.getElementById('messageContainer'); 
+    c.scrollTo({ top: c.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
+}
 
 // ==========================
-// ৬. ইনপুট ও ইভেন্ট লিসেনার
+// ৬. ইনপুট ও ইভেন্ট হ্যান্ডলার
 // ==========================
 function setupEventListeners() {
-    // ব্যাক বাটন
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
         activeChatUserId = null;
         if(realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
-        loadChatList(); // লিস্ট রিফ্রেশ
+        loadChatList();
     });
 
-    // ইনপুট হ্যান্ডলিং
     const input = document.getElementById('messageInput');
     input.addEventListener('input', () => {
-        const btn = document.querySelector('#sendMessageBtn i');
-        btn.className = input.value.trim() ? 'fas fa-paper-plane' : 'fas fa-thumbs-up';
-        
-        // টাইপিং স্ট্যাটাস পাঠানো
-        if (presenceChannel) {
-            presenceChannel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser.id } });
-        }
+        document.querySelector('#sendMessageBtn i').className = input.value.trim() ? 'fas fa-paper-plane' : 'fas fa-thumbs-up';
+        if (presenceChannel) presenceChannel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser.id } });
     });
 
     document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
     input.addEventListener('keyup', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // লং প্রেস হ্যান্ডলার (Delete/Reply)
+    // লং প্রেস
     window.handleMessagePressStart = (el, id, isMe, text) => {
         selectedMessageId = id; selectedMessageText = text;
         pressTimer = setTimeout(() => {
@@ -442,11 +435,11 @@ function setupEventListeners() {
         document.getElementById('replyPreviewBar').style.display = 'none';
     });
 
-    // ডিলিট অ্যাকশন
+    // ডিলিট
     document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
     document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
 
-    // ইমেজ আপলোড ট্রিগার
+    // ইমেজ আপলোড
     document.getElementById('galleryTriggerBtn').addEventListener('click', () => document.getElementById('chatImageInput').click());
     document.getElementById('chatImageInput').addEventListener('change', handleImageSelect);
     document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
@@ -458,15 +451,15 @@ function setupEventListeners() {
 }
 
 // ==========================
-// ৭. মেসেজ সেন্ডিং লজিক
+// ৭. মেসেজ সেন্ডিং (ইমেজ ও টেক্সট)
 // ==========================
 async function sendMessage() {
     if (isUploading) return;
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
 
-    // থাম্বস আপ
     if (!text && !selectedImageFile) {
+        // Send Like
         await supabaseClient.from('messages').insert([{ sender_id: currentUser.id, receiver_id: activeChatUserId, content: '👍' }]);
         return;
     }
@@ -474,23 +467,19 @@ async function sendMessage() {
     isUploading = true;
     let imgUrl = null;
 
-    // ইমেজ আপলোড
     if (selectedImageFile) {
         imgUrl = await uploadFile(selectedImageFile, 'chat_images');
         if(!imgUrl) { isUploading = false; return alert("Image upload failed"); }
     }
 
-    const newMsg = {
+    await supabaseClient.from('messages').insert([{
         sender_id: currentUser.id,
         receiver_id: activeChatUserId,
         content: text || null,
         image_url: imgUrl,
         reply_to_id: replyToId
-    };
+    }]);
 
-    await supabaseClient.from('messages').insert([newMsg]);
-
-    // রিসেট
     input.value = '';
     document.querySelector('#sendMessageBtn i').className = 'fas fa-thumbs-up';
     closeImagePreview();
@@ -502,7 +491,6 @@ async function sendMessage() {
     if(empty) empty.remove();
 }
 
-// ইমেজ সিলেকশন
 function handleImageSelect(e) {
     const file = e.target.files[0];
     if (file) {
@@ -519,26 +507,8 @@ function closeImagePreview() {
     document.getElementById('imagePreviewPanel').style.display = 'none';
 }
 
-// আপলোড ফাংশন
-async function uploadFile(file, bucket) {
-    try {
-        let uploadFile = file;
-        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
-            uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
-        }
-        const fileName = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
-        const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, uploadFile);
-        if (error) throw error;
-        const { data: url } = supabaseClient.storage.from(bucket).getPublicUrl(fileName);
-        return url.publicUrl;
-    } catch (e) {
-        console.error(e);
-        return null;
-    }
-}
-
 // ==========================
-// ৮. অডিও রেকর্ডিং
+// ৮. ভয়েস রেকর্ডিং (ফিক্সড)
 // ==========================
 async function startRecording() {
     try {
@@ -574,28 +544,85 @@ function closeRecordingUI() {
     isRecording = false;
 }
 
+// ** FIX: Direct Blob Upload for Audio **
 async function sendRecording() {
-    if(!mediaRecorder) return;
+    if (!mediaRecorder) return;
+    
+    const sendBtn = document.querySelector('#sendRecordingBtn i');
+    const originalIcon = sendBtn.className;
+    sendBtn.className = 'fas fa-spinner fa-spin'; // লোডিং আইকন
+
     mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        const url = await uploadFile(blob, 'chat_audio');
-        if(url) {
-            await supabaseClient.from('messages').insert([{
-                sender_id: currentUser.id, receiver_id: activeChatUserId, audio_url: url
-            }]);
+        try {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const fileName = `${currentUser.id}/${Date.now()}.webm`;
+            
+            // সরাসরি স্টোরেজে আপলোড
+            const { data, error } = await supabaseClient.storage
+                .from('chat_audio')
+                .upload(fileName, audioBlob, { cacheControl: '3600', upsert: false });
+
+            if (error) throw error;
+
+            // URL সংগ্রহ
+            const { data: urlData } = supabaseClient.storage
+                .from('chat_audio')
+                .getPublicUrl(fileName);
+
+            const audioUrl = urlData.publicUrl;
+
+            // ডাটাবেজে ইনসার্ট
+            if (audioUrl) {
+                const empty = document.querySelector('.empty-chat-placeholder');
+                if(empty) empty.remove();
+
+                await supabaseClient.from('messages').insert([{ 
+                    sender_id: currentUser.id, 
+                    receiver_id: activeChatUserId, 
+                    audio_url: audioUrl,
+                    content: null,
+                    is_read: false
+                }]);
+            }
+        } catch (e) {
+            console.error("Audio upload failed:", e);
+            alert("Failed to send audio. Ensure 'chat_audio' bucket exists.");
+        } finally {
+            closeRecordingUI();
+            sendBtn.className = originalIcon;
         }
     };
+
     mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
     clearInterval(recordingInterval);
-    closeRecordingUI();
 }
 
 // ==========================
-// ৯. রিয়েলটাইম এবং ডিলিট
+// ৯. ফাইল আপলোড (ইমেজের জন্য)
+// ==========================
+async function uploadFile(file, bucket) {
+    try {
+        let uploadFile = file;
+        // ইমেজ হলে কম্প্রেস করব
+        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
+            uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
+        }
+        
+        const fileName = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+        const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, uploadFile);
+        if (error) throw error;
+        
+        const { data: url } = supabaseClient.storage.from(bucket).getPublicUrl(fileName);
+        return url.publicUrl;
+    } catch (e) { return null; }
+}
+
+// ==========================
+// ১০. রিয়েলটাইম ও অন্যান্য
 // ==========================
 function setupRealtimeChat(partnerId) {
     if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
-    
     realtimeSubscription = supabaseClient.channel('chat-room')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
             const { eventType, new: newMsg, old: oldMsg } = payload;
@@ -613,12 +640,10 @@ function setupRealtimeChat(partnerId) {
                     }
                 }
             } else if (eventType === 'DELETE') {
-                const el = document.getElementById(`msg-${oldMsg.id}`);
-                if(el) el.remove();
+                document.getElementById(`msg-${oldMsg.id}`)?.remove();
             } else if (eventType === 'UPDATE') {
                 if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
-                    const el = document.getElementById(`msg-${newMsg.id}`);
-                    if(el) el.remove();
+                    document.getElementById(`msg-${newMsg.id}`)?.remove();
                 }
             }
         })
