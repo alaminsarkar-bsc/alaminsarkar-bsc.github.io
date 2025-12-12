@@ -15,10 +15,29 @@
     <link rel="stylesheet" href="style.css"> 
     <!-- চ্যাট স্পেসিফিক স্টাইল -->
     <link rel="stylesheet" href="messages.css"> 
+
+    <!-- OneSignal Push Notification SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.init({
+          appId: "f32cfd0e-9004-4b77-99e1-0a668f4b0df4",
+          safari_web_id: "web.onesignal.auto.66a2c26d-209a-4720-9720-e2220d937000",
+          notifyButton: {
+            enable: true,
+          },
+          allowLocalhostAsSecureOrigin: true,
+        });
+        
+        // ইউজারের আইডি সেট করা (যাতে নির্দিষ্ট ইউজারকে নোটিফিকেশন পাঠানো যায়)
+        OneSignal.User.PushSubscription.optIn();
+      });
+    </script>
 </head>
 <body id="chat-page">
 
-    <!-- নোটিফিকেশন সাউন্ড প্লেয়ার (লুকানো থাকবে) -->
+    <!-- নোটিফিকেশন সাউন্ড প্লেয়ার -->
     <audio id="notificationSound" src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" preload="auto"></audio>
 
     <!-- ===========================
@@ -66,7 +85,6 @@
             
             <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট -->
             <div id="activeUsersBar" class="active-users-bar">
-                <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে ইউজার লোড হবে -->
                 <div class="loader-horizontal" style="display: none;"></div> 
             </div>
 
@@ -100,7 +118,6 @@
             <div class="chat-partner-info">
                 <div class="partner-avatar-wrapper">
                     <img id="chatHeaderImg" src="" alt="" class="partner-img">
-                    <!-- অনলাইন গ্রিন ডট -->
                     <span class="active-dot" id="headerActiveDot"></span>
                 </div>
                 <div class="partner-text">
@@ -112,7 +129,6 @@
             <div class="chat-actions">
                 <button class="action-icon"><i class="fas fa-phone-alt"></i></button>
                 <button class="action-icon"><i class="fas fa-video"></i></button>
-                <!-- More Options Menu Trigger -->
                 <button class="action-icon info-icon" id="chatOptionsBtn">
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
@@ -165,11 +181,11 @@
             <emoji-picker></emoji-picker>
         </div>
 
-        <!-- মেসেজ ডিলিট/অপশন মডাল (Reaction Bar Added) -->
+        <!-- মেসেজ ডিলিট/অপশন মডাল -->
         <div id="deleteOptionsModal" class="modal-overlay" style="display: none;">
             <div class="modal-box">
                 
-                <!-- [NEW] Reaction Bar -->
+                <!-- Reaction Bar -->
                 <div class="reaction-bar">
                     <span class="reaction-emoji" onclick="sendReaction('❤️')">❤️</span>
                     <span class="reaction-emoji" onclick="sendReaction('😆')">😆</span>

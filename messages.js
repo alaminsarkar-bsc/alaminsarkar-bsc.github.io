@@ -7,6 +7,10 @@ const SUPABASE_URL = 'https://pnsvptaanvtdaspqjwbk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuc3ZwdGFhbnZ0ZGFzcHFqd2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMzcxNjMsImV4cCI6MjA3NTkxMzE2M30.qposYOL-W17DnFF11cJdZ7zrN1wh4Bop6YnclkUe_rU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// OneSignal কনফিগারেশন
+const ONESIGNAL_APP_ID = "f32cfd0e-9004-4b77-99e1-0a668f4b0df4";
+const ONESIGNAL_REST_API_KEY = "hlmvlcdziujz5fwiariyhrsqo"; 
+
 // ==========================================
 // ২. গ্লোবাল ভ্যারিয়েবল (Global Variables)
 // ==========================================
@@ -22,7 +26,7 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 
-// অন্যান্য
+// অন্যান্য স্টেট ভ্যারিয়েবল
 let selectedImageFile = null;
 let isUploading = false;
 let replyToId = null;
@@ -44,39 +48,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     currentUser = session.user;
+
+    // OneSignal এ ইউজারকে লগইন করানো (যাতে নোটিফিকেশন পায়)
+    if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(function(OneSignal) {
+            OneSignal.login(currentUser.id);
+            console.log("OneSignal User ID Registered:", currentUser.id);
+        });
+    }
     
-    // নিজের প্রোফাইল এবং স্ট্যাটাস আপডেট
+    // ডাটা লোড করা
     loadMyProfile();
     updateMyLastSeen();
     
-    // প্রতি ১ মিনিটে লাস্ট সিন আপডেট হবে যাতে অনলাইন দেখায়
+    // প্রতি ১ মিনিটে লাস্ট সিন আপডেট হবে
     setInterval(updateMyLastSeen, 60000); 
 
-    // UI লোড করা (স্টোরি এবং চ্যাট লিস্ট)
+    // UI লোড করা
     loadActiveUsersHorizontal();
     loadChatList();
     
     // রিয়েলটাইম স্ট্যাটাস লিসেনার (Green Dot এর জন্য)
     setupUserStatusListener();
 
-    // সব ইভেন্ট লিসেনার সেটআপ (বাটন ক্লিক ইত্যাদি)
+    // সব ইভেন্ট লিসেনার সেটআপ
     setupEventListeners();
     
     // --- সার্চ বাটন লজিক (Floating Search Bar) ---
-    document.getElementById('openSearchBtn').addEventListener('click', () => {
-        document.getElementById('floatingSearchBar').style.display = 'flex';
-        document.getElementById('chatSearchInput').focus();
-    });
+    const openSearchBtn = document.getElementById('openSearchBtn');
+    if (openSearchBtn) {
+        openSearchBtn.addEventListener('click', () => {
+            document.getElementById('floatingSearchBar').style.display = 'flex';
+            document.getElementById('chatSearchInput').focus();
+        });
+    }
 
-    document.getElementById('closeSearchBtn').addEventListener('click', () => {
-        document.getElementById('floatingSearchBar').style.display = 'none';
-        document.getElementById('chatSearchInput').value = '';
-        filterChatList(''); // ফিল্টার রিসেট
-    });
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    if (closeSearchBtn) {
+        closeSearchBtn.addEventListener('click', () => {
+            document.getElementById('floatingSearchBar').style.display = 'none';
+            document.getElementById('chatSearchInput').value = '';
+            filterChatList(''); // ফিল্টার রিসেট
+        });
+    }
 
-    document.getElementById('chatSearchInput').addEventListener('input', (e) => {
-        filterChatList(e.target.value.toLowerCase());
-    });
+    const searchInput = document.getElementById('chatSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterChatList(e.target.value.toLowerCase());
+        });
+    }
 });
 
 // ==========================================
@@ -115,7 +136,7 @@ async function updateMyLastSeen() {
     }
 }
 
-// সময় ফরম্যাটিং (Time Fix: m, h, d)
+// সময় ফরম্যাটিং (Time Fix: Just now, m, h, d, w)
 function timeAgoShort(dateString) {
     if (!dateString) return '';
     const now = new Date();
@@ -477,9 +498,39 @@ function playMessageSound() {
     }
 }
 
-// ==========================================
-// ৮. ইভেন্ট হ্যান্ডলার ও ইনপুট
-// ==========================================
+// ==========================
+// ৮. পুশ নোটিফিকেশন পাঠানো (OneSignal API)
+// ==========================
+async function sendPushNotification(receiverId, content) {
+    const myName = currentUser.user_metadata.full_name || "iPray User";
+
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`
+        },
+        body: JSON.stringify({
+            app_id: ONESIGNAL_APP_ID,
+            include_external_user_ids: [receiverId], // নির্দিষ্ট ইউজারের কাছে যাবে
+            contents: { en: content },
+            headings: { en: myName },
+            url: `${window.location.origin}/messages.html` // ক্লিক করলে চ্যাটে যাবে
+        })
+    };
+
+    try {
+        await fetch('https://onesignal.com/api/v1/notifications', options);
+        console.log("Push Notification Sent!");
+    } catch (err) {
+        console.error("Push Notification Failed:", err);
+    }
+}
+
+// ==========================
+// ৯. ইভেন্ট হ্যান্ডলার ও ইনপুট
+// ==========================
 function setupEventListeners() {
     document.getElementById('backToInboxBtn').addEventListener('click', () => {
         document.getElementById('conversation-view').style.display = 'none';
@@ -574,9 +625,9 @@ window.sendReaction = async function(emoji) {
     }
 }
 
-// ==========================================
-// ৯. মেসেজ সেন্ডিং লজিক
-// ==========================================
+// ==========================
+// ১০. মেসেজ সেন্ডিং লজিক
+// ==========================
 async function sendMessage() {
     if (isUploading) return;
     const input = document.getElementById('messageInput');
@@ -585,20 +636,26 @@ async function sendMessage() {
     // থাম্বস আপ পাঠানো
     if (!text && !selectedImageFile) {
         await supabaseClient.from('messages').insert([{ sender_id: currentUser.id, receiver_id: activeChatUserId, content: '👍' }]);
+        sendPushNotification(activeChatUserId, "Sent a Like 👍");
         return;
     }
 
     isUploading = true;
     let imgUrl = null;
+    let notifText = text || "Sent an attachment";
 
     if (selectedImageFile) {
         imgUrl = await uploadFile(selectedImageFile, 'chat_images');
+        notifText = "Sent a photo 📷";
         if(!imgUrl) { isUploading = false; return alert("Image upload failed"); }
     }
 
     await supabaseClient.from('messages').insert([{
         sender_id: currentUser.id, receiver_id: activeChatUserId, content: text || null, image_url: imgUrl, reply_to_id: replyToId
     }]);
+
+    // নোটিফিকেশন পাঠানো
+    sendPushNotification(activeChatUserId, notifText);
 
     input.value = '';
     document.querySelector('#sendMessageBtn i').className = 'fas fa-thumbs-up';
@@ -627,9 +684,9 @@ function closeImagePreview() {
     document.getElementById('imagePreviewPanel').style.display = 'none';
 }
 
-// ==========================================
-// ১০. ভয়েস রেকর্ডিং (FIXED: Direct Blob Upload)
-// ==========================================
+// ==========================
+// ১১. ভয়েস রেকর্ডিং (FIXED: Direct Blob Upload)
+// ==========================
 async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -703,6 +760,9 @@ async function sendRecording() {
                     content: null,
                     is_read: false
                 }]);
+
+                // নোটিফিকেশন
+                sendPushNotification(activeChatUserId, "Sent a voice message 🎤");
             }
         } catch (e) {
             console.error("Audio upload failed:", e);
@@ -718,16 +778,15 @@ async function sendRecording() {
     clearInterval(recordingInterval);
 }
 
-// ==========================================
-// ১১. ফাইল আপলোড (ইমেজের জন্য)
-// ==========================================
+// ==========================
+// ১২. ফাইল আপলোড (ইমেজের জন্য)
+// ==========================
 async function uploadFile(file, bucket) {
     try {
         let uploadFile = file;
         if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
             uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
         }
-        
         const fileName = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
         const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, uploadFile);
         if (error) throw error;
@@ -736,9 +795,9 @@ async function uploadFile(file, bucket) {
     } catch (e) { return null; }
 }
 
-// ==========================================
-// ১২. রিয়েলটাইম ও অন্যান্য
-// ==========================================
+// ==========================
+// ১৩. রিয়েলটাইম ও অন্যান্য
+// ==========================
 function setupRealtimeChat(partnerId) {
     if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
     
@@ -750,23 +809,13 @@ function setupRealtimeChat(partnerId) {
                 if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
                     (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
                     
-                    // মেসেজ এবং রিপ্লাই ডাটা ফেচ করা
-                    const { data } = await supabaseClient
-                        .from('messages')
-                        .select(`*, reply_message:reply_to_id(content)`)
-                        .eq('id', newMsg.id)
-                        .single();
-                        
+                    const { data } = await supabaseClient.from('messages').select(`*, reply_message:reply_to_id(content)`).eq('id', newMsg.id).single();
                     appendMessageToUI(data || newMsg);
                     scrollToBottom(true);
                     
-                    // সাউন্ড ও সিন
                     if(newMsg.sender_id === partnerId) {
                         playMessageSound();
-                        await supabaseClient
-                            .from('messages')
-                            .update({ is_read: true })
-                            .eq('id', newMsg.id);
+                        await supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
                     }
                 }
             } 
@@ -834,3 +883,34 @@ window.viewFullScreenImage = function(src) {
 document.querySelector('.fs-close-btn').addEventListener('click', () => {
     document.getElementById('fullScreenImageModal').style.display = 'none';
 });
+
+// ==========================
+// [FIX] পুশ নোটিফিকেশন ফাংশন
+// ==========================
+async function sendPushNotification(receiverId, content) {
+    // ইউজারের নাম নেওয়া
+    const myName = currentUser.user_metadata.full_name || currentUser.email?.split('@')[0] || "iPray User";
+
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`
+        },
+        body: JSON.stringify({
+            app_id: ONESIGNAL_APP_ID,
+            include_external_user_ids: [receiverId], // যাকে মেসেজ দিচ্ছেন তার আইডি
+            contents: { en: content }, // মেসেজের টেক্সট
+            headings: { en: myName }, // আপনার নাম টাইটেল হিসেবে যাবে
+            url: `${window.location.origin}/messages.html` // ক্লিক করলে চ্যাটে আসবে
+        })
+    };
+
+    try {
+        await fetch('https://onesignal.com/api/v1/notifications', options);
+        console.log("Push Notification Sent Successfully!");
+    } catch (err) {
+        console.error("Push Notification Failed:", err);
+    }
+}
