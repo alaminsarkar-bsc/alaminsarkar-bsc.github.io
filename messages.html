@@ -19,44 +19,55 @@
 <body id="chat-page">
 
     <!-- ===========================
-       ১. ইনবক্স ভিউ (Inbox View) - Messenger Style Updated
+       ১. ইনবক্স ভিউ (Inbox View) - Messenger Style
        =========================== -->
     <div id="inbox-view" class="view-container">
         
-        <!-- ফিক্সড টপ এরিয়া (হেডার + সার্চ বক্স) -->
+        <!-- ফিক্সড টপ এরিয়া (হেডার) -->
         <div class="fixed-top-area">
             <header class="msg-header-modern">
                 <div class="header-top-row">
                     <div class="header-left">
-                        <a href="/index.html" class="my-profile-link">
+                        <a href="/profile.html" class="my-profile-link">
                             <div id="myHeaderAvatar" class="avatar-small"></div>
                         </a>
                         <h1 class="page-title">Chats</h1>
                     </div>
                     <div class="header-right">
-                        <button class="icon-circle-btn"><i class="fas fa-camera"></i></button>
-                        <button class="icon-circle-btn" id="newChatBtn"><i class="fas fa-edit"></i></button>
+                        <!-- সার্চ বাটন (ক্লিক করলে সার্চ বার আসবে) -->
+                        <button class="icon-circle-btn" id="openSearchBtn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <button class="icon-circle-btn" id="newChatBtn">
+                            <i class="fas fa-edit"></i>
+                        </button>
                     </div>
                 </div>
-                
-                <!-- সার্চ বক্স এখন হেডারের অংশ -->
-                <div class="msg-search-box-modern">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="chatSearchInput" placeholder="Search">
-                </div>
             </header>
+
+            <!-- ফ্লটিং সার্চ বার (ডিফল্টভাবে লুকানো থাকবে) -->
+            <div id="floatingSearchBar" class="floating-search-wrapper" style="display: none;">
+                <div class="search-inner">
+                    <button class="back-icon-btn" id="closeSearchBtn">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="search-input-container">
+                        <input type="text" id="chatSearchInput" placeholder="Search chats...">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- স্ক্রলেবল মেইন এরিয়া (হেডারের নিচ থেকে শুরু হবে) -->
         <div class="scrollable-content-area">
             
-            <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (New Feature) -->
+            <!-- হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট (Active Users) -->
             <div id="activeUsersBar" class="active-users-bar">
-                <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে ইউজার আসবে -->
+                <!-- জাভাস্ক্রিপ্ট দিয়ে এখানে ইউজার লোড হবে -->
                 <div class="loader-horizontal" style="display: none;"></div> 
             </div>
 
-            <!-- ভার্টিকাল চ্যাট লিস্ট -->
+            <!-- ভার্টিকাল চ্যাট লিস্ট (Inbox List) -->
             <div id="chatListContainer" class="chat-list-area">
                 <div class="loader-container" style="padding-top: 50px;">
                     <div class="loader"></div>
@@ -73,22 +84,25 @@
     </div>
 
     <!-- ===========================
-       ২. কনভারসেশন ভিউ (Chat Room) - আগের মতোই আছে
+       ২. কনভারসেশন ভিউ (Chat Room)
        =========================== -->
     <div id="conversation-view" class="view-container" style="display: none;">
         
         <!-- চ্যাট হেডার -->
         <header class="chat-room-header">
-            <button id="backToInboxBtn" class="back-btn-chat"><i class="fas fa-arrow-left"></i></button>
+            <button id="backToInboxBtn" class="back-btn-chat">
+                <i class="fas fa-arrow-left"></i>
+            </button>
             
             <div class="chat-partner-info">
                 <div class="partner-avatar-wrapper">
                     <img id="chatHeaderImg" src="" alt="" class="partner-img">
+                    <!-- অনলাইন গ্রিন ডট -->
                     <span class="active-dot" id="headerActiveDot"></span>
                 </div>
                 <div class="partner-text">
                     <h3 id="chatHeaderName">Loading...</h3>
-                    <span id="chatHeaderStatus">Active now</span>
+                    <span id="chatHeaderStatus">Checking...</span>
                 </div>
             </div>
             
@@ -96,7 +110,9 @@
                 <button class="action-icon"><i class="fas fa-phone-alt"></i></button>
                 <button class="action-icon"><i class="fas fa-video"></i></button>
                 <!-- More Options Menu Trigger -->
-                <button class="action-icon info-icon" id="chatOptionsBtn"><i class="fas fa-ellipsis-v"></i></button>
+                <button class="action-icon info-icon" id="chatOptionsBtn">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
             </div>
 
             <!-- Chat Options Dropdown (Block/Report) -->
@@ -108,7 +124,7 @@
 
         <!-- মেসেজ বডি -->
         <main class="message-body" id="messageContainer">
-            <!-- মেসেজগুলো এখানে আসবে -->
+            <!-- মেসেজগুলো এখানে ডাইনামিকলি আসবে -->
         </main>
 
         <!-- Typing Indicator Bubble -->
@@ -151,7 +167,6 @@
             <div class="modal-box">
                 <h3 style="margin-bottom: 15px; font-size: 16px; color: #333;">Message Options</h3>
                 <div class="modal-actions">
-                    <!-- Reply Option added to modal for Long Press -->
                     <button id="replyOptionBtn" class="modal-btn">Reply</button>
                     <button id="deleteForMeBtn" class="modal-btn">Delete for me</button>
                     <button id="deleteForEveryoneBtn" class="modal-btn danger" style="display: none;">Delete for everyone</button>
@@ -194,11 +209,13 @@
         </footer>
     </div>
 
-    <!-- ইমেজ ভিউয়ার মডাল -->
+    <!-- ইমেজ ভিউয়ার মডাল (Full Screen) -->
     <div id="fullScreenImageModal" class="fs-image-modal">
         <span class="fs-close-btn">&times;</span>
         <img class="fs-modal-content" id="fsModalImg">
-        <a id="downloadImgBtn" href="#" download class="fs-download-btn"><i class="fas fa-download"></i></a>
+        <a id="downloadImgBtn" href="#" download class="fs-download-btn">
+            <i class="fas fa-download"></i>
+        </a>
     </div>
 
     <!-- লাইব্রেরি -->

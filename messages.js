@@ -14,232 +14,249 @@ let currentUser = null;
 let activeChatUserId = null;
 let realtimeSubscription = null;
 let presenceChannel = null;
-let selectedImageFile = null;
-let isUploading = false;
-
-// ভয়েস রেকর্ডিং ভ্যারিয়েবল
+let typingTimeout = null;
+let isRecording = false;
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
-let isRecording = false;
-
-// লং প্রেস এবং রিপ্লাই ভ্যারিয়েবল
-let pressTimer;
-let selectedMessageId = null;
-let selectedMessageText = null; 
+let selectedImageFile = null;
+let isUploading = false;
 let replyToId = null;
-let typingTimeout = null;
+let selectedMessageId = null;
+let selectedMessageText = null;
+let pressTimer;
 
 // ==========================
-// ১. অ্যাপ লোডিং এবং অথেন্টিকেশন
+// ১. ইনিশিয়ালাইজেশন
 // ==========================
 document.addEventListener('DOMContentLoaded', async () => {
-    // সেশন চেক করা
+    // সেশন চেক
     const { data: { session }, error } = await supabaseClient.auth.getSession();
-    
-    if (error || !session) {
-        window.location.href = '/index.html'; // লগইন না থাকলে ফেরত
-        return;
+    if (error || !session) { 
+        window.location.href = '/index.html'; 
+        return; 
     }
     
     currentUser = session.user;
     
-    // নিজের প্রোফাইল লোড করা
+    // ডাটা লোড
     loadMyProfile();
-    
-    // লাস্ট সিন আপডেট করা (প্রতি মিনিটে)
     updateMyLastSeen();
-    setInterval(updateMyLastSeen, 60000); 
+    setInterval(updateMyLastSeen, 60000); // প্রতি মিনিটে লাস্ট সিন আপডেট
 
-    // নতুন ফিচার: হরাইজন্টাল অ্যাক্টিভ ইউজার লোড করা
+    // UI লোড
     loadActiveUsersHorizontal();
-
-    // অন্য পেজ থেকে চ্যাট শুরু করতে চাইলে
-    const startChatUser = localStorage.getItem('startChatWith');
-    if (startChatUser) {
-        localStorage.removeItem('startChatWith');
-        openChat(startChatUser);
-    } else {
-        loadChatList();
-    }
+    loadChatList();
     
-    // ইভেন্ট লিসেনার চালু করা
+    // রিয়েলটাইম স্ট্যাটাস লিসেনার (গ্রিন ডটের জন্য)
+    setupUserStatusListener();
+
+    // ইভেন্ট লিসেনার সেটআপ
     setupEventListeners();
+    
+    // --- সার্চ বাটন লজিক ---
+    document.getElementById('openSearchBtn').addEventListener('click', () => {
+        document.getElementById('floatingSearchBar').style.display = 'flex';
+        document.getElementById('chatSearchInput').focus();
+    });
+
+    document.getElementById('closeSearchBtn').addEventListener('click', () => {
+        document.getElementById('floatingSearchBar').style.display = 'none';
+        document.getElementById('chatSearchInput').value = '';
+        filterChatList(''); // ফিল্টার রিসেট
+    });
+
+    document.getElementById('chatSearchInput').addEventListener('input', (e) => {
+        filterChatList(e.target.value.toLowerCase());
+    });
 });
 
-// নিজের ছবি লোড করা
+// ==========================
+// ২. প্রোফাইল ও স্ট্যাটাস
+// ==========================
 async function loadMyProfile() {
     try {
-        const { data } = await supabaseClient
-            .from('users')
-            .select('photo_url')
-            .eq('id', currentUser.id)
-            .single();
-            
+        const { data } = await supabaseClient.from('users').select('photo_url').eq('id', currentUser.id).single();
         const el = document.getElementById('myHeaderAvatar');
         if (el) {
-            if (data?.photo_url) {
-                el.innerHTML = `<img src="${data.photo_url}" alt="Me">`;
-            } else {
-                el.innerHTML = '<img src="./images/default-avatar.png" alt="Me">';
-            }
+            el.innerHTML = data?.photo_url ? `<img src="${data.photo_url}">` : '<img src="./images/default-avatar.png">';
         }
-    } catch(e) {
-        console.error("Profile load error", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
-// নিজের অনলাইন স্ট্যাটাস আপডেট করা
 async function updateMyLastSeen() {
     if (!currentUser) return;
     try {
-        await supabaseClient
-            .from('users')
-            .update({ last_seen: new Date() })
-            .eq('id', currentUser.id);
-    } catch (e) {
-        console.error("Last seen update error", e);
-    }
+        await supabaseClient.from('users').update({ last_seen: new Date() }).eq('id', currentUser.id);
+    } catch (e) {}
+}
+
+// সময় ঠিক করা (Fix for "Just now")
+function timeAgoShort(dateString) {
+    if (!dateString) return '';
+    const now = new Date();
+    const date = new Date(dateString);
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    
+    const weeks = Math.floor(days / 7);
+    return `${weeks}w`;
+}
+
+// রিয়েলটাইম অনলাইন স্ট্যাটাস লিসেনার (Green Dot Fix)
+function setupUserStatusListener() {
+    supabaseClient.channel('public-users-status')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
+        const user = payload.new;
+        // ৫ মিনিটের মধ্যে অ্যাক্টিভ থাকলে অনলাইন ধরব
+        const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+        
+        // ১. চ্যাট লিস্টে ডট আপডেট
+        const listDot = document.querySelector(`.chat-item-row[data-user-id="${user.id}"] .online-status-dot`);
+        if (listDot) listDot.style.display = isOnline ? 'block' : 'none';
+
+        // ২. উপরের স্টোরি লিস্টে ডট আপডেট
+        const storyDot = document.querySelector(`.story-avatar-item[data-user-id="${user.id}"] .story-online-dot`);
+        if (storyDot) storyDot.style.display = isOnline ? 'block' : 'none';
+
+        // ৩. চ্যাট রুমে থাকলে হেডার আপডেট
+        if (activeChatUserId === user.id) {
+            const headerDot = document.getElementById('headerActiveDot');
+            const statusText = document.getElementById('chatHeaderStatus');
+            
+            if (headerDot) headerDot.style.display = isOnline ? 'block' : 'none';
+            if (statusText) statusText.innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
+        }
+    })
+    .subscribe();
+}
+
+// চ্যাট ফিল্টার লজিক (Search Function)
+function filterChatList(term) {
+    const rows = document.querySelectorAll('.chat-item-row');
+    rows.forEach(row => {
+        const name = row.querySelector('.chat-name').innerText.toLowerCase();
+        if (name.includes(term)) {
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 // ==========================
-// ২. [NEW] হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট
+// ৩. হরাইজন্টাল অ্যাক্টিভ ইউজার লিস্ট
 // ==========================
 async function loadActiveUsersHorizontal() {
     const container = document.getElementById('activeUsersBar');
-    if (!container || !currentUser) return;
-
-    // লোডার দেখানো (CSS এ display:none থাকলে JS দিয়ে অন করছি)
-    const loader = container.querySelector('.loader-horizontal');
-    if(loader) loader.style.display = 'block';
+    if(!container) return;
 
     try {
-        // লাস্ট সিন অনুযায়ী ইউজারদের আনা (সর্বশেষ ১৫ জন)
-        // নিজের আইডি বাদে বাকিদের আনা
         const { data: users, error } = await supabaseClient
             .from('users')
             .select('id, display_name, photo_url, last_seen')
-            .neq('id', currentUser.id) 
-            .order('last_seen', { ascending: false })
+            .neq('id', currentUser.id)
+            .order('last_seen', { ascending: false }) // যারা রিসেন্টলি অ্যাক্টিভ তারা আগে থাকবে
             .limit(15);
 
         if (error) throw error;
 
-        container.innerHTML = ''; // ক্লিয়ার কন্টেইনার
-
-        // নিজের নোট বা স্ট্যাটাস এড করার বাটন (অপশনাল)
-        const myHtml = `
+        // ডিফল্ট "Your Note" বাটন
+        container.innerHTML = `
             <div class="story-avatar-item">
                 <div class="story-img-wrapper" style="border:none; box-shadow:none;">
-                    <div style="width:100%; height:100%; background:#f0f2f5; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:#050505;">
+                    <div class="add-note-icon">
                         <i class="fas fa-plus"></i>
                     </div>
                 </div>
-                <span class="story-name">Your Note</span>
+                <span class="story-name">Note</span>
             </div>
         `;
-        container.insertAdjacentHTML('beforeend', myHtml);
 
         if (users && users.length > 0) {
-            users.forEach(user => {
-                // ৫ মিনিটের মধ্যে অনলাইন থাকলে সবুজ বাতি
-                const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+            users.forEach(u => {
+                const isOnline = u.last_seen && (new Date() - new Date(u.last_seen) < 5 * 60 * 1000);
+                const name = u.display_name ? u.display_name.split(' ')[0] : 'User';
                 
-                // শুধুমাত্র নামের প্রথম অংশ দেখানো
-                const firstName = user.display_name ? user.display_name.split(' ')[0] : 'User';
-
-                const html = `
-                    <div class="story-avatar-item" onclick="openChat('${user.id}')">
+                container.innerHTML += `
+                    <div class="story-avatar-item" onclick="openChat('${u.id}')" data-user-id="${u.id}">
                         <div class="story-img-wrapper">
-                            <img src="${user.photo_url || './images/default-avatar.png'}" alt="${firstName}">
-                            ${isOnline ? '<div class="story-online-dot"></div>' : ''}
+                            <img src="${u.photo_url || './images/default-avatar.png'}" alt="${name}">
+                            <div class="story-online-dot" style="display:${isOnline ? 'block' : 'none'}"></div>
                         </div>
-                        <span class="story-name" style="${isOnline ? 'font-weight:600; color:#050505;' : ''}">${firstName}</span>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
+                        <span class="story-name" style="${isOnline ? 'font-weight:700;color:black;' : ''}">${name}</span>
+                    </div>`;
             });
         }
-
-    } catch (error) {
-        console.error("Error loading active users:", error);
+    } catch (e) {
+        console.error("Error loading active users:", e);
     }
 }
 
 // ==========================
-// ৩. চ্যাট লিস্ট লোড করা (ভার্টিকাল)
+// ৪. ভার্টিকাল চ্যাট লিস্ট
 // ==========================
 async function loadChatList() {
     const container = document.getElementById('chatListContainer');
-    if(!container) return;
+    container.innerHTML = `<div class="loader-container" style="padding-top:50px;"><div class="loader"></div></div>`;
     
-    // লোডার দেখানো
-    container.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
-
     try {
-        // ডাটাবেস থেকে পার্টনারদের লিস্ট আনা
         const { data: partners, error } = await supabaseClient.rpc('get_chat_partners', { user_id: currentUser.id });
-
-        if (error) throw error;
-
-        container.innerHTML = ''; // লোডার সরানো
-
-        if (!partners || partners.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding:50px 20px; color:#999;">
-                    <i class="fas fa-comment-dots" style="font-size: 30px; margin-bottom:10px;"></i>
-                    <h3 style="margin:0;">No Messages</h3>
-                    <p>Start a conversation with someone.</p>
-                </div>`;
+        
+        container.innerHTML = '';
+        if (error || !partners || partners.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:50px;color:#999;"><h3>No messages yet</h3><p>Start chatting with someone!</p></div>`;
             return;
         }
 
-        // চ্যাট লিস্ট রেন্ডার করা
+        // প্রত্যেক পার্টনারের ডিটেইলস লোড করা
         for (const chat of partners) {
-            const { data: user } = await supabaseClient
-                .from('users')
-                .select('display_name, photo_url, last_seen')
-                .eq('id', chat.partner_id)
-                .single();
-            
-            const timeString = timeAgoShort(chat.last_message_time);
-            const isUnread = chat.unread_count > 0;
-            let msgPreview = chat.last_message_content || 'Sent an attachment';
-            
-            if (msgPreview === '👍') msgPreview = 'Like 👍';
+            const { data: user } = await supabaseClient.from('users').select('*').eq('id', chat.partner_id).single();
+            if (!user) continue;
 
-            // অনলাইন চেক (৫ মিনিটের মধ্যে অ্যাক্টিভ থাকলে)
             const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
+            const timeStr = timeAgoShort(chat.last_message_time);
+            const isUnread = chat.unread_count > 0;
+            
+            let preview = chat.last_message_content || 'Sent an attachment';
+            if (chat.last_message_content === '👍') preview = 'Like 👍';
 
             // HTML তৈরি
             const html = `
-                <div class="chat-item-row" onclick="openChat('${chat.partner_id}')">
+                <div class="chat-item-row" onclick="openChat('${chat.partner_id}')" data-user-id="${chat.partner_id}">
                     <div class="chat-avatar">
-                        <img src="${user?.photo_url || './images/default-avatar.png'}" alt="User">
-                        ${isOnline ? '<div class="online-status-dot"></div>' : ''}
+                        <img src="${user.photo_url || './images/default-avatar.png'}" alt="${user.display_name}">
+                        <div class="online-status-dot" style="display:${isOnline ? 'block' : 'none'}"></div>
                     </div>
                     <div class="chat-info">
-                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${user?.display_name || 'Unknown'}</h4>
+                        <h4 class="chat-name" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${user.display_name}</h4>
                         <div class="chat-preview">
-                            <span class="msg-text" style="${isUnread ? 'font-weight:700;color:black;' : ''}">
-                                ${msgPreview.substring(0, 30)}${msgPreview.length > 30 ? '...' : ''}
-                            </span>
-                            <span class="msg-dot">· ${timeString}</span>
+                            <span class="msg-text" style="${isUnread ? 'font-weight:700;color:black;' : ''}">${preview}</span>
+                            <span class="msg-dot">· ${timeStr}</span>
                         </div>
                     </div>
                     ${isUnread ? '<div class="unread-dot"></div>' : ''}
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
         }
-
     } catch (err) {
         console.error("Chat list error:", err);
-        container.innerHTML = `<p style="text-align:center; color:red;">Error loading chats.</p>`;
+        container.innerHTML = `<p style="text-align:center;color:red;">Error loading chats.</p>`;
     }
 }
 
 // ==========================
-// ৪. চ্যাট রুম ওপেন করা
+// ৫. চ্যাট রুম এবং মেসেজিং
 // ==========================
 async function openChat(partnerId) {
     activeChatUserId = partnerId;
@@ -248,573 +265,131 @@ async function openChat(partnerId) {
     document.getElementById('inbox-view').style.display = 'none';
     document.getElementById('conversation-view').style.display = 'flex';
     
-    // চ্যাট লোডার
+    // লোডার
     const msgContainer = document.getElementById('messageContainer');
-    msgContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%;"><div class="loader"></div></div>';
-    
-    // রিপ্লাই রিসেট
-    replyToId = null;
-    document.getElementById('replyPreviewBar').style.display = 'none';
+    msgContainer.innerHTML = '<div style="display:flex;justify-content:center;height:100%;align-items:center;"><div class="loader"></div></div>';
 
+    // হেডার ইনফো আপডেট
     try {
-        // ১. ব্লক চেক করা
-        const { data: blocked } = await supabaseClient
-            .from('user_blocks')
-            .select('*')
-            .or(`blocker_id.eq.${currentUser.id},blocked_id.eq.${currentUser.id}`)
-            .or(`blocker_id.eq.${partnerId},blocked_id.eq.${partnerId}`);
-        
-        if (blocked && blocked.length > 0) {
-            console.log("This user conversation is blocked.");
-        }
-
-        // ২. ইউজারের তথ্য আনা
-        const { data: user } = await supabaseClient
-            .from('users')
-            .select('*')
-            .eq('id', partnerId)
-            .single();
-            
+        const { data: user } = await supabaseClient.from('users').select('*').eq('id', partnerId).single();
         if (user) {
             document.getElementById('chatHeaderName').innerText = user.display_name;
             document.getElementById('chatHeaderImg').src = user.photo_url || './images/default-avatar.png';
             
-            // অনলাইন স্ট্যাটাস দেখানো
             const isOnline = user.last_seen && (new Date() - new Date(user.last_seen) < 5 * 60 * 1000);
             document.getElementById('headerActiveDot').style.display = isOnline ? 'block' : 'none';
-            document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Last seen ${timeAgoShort(user.last_seen)}`;
+            document.getElementById('chatHeaderStatus').innerText = isOnline ? 'Active now' : `Active ${timeAgoShort(user.last_seen)} ago`;
         }
+    } catch(e) {}
 
-        // ৩. মেসেজ লোড এবং রিয়েলটাইম সেটআপ
-        await loadMessages(partnerId);
-        setupRealtimeChat(partnerId);
-        setupPresence(partnerId); 
-
-    } catch (err) { 
-        console.error("Open chat error:", err); 
-    }
+    // মেসেজ লোড এবং সেটআপ
+    loadMessages(partnerId);
+    setupRealtimeChat(partnerId);
+    setupPresence(partnerId);
 }
 
-// মেসেজ লোড ফাংশন
 async function loadMessages(partnerId) {
     const container = document.getElementById('messageContainer');
     
-    // ডিলিট করা মেসেজ বাদে বাকিগুলো আনা
-    const { data: messages, error } = await supabaseClient
+    const { data: messages } = await supabaseClient
         .from('messages')
-        .select(`
-            *, 
-            reply_message:reply_to_id(content, sender_id, image_url, audio_url)
-        `)
+        .select(`*, reply_message:reply_to_id(content, image_url, audio_url)`)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .or(`sender_id.eq.${partnerId},receiver_id.eq.${partnerId}`)
-        .not('deleted_by', 'cs', `{"${currentUser.id}"}`) // ডিলিটেড ফিল্টার
         .order('created_at', { ascending: true });
 
-    container.innerHTML = ''; // ক্লিয়ার লোডার
-
+    container.innerHTML = '';
+    
     if (messages && messages.length > 0) {
         messages.forEach(msg => appendMessageToUI(msg));
-        scrollToBottom(false); 
     } else {
-        const pImg = document.getElementById('chatHeaderImg').src;
         const pName = document.getElementById('chatHeaderName').innerText;
-        
+        const pImg = document.getElementById('chatHeaderImg').src;
         container.innerHTML = `
-            <div class="empty-chat-placeholder">
-                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;margin-bottom:10px;object-fit:cover;">
-                <h3>${pName}</h3>
+            <div class="empty-chat-placeholder" style="text-align:center;margin-top:50px;opacity:0.6;">
+                <img src="${pImg}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
+                <h3 style="margin-top:10px;">${pName}</h3>
                 <p>Say Hi 👋 to start chatting.</p>
             </div>`;
     }
     
-    markAsSeen(partnerId);
-}
-
-// ==========================
-// ৫. মেসেজ পাঠানো (টেক্সট, ছবি, রিপ্লাই)
-// ==========================
-async function sendMessage() {
-    if (isUploading) return;
-
-    const input = document.getElementById('messageInput');
-    const text = input.value.trim();
+    scrollToBottom(false);
     
-    // খালি মেসেজ হ্যান্ডলিং
-    if (!text && !selectedImageFile) {
-        sendLikeEmoji(activeChatUserId); 
-        return;
-    }
-
-    // লোডিং শুরু
-    isUploading = true;
-    const sendBtnIcon = document.querySelector('#sendMessageBtn i');
-    const originalIcon = sendBtnIcon.className;
-    sendBtnIcon.className = 'fas fa-spinner fa-spin';
-
-    let imageUrl = null;
-
-    // ইমেজ আপলোড
-    if (selectedImageFile) {
-        try {
-            imageUrl = await uploadFile(selectedImageFile, 'chat_images');
-            if (!imageUrl) {
-                alert("ছবি আপলোড ব্যর্থ হয়েছে।");
-                isUploading = false;
-                sendBtnIcon.className = originalIcon;
-                return;
-            }
-        } catch (error) {
-            console.error("Image Upload Error:", error);
-            isUploading = false;
-            sendBtnIcon.className = originalIcon;
-            return;
-        }
-    }
-
-    // মেসেজ অবজেক্ট
-    const newMessage = { 
-        sender_id: currentUser.id, 
-        receiver_id: activeChatUserId, 
-        content: text || null, 
-        image_url: imageUrl, 
-        is_read: false,
-        deleted_by: [], // ডিফল্ট খালি অ্যারে
-        reply_to_id: replyToId // রিপ্লাই আইডি (যদি থাকে)
-    };
-    
-    try {
-        const { error } = await supabaseClient.from('messages').insert([newMessage]);
-        if (error) throw error;
-        
-        // সফল হলে UI রিসেট
-        input.value = '';
-        closeImagePreview();
-        cancelReply(); 
-        
-        const empty = document.querySelector('.empty-chat-placeholder');
-        if(empty) empty.remove();
-        
-        document.getElementById('emojiPickerContainer').style.display = 'none';
-
-    } catch (err) {
-        console.error("Send failed:", err);
-        alert("মেসেজ পাঠানো যায়নি।");
-    } finally {
-        isUploading = false; 
-        sendBtnIcon.className = 'fas fa-thumbs-up'; 
-        toggleSendButton();
-    }
+    // মেসেজ সিন করা
+    await supabaseClient.from('messages').update({ is_read: true }).match({ sender_id: partnerId, receiver_id: currentUser.id, is_read: false });
 }
 
-// লাইক পাঠানো
-async function sendLikeEmoji(partnerId) {
-    try {
-        const empty = document.querySelector('.empty-chat-placeholder');
-        if(empty) empty.remove();
-        
-        await supabaseClient.from('messages').insert([{ 
-            sender_id: currentUser.id, 
-            receiver_id: partnerId, 
-            content: '👍', 
-            is_read: false, 
-            deleted_by: [] 
-        }]);
-    } catch (e) {}
-}
-
-// ফাইল আপলোড ফাংশন
-async function uploadFile(file, bucketName) {
-    try {
-        let fileToUpload = file;
-        
-        // ইমেজ হলে কম্প্রেস করা
-        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
-            try {
-                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true };
-                fileToUpload = await imageCompression(file, options);
-            } catch (cErr) {
-                console.warn("Compression skipped:", cErr);
-            }
-        }
-
-        const ext = file.name ? file.name.split('.').pop() : 'jpg';
-        const fileName = `${currentUser.id}/${Date.now()}.${ext}`;
-        
-        const { data, error } = await supabaseClient.storage
-            .from(bucketName)
-            .upload(fileName, fileToUpload);
-            
-        if (error) throw error;
-        
-        const { data: urlData } = supabaseClient.storage
-            .from(bucketName)
-            .getPublicUrl(fileName);
-            
-        return urlData.publicUrl;
-    } catch (err) { 
-        console.error("Upload failed details:", err); 
-        return null; 
-    }
-}
-
-// ==========================
-// ৬. Realtime & Presence
-// ==========================
-function setupRealtimeChat(partnerId) {
-    if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
-    
-    realtimeSubscription = supabaseClient.channel('chat-room')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
-            
-            const eventType = payload.eventType;
-            const newMsg = payload.new;
-            const oldMsg = payload.old;
-
-            // নতুন মেসেজ আসলে
-            if (eventType === 'INSERT') {
-                if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
-                    (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
-                    
-                    const empty = document.querySelector('.empty-chat-placeholder'); 
-                    if(empty) empty.remove();
-                    
-                    // রিপ্লাই ডাটা আনার জন্য আবার ফেচ করা
-                    const { data } = await supabaseClient
-                        .from('messages')
-                        .select(`*, reply_message:reply_to_id(content, sender_id, image_url, audio_url)`)
-                        .eq('id', newMsg.id)
-                        .single();
-                        
-                    if (data) {
-                        appendMessageToUI(data);
-                        scrollToBottom(true);
-                    }
-                    
-                    if (newMsg.sender_id === partnerId) markAsSeen(partnerId);
-                }
-            } 
-            // মেসেজ ডিলিট হলে (Delete for Everyone)
-            else if (eventType === 'DELETE') {
-                const el = document.getElementById(`msg-${oldMsg.id}`);
-                if (el) el.remove();
-            }
-            // মেসেজ আপডেট হলে (Delete for Me)
-            else if (eventType === 'UPDATE') {
-                if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
-                    const el = document.getElementById(`msg-${newMsg.id}`);
-                    if (el) el.remove();
-                }
-            }
-
-        }).subscribe();
-}
-
-// টাইপিং ইন্ডিকেটর সেটআপ
-function setupPresence(partnerId) {
-    if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
-
-    presenceChannel = supabaseClient.channel(`presence-${partnerId}`)
-        .on('broadcast', { event: 'typing' }, ({ payload }) => {
-            if (payload.userId === partnerId) {
-                showTypingIndicator();
-            }
-        })
-        .subscribe();
-}
-
-function sendTypingEvent() {
-    if (presenceChannel) {
-        presenceChannel.send({ 
-            type: 'broadcast', 
-            event: 'typing', 
-            payload: { userId: currentUser.id } 
-        });
-    }
-}
-
-function showTypingIndicator() {
-    const bubble = document.getElementById('typingIndicatorBubble');
-    const container = document.getElementById('messageContainer');
-    
-    container.appendChild(bubble);
-    bubble.style.display = 'flex';
-    scrollToBottom(true);
-
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-        bubble.style.display = 'none';
-    }, 3000);
-}
-
-// ==========================
-// ৭. UI রেন্ডারিং (মেসেজ)
-// ==========================
+// মেসেজ রেন্ডারিং
 function appendMessageToUI(msg) {
-    // যদি ডিলিট করা থাকে তবে দেখাবো না
+    // ডিলিট করা মেসেজ ফিল্টার
     if (msg.deleted_by && msg.deleted_by.includes(currentUser.id)) return;
 
-    const container = document.getElementById('messageContainer');
     const isMe = msg.sender_id === currentUser.id;
+    const container = document.getElementById('messageContainer');
     
-    // রিপ্লাই অংশ তৈরি
+    // রিপ্লাই অংশ
     let replyHTML = '';
     if (msg.reply_message) {
-        const rName = msg.reply_message.sender_id === currentUser.id ? 'You' : document.getElementById('chatHeaderName').innerText;
-        let rText = msg.reply_message.content;
+        let rText = msg.reply_message.content || 'Attachment';
+        if (!msg.reply_message.content && msg.reply_message.image_url) rText = '📷 Photo';
+        if (!msg.reply_message.content && msg.reply_message.audio_url) rText = '🎤 Audio';
         
-        if (!rText) {
-            if (msg.reply_message.image_url) rText = '📷 Photo';
-            else if (msg.reply_message.audio_url) rText = '🎤 Audio';
-            else rText = 'Attachment';
-        }
-        
-        replyHTML = `
-            <div class="reply-context">
-                <span class="reply-sender-name">${rName}</span>
-                <span class="reply-text-content">${rText}</span>
-            </div>`;
+        replyHTML = `<div class="reply-context"><span class="reply-sender-name">${isMe ? 'You replied' : 'Replied to you'}</span><span class="reply-text-content">${rText}</span></div>`;
     }
 
     let contentHTML = '';
     
+    // ছবি
     if (msg.image_url) {
         contentHTML += `<img src="${msg.image_url}" class="bubble-image" onclick="viewFullScreenImage('${msg.image_url}')">`;
     }
     
+    // অডিও
     if (msg.audio_url) {
-        contentHTML += `
-            <div class="audio-bubble" style="background: ${isMe ? '#0084ff' : '#e4e6eb'}; padding: 10px; border-radius: 15px;">
-                <audio controls src="${msg.audio_url}" preload="metadata"></audio>
-            </div>`;
+        contentHTML += `<div class="audio-bubble" style="background:${isMe?'#0084ff':'#e4e6eb'};padding:10px;border-radius:15px;"><audio controls src="${msg.audio_url}"></audio></div>`;
     }
     
-    if (msg.content) { 
-        if (msg.content === '👍') {
-            contentHTML += `<span style="font-size: 40px; margin: 5px;">👍</span>`; 
+    // টেক্সট
+    if (msg.content) {
+        if(msg.content === '👍') {
+            contentHTML += `<span style="font-size:40px;">👍</span>`;
         } else {
             contentHTML += `<div class="bubble">${replyHTML}${msg.content}</div>`;
         }
-    } else if(replyHTML) {
-        // শুধু রিপ্লাই থাকলে
+    } else if (replyHTML && !msg.image_url && !msg.audio_url) {
         contentHTML += `<div class="bubble">${replyHTML}</div>`;
     }
 
+    // বাবলের ব্যাকগ্রাউন্ড মুছে ফেলার লজিক (শুধু ইমোজি বা ছবির জন্য)
     const bubbleClass = (msg.content === '👍' || (!msg.content && !replyHTML && msg.image_url)) ? 'bg-transparent' : '';
     const partnerImgSrc = document.getElementById('chatHeaderImg').src;
 
-    // লং প্রেস ইভেন্ট সহ মেসেজ রো
     const html = `
         <div class="message-row ${isMe ? 'sent' : 'received'}" id="msg-${msg.id}">
             ${!isMe ? `<img src="${partnerImgSrc}" class="msg-avatar">` : ''}
             <div class="message-content ${bubbleClass}" 
-                 style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}"
-                 onmousedown="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
-                 ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content || 'Media'}')" 
-                 onmouseup="handleMessagePressEnd()" 
-                 ontouchend="handleMessagePressEnd()"
-                 oncontextmenu="return false;"> <!-- রাইট ক্লিক বন্ধ -->
+                 onmousedown="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content}')"
+                 ontouchstart="handleMessagePressStart(this, '${msg.id}', ${isMe}, '${msg.content}')"
+                 ontouchend="clearTimeout(pressTimer)"
+                 oncontextmenu="return false;">
                 ${contentHTML}
             </div>
         </div>`;
     
-    // টাইপিং বাবল সবসময় নিচে রাখতে হবে
+    // টাইপিং বাবল নিচে রাখার জন্য
     const typingBubble = document.getElementById('typingIndicatorBubble');
-    if(typingBubble && typingBubble.parentNode === container) {
+    if (typingBubble && typingBubble.parentNode === container) {
         container.insertBefore(parseHTML(html), typingBubble);
     } else {
         container.insertAdjacentHTML('beforeend', html);
     }
 }
 
-function parseHTML(html) {
-    const t = document.createElement('template');
-    t.innerHTML = html;
-    return t.content.cloneNode(true);
-}
+function parseHTML(html) { const t = document.createElement('template'); t.innerHTML = html; return t.content.cloneNode(true); }
+function scrollToBottom(smooth) { const c = document.getElementById('messageContainer'); c.scrollTo({ top: c.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); }
 
 // ==========================
-// ৮. লং প্রেস ও রিপ্লাই লজিক
-// ==========================
-function handleMessagePressStart(el, msgId, isMyMessage, msgText) {
-    selectedMessageId = msgId;
-    selectedMessageText = msgText;
-    
-    // ৮০০ মিলি সেকেন্ড চাপলে মেনু আসবে
-    pressTimer = setTimeout(() => {
-        showDeleteOptions(isMyMessage);
-        // ভাইব্রেশন
-        if (navigator.vibrate) navigator.vibrate(50);
-    }, 600);
-}
-
-function handleMessagePressEnd() {
-    clearTimeout(pressTimer);
-}
-
-function showDeleteOptions(isMyMessage) {
-    const modal = document.getElementById('deleteOptionsModal');
-    const deleteForEveryoneBtn = document.getElementById('deleteForEveryoneBtn');
-    
-    if (isMyMessage) {
-        deleteForEveryoneBtn.style.display = 'block';
-    } else {
-        deleteForEveryoneBtn.style.display = 'none';
-    }
-    
-    modal.style.display = 'flex';
-}
-
-function initiateReply() {
-    if (!selectedMessageId) return;
-    replyToId = selectedMessageId;
-    
-    const bar = document.getElementById('replyPreviewBar');
-    bar.style.display = 'flex';
-    bar.querySelector('.reply-to-name').innerText = 'Replying...';
-    bar.querySelector('.reply-text-preview').innerText = selectedMessageText.substring(0, 30) + '...';
-    
-    closeDeleteModal();
-    document.getElementById('messageInput').focus();
-}
-
-function cancelReply() {
-    replyToId = null;
-    document.getElementById('replyPreviewBar').style.display = 'none';
-}
-
-// ডিলিট লজিক
-async function deleteMessageForMe() {
-    if (!selectedMessageId) return;
-    try {
-        const { data } = await supabaseClient.from('messages').select('deleted_by').eq('id', selectedMessageId).single();
-        let current = data?.deleted_by || [];
-        
-        if (!current.includes(currentUser.id)) {
-            current.push(currentUser.id);
-            await supabaseClient.from('messages').update({ deleted_by: current }).eq('id', selectedMessageId);
-            
-            const el = document.getElementById(`msg-${selectedMessageId}`);
-            if(el) el.remove();
-        }
-        closeDeleteModal();
-    } catch (e) {
-        console.error(e);
-        alert("Failed to delete.");
-    }
-}
-
-async function deleteMessageForEveryone() {
-    if (!selectedMessageId) return;
-    if(!confirm("Are you sure you want to delete this for everyone?")) return;
-
-    try {
-        await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
-        closeDeleteModal();
-    } catch (e) {
-        console.error(e);
-        alert("Failed to delete.");
-    }
-}
-
-async function blockUser() {
-    if (!activeChatUserId || !confirm("Block this user?")) return;
-    try {
-        await supabaseClient.from('user_blocks').insert({ blocker_id: currentUser.id, blocked_id: activeChatUserId });
-        alert("User blocked.");
-        location.reload();
-    } catch (e) {
-        alert("Error blocking user.");
-    }
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteOptionsModal').style.display = 'none';
-    selectedMessageId = null;
-}
-
-// ==========================
-// ৯. ভয়েস রেকর্ডিং
-// ==========================
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = event => {
-            audioChunks.push(event.data);
-        };
-        
-        mediaRecorder.start();
-        isRecording = true;
-        
-        document.getElementById('audioRecordingUI').style.display = 'flex';
-        // ফুটার হাইড করা (শুধুমাত্র ফুটার অংশ, পুরোটা নয়)
-        document.querySelector('.footer-input-row').style.display = 'none';
-        
-        let seconds = 0;
-        document.getElementById('recordingTimer').innerText = "00:00";
-        recordingInterval = setInterval(() => {
-            seconds++;
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            document.getElementById('recordingTimer').innerText = `${mins}:${secs}`;
-        }, 1000);
-        
-    } catch (err) {
-        console.error(err);
-        alert("Microphone access needed.");
-    }
-}
-
-function cancelRecording() {
-    if (mediaRecorder) {
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        mediaRecorder = null;
-    }
-    clearInterval(recordingInterval);
-    closeRecordingUI();
-}
-
-function closeRecordingUI() {
-    document.getElementById('audioRecordingUI').style.display = 'none';
-    document.querySelector('.footer-input-row').style.display = 'flex'; // ফুটার আবার দেখানো
-    isRecording = false;
-}
-
-async function sendRecording() {
-    if (!mediaRecorder) return;
-    
-    mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioUrl = await uploadFile(audioBlob, 'chat_audio');
-        
-        if (audioUrl) {
-            const empty = document.querySelector('.empty-chat-placeholder');
-            if(empty) empty.remove();
-
-            await supabaseClient.from('messages').insert([{ 
-                sender_id: currentUser.id, 
-                receiver_id: activeChatUserId, 
-                audio_url: audioUrl,
-                content: null,
-                is_read: false,
-                deleted_by: []
-            }]);
-        } else {
-            alert("Audio send failed.");
-        }
-    };
-    
-    mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    clearInterval(recordingInterval);
-    closeRecordingUI();
-}
-
-// ==========================
-// ১০. ইভেন্ট লিসেনার
+// ৬. ইনপুট ও ইভেন্ট লিসেনার
 // ==========================
 function setupEventListeners() {
     // ব্যাক বাটন
@@ -822,131 +397,275 @@ function setupEventListeners() {
         document.getElementById('conversation-view').style.display = 'none';
         document.getElementById('inbox-view').style.display = 'block';
         activeChatUserId = null;
-        loadChatList(); 
+        if(realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
+        loadChatList(); // লিস্ট রিফ্রেশ
     });
-    
-    // মেসেজ ইনপুট
+
+    // ইনপুট হ্যান্ডলিং
     const input = document.getElementById('messageInput');
-    input.addEventListener('input', () => { 
-        toggleSendButton(); 
-        sendTypingEvent(); 
-    });
-    input.addEventListener('keyup', (e) => { 
-        if (e.key === 'Enter') sendMessage(); 
-    });
-    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
-    
-    // ইমেজ আপলোড
-    document.getElementById('galleryTriggerBtn').addEventListener('click', () => document.getElementById('chatImageInput').click());
-    
-    document.getElementById('chatImageInput').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            selectedImageFile = file;
-            document.getElementById('uploadPreviewImg').src = URL.createObjectURL(file);
-            document.getElementById('imagePreviewPanel').style.display = 'flex';
-            toggleSendButton();
+    input.addEventListener('input', () => {
+        const btn = document.querySelector('#sendMessageBtn i');
+        btn.className = input.value.trim() ? 'fas fa-paper-plane' : 'fas fa-thumbs-up';
+        
+        // টাইপিং স্ট্যাটাস পাঠানো
+        if (presenceChannel) {
+            presenceChannel.send({ type: 'broadcast', event: 'typing', payload: { userId: currentUser.id } });
         }
     });
-    document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
+
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+    input.addEventListener('keyup', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // লং প্রেস হ্যান্ডলার (Delete/Reply)
+    window.handleMessagePressStart = (el, id, isMe, text) => {
+        selectedMessageId = id; selectedMessageText = text;
+        pressTimer = setTimeout(() => {
+            document.getElementById('deleteOptionsModal').style.display = 'flex';
+            document.getElementById('deleteForEveryoneBtn').style.display = isMe ? 'block' : 'none';
+            if(navigator.vibrate) navigator.vibrate(50);
+        }, 600);
+    };
+
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => document.getElementById('deleteOptionsModal').style.display = 'none');
     
+    // রিপ্লাই
+    document.getElementById('replyOptionBtn').addEventListener('click', () => {
+        replyToId = selectedMessageId;
+        document.getElementById('replyPreviewBar').style.display = 'flex';
+        document.querySelector('.reply-text-preview').innerText = selectedMessageText || 'Attachment';
+        document.getElementById('deleteOptionsModal').style.display = 'none';
+        document.getElementById('messageInput').focus();
+    });
+    
+    document.getElementById('cancelReplyBtn').addEventListener('click', () => {
+        replyToId = null;
+        document.getElementById('replyPreviewBar').style.display = 'none';
+    });
+
+    // ডিলিট অ্যাকশন
+    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
+    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
+
+    // ইমেজ আপলোড ট্রিগার
+    document.getElementById('galleryTriggerBtn').addEventListener('click', () => document.getElementById('chatImageInput').click());
+    document.getElementById('chatImageInput').addEventListener('change', handleImageSelect);
+    document.getElementById('closePreviewBtn').addEventListener('click', closeImagePreview);
+
     // অডিও রেকর্ডার
     document.getElementById('micTriggerBtn').addEventListener('click', startRecording);
     document.getElementById('cancelRecordingBtn').addEventListener('click', cancelRecording);
     document.getElementById('sendRecordingBtn').addEventListener('click', sendRecording);
-    
-    // ফুল স্ক্রিন ইমেজ ক্লোজ
-    document.querySelector('.fs-close-btn').addEventListener('click', () => { 
-        document.getElementById('fullScreenImageModal').style.display = 'none'; 
-    });
-
-    // ইমোজি পিকার
-    const emojiBtn = document.getElementById('emojiTriggerBtn');
-    const picker = document.getElementById('emojiPickerContainer');
-    
-    emojiBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
-    });
-
-    document.querySelector('emoji-picker').addEventListener('emoji-click', e => {
-        input.value += e.detail.unicode;
-        toggleSendButton();
-        input.focus();
-    });
-
-    // বাইরে ক্লিক করলে মেনু বন্ধ
-    document.addEventListener('click', (e) => {
-        if (!picker.contains(e.target) && !emojiBtn.contains(e.target)) {
-            picker.style.display = 'none';
-        }
-        
-        const optsMenu = document.getElementById('chatOptionsDropdown');
-        const optsBtn = document.getElementById('chatOptionsBtn');
-        if(!optsMenu.contains(e.target) && !optsBtn.contains(e.target)) {
-            optsMenu.style.display = 'none';
-        }
-    });
-
-    // ডিলিট এবং রিপ্লাই মডাল লিসেনার
-    document.getElementById('deleteForMeBtn').addEventListener('click', deleteMessageForMe);
-    document.getElementById('deleteForEveryoneBtn').addEventListener('click', deleteMessageForEveryone);
-    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
-    document.getElementById('replyOptionBtn').addEventListener('click', initiateReply);
-    document.getElementById('cancelReplyBtn').addEventListener('click', cancelReply);
-
-    // হেডার অপশন
-    document.getElementById('chatOptionsBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const menu = document.getElementById('chatOptionsDropdown');
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    });
-    document.getElementById('blockUserBtn').addEventListener('click', blockUser);
 }
 
 // ==========================
-// ১১. হেল্পার ফাংশনস
+// ৭. মেসেজ সেন্ডিং লজিক
 // ==========================
+async function sendMessage() {
+    if (isUploading) return;
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+
+    // থাম্বস আপ
+    if (!text && !selectedImageFile) {
+        await supabaseClient.from('messages').insert([{ sender_id: currentUser.id, receiver_id: activeChatUserId, content: '👍' }]);
+        return;
+    }
+
+    isUploading = true;
+    let imgUrl = null;
+
+    // ইমেজ আপলোড
+    if (selectedImageFile) {
+        imgUrl = await uploadFile(selectedImageFile, 'chat_images');
+        if(!imgUrl) { isUploading = false; return alert("Image upload failed"); }
+    }
+
+    const newMsg = {
+        sender_id: currentUser.id,
+        receiver_id: activeChatUserId,
+        content: text || null,
+        image_url: imgUrl,
+        reply_to_id: replyToId
+    };
+
+    await supabaseClient.from('messages').insert([newMsg]);
+
+    // রিসেট
+    input.value = '';
+    document.querySelector('#sendMessageBtn i').className = 'fas fa-thumbs-up';
+    closeImagePreview();
+    replyToId = null;
+    document.getElementById('replyPreviewBar').style.display = 'none';
+    isUploading = false;
+    
+    const empty = document.querySelector('.empty-chat-placeholder');
+    if(empty) empty.remove();
+}
+
+// ইমেজ সিলেকশন
+function handleImageSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        selectedImageFile = file;
+        document.getElementById('uploadPreviewImg').src = URL.createObjectURL(file);
+        document.getElementById('imagePreviewPanel').style.display = 'flex';
+        document.querySelector('#sendMessageBtn i').className = 'fas fa-paper-plane';
+    }
+}
+
 function closeImagePreview() {
     selectedImageFile = null;
     document.getElementById('chatImageInput').value = '';
     document.getElementById('imagePreviewPanel').style.display = 'none';
-    toggleSendButton();
 }
 
-function toggleSendButton() {
-    const val = document.getElementById('messageInput').value.trim();
-    const icon = document.querySelector('#sendMessageBtn i');
-    
-    if (val !== '' || selectedImageFile) { 
-        icon.className = 'fas fa-paper-plane'; 
-        icon.style.color = '#0084ff'; 
-    } 
-    else { 
-        icon.className = 'fas fa-thumbs-up'; 
-        icon.style.color = '#0084ff'; 
+// আপলোড ফাংশন
+async function uploadFile(file, bucket) {
+    try {
+        let uploadFile = file;
+        if(file.type.startsWith('image/') && typeof imageCompression !== 'undefined') {
+            uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200 });
+        }
+        const fileName = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+        const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, uploadFile);
+        if (error) throw error;
+        const { data: url } = supabaseClient.storage.from(bucket).getPublicUrl(fileName);
+        return url.publicUrl;
+    } catch (e) {
+        console.error(e);
+        return null;
     }
 }
 
-function timeAgoShort(dateString) { return dateString ? 'Just now' : ''; } // সিম্পলিফাইড
-
-async function markAsSeen(partnerId) {
-    try { 
-        await supabaseClient
-            .from('messages')
-            .update({ is_read: true })
-            .match({ sender_id: partnerId, receiver_id: currentUser.id, is_read: false }); 
-    } catch (e) {}
+// ==========================
+// ৮. অডিও রেকর্ডিং
+// ==========================
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.start();
+        isRecording = true;
+        
+        document.getElementById('audioRecordingUI').style.display = 'flex';
+        document.querySelector('.footer-input-row').style.display = 'none';
+        
+        let sec = 0;
+        document.getElementById('recordingTimer').innerText = "00:00";
+        recordingInterval = setInterval(() => {
+            sec++;
+            document.getElementById('recordingTimer').innerText = `00:${sec < 10 ? '0'+sec : sec}`;
+        }, 1000);
+    } catch (e) { alert("Mic permission needed"); }
 }
 
-function scrollToBottom(smooth = false) { 
-    const main = document.getElementById('messageContainer'); 
-    main.scrollTo({ top: main.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); 
+function cancelRecording() {
+    if(mediaRecorder) mediaRecorder.stop();
+    clearInterval(recordingInterval);
+    closeRecordingUI();
+}
+
+function closeRecordingUI() {
+    document.getElementById('audioRecordingUI').style.display = 'none';
+    document.querySelector('.footer-input-row').style.display = 'flex';
+    isRecording = false;
+}
+
+async function sendRecording() {
+    if(!mediaRecorder) return;
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const url = await uploadFile(blob, 'chat_audio');
+        if(url) {
+            await supabaseClient.from('messages').insert([{
+                sender_id: currentUser.id, receiver_id: activeChatUserId, audio_url: url
+            }]);
+        }
+    };
+    mediaRecorder.stop();
+    clearInterval(recordingInterval);
+    closeRecordingUI();
+}
+
+// ==========================
+// ৯. রিয়েলটাইম এবং ডিলিট
+// ==========================
+function setupRealtimeChat(partnerId) {
+    if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
+    
+    realtimeSubscription = supabaseClient.channel('chat-room')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, async (payload) => {
+            const { eventType, new: newMsg, old: oldMsg } = payload;
+            
+            if (eventType === 'INSERT') {
+                if ((newMsg.sender_id === partnerId && newMsg.receiver_id === currentUser.id) || 
+                    (newMsg.sender_id === currentUser.id && newMsg.receiver_id === partnerId)) {
+                    
+                    const { data } = await supabaseClient.from('messages').select(`*, reply_message:reply_to_id(content)`).eq('id', newMsg.id).single();
+                    appendMessageToUI(data || newMsg);
+                    scrollToBottom(true);
+                    
+                    if(newMsg.sender_id === partnerId) {
+                        await supabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
+                    }
+                }
+            } else if (eventType === 'DELETE') {
+                const el = document.getElementById(`msg-${oldMsg.id}`);
+                if(el) el.remove();
+            } else if (eventType === 'UPDATE') {
+                if (newMsg.deleted_by && newMsg.deleted_by.includes(currentUser.id)) {
+                    const el = document.getElementById(`msg-${newMsg.id}`);
+                    if(el) el.remove();
+                }
+            }
+        })
+        .subscribe();
+}
+
+function setupPresence(partnerId) {
+    if (presenceChannel) supabaseClient.removeChannel(presenceChannel);
+    const roomId = [currentUser.id, partnerId].sort().join('-');
+    
+    presenceChannel = supabaseClient.channel(`room-${roomId}`)
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+            if (payload.userId !== currentUser.id) {
+                const b = document.getElementById('typingIndicatorBubble');
+                document.getElementById('messageContainer').appendChild(b);
+                b.style.display = 'flex';
+                scrollToBottom(true);
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => b.style.display = 'none', 3000);
+            }
+        })
+        .subscribe();
+}
+
+async function deleteMessageForMe() {
+    if(!selectedMessageId) return;
+    const { data } = await supabaseClient.from('messages').select('deleted_by').eq('id', selectedMessageId).single();
+    let current = data?.deleted_by || [];
+    if(!current.includes(currentUser.id)) {
+        current.push(currentUser.id);
+        await supabaseClient.from('messages').update({ deleted_by: current }).eq('id', selectedMessageId);
+        document.getElementById(`msg-${selectedMessageId}`)?.remove();
+    }
+    document.getElementById('deleteOptionsModal').style.display = 'none';
+}
+
+async function deleteMessageForEveryone() {
+    if(!selectedMessageId || !confirm("Delete for everyone?")) return;
+    await supabaseClient.from('messages').delete().eq('id', selectedMessageId);
+    document.getElementById('deleteOptionsModal').style.display = 'none';
 }
 
 window.viewFullScreenImage = function(src) {
-    const modal = document.getElementById('fullScreenImageModal');
     document.getElementById('fsModalImg').src = src;
     document.getElementById('downloadImgBtn').href = src;
-    modal.style.display = 'flex';
-}
+    document.getElementById('fullScreenImageModal').style.display = 'flex';
+};
+document.querySelector('.fs-close-btn').addEventListener('click', () => {
+    document.getElementById('fullScreenImageModal').style.display = 'none';
+});
