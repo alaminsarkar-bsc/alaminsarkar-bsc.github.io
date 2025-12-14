@@ -1,20 +1,30 @@
-// ====================================
+// ====================================================================
 // FILE: auth.js
-// বিবরণ: অথেন্টিকেশন, প্রোফাইল ম্যানেজমেন্ট এবং ইউজার অ্যাকশন
-// ====================================
+// বিবরণ: অথেন্টিকেশন, প্রোফাইল ম্যানেজমেন্ট, OneSignal এবং ইউজার অ্যাকশন
+// ====================================================================
 
-// --- Google Sign In ---
+console.log("Auth Module Loaded");
+
+// 1. GOOGLE SIGN IN
 async function handleGoogleSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
-            options: { redirectTo: 'https://alaminsarkar-bsc.github.io/', queryParams: { access_type: 'offline', prompt: 'consent select_account' } } 
+            options: { 
+                redirectTo: 'https://doa-angina.vercel.app/', // আপনার লাইভ লিংক বা লোকালহোস্ট
+                queryParams: { 
+                    access_type: 'offline', 
+                    prompt: 'consent select_account' 
+                } 
+            } 
         }); 
         if (error) throw error; 
-    } catch (error) { alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); } 
+    } catch (error) { 
+        alert('গুগল সাইনইনে সমস্যা হয়েছে: ' + error.message); 
+    } 
 }
 
-// --- Facebook Sign In ---
+// 2. FACEBOOK SIGN IN
 async function handleFacebookSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
@@ -22,32 +32,92 @@ async function handleFacebookSignIn() {
             options: { redirectTo: window.location.origin } 
         }); 
         if (error) throw error; 
-    } catch (error) { alert('ফেসবুক সাইনইনে সমস্যা হয়েছে: ' + error.message); } 
+    } catch (error) { 
+        alert('ফেসবুক সাইনইনে সমস্যা হয়েছে: ' + error.message); 
+    } 
 }
 
-// --- OTP Sending ---
+// 3. OTP SENDING (Phone Login Step 1)
 async function handleSendOtp() {
-    const phoneInput = document.getElementById('phoneInput'); const btn = document.getElementById('sendOtpBtn');
-    let phone = phoneInput.value.trim(); if (!phone) { alert("মোবাইল নাম্বার দিন।"); return; }
-    if (!phone.startsWith('+')) { if (phone.startsWith('01')) { phone = '+88' + phone; } else { alert("সঠিক ফরম্যাটে নাম্বার দিন (যেমন: 017... অথবা +88017...)"); return; } }
+    const phoneInput = document.getElementById('phoneInput'); 
+    const btn = document.getElementById('sendOtpBtn');
+    
+    let phone = phoneInput.value.trim(); 
+    if (!phone) { alert("মোবাইল নাম্বার দিন।"); return; }
+    
+    // নাম্বার ফরম্যাটিং (+880 যোগ করা)
+    if (!phone.startsWith('+')) { 
+        if (phone.startsWith('01')) { 
+            phone = '+88' + phone; 
+        } else { 
+            alert("সঠিক ফরম্যাটে নাম্বার দিন (যেমন: 017... অথবা +88017...)"); return; 
+        } 
+    }
+    
     setLoading(btn, true);
-    try { const { error } = await supabaseClient.auth.signInWithOtp({ phone: phone }); if (error) throw error; document.getElementById('phoneInputStep').style.display = 'none'; document.getElementById('otpInputStep').style.display = 'block'; alert("কোড পাঠানো হয়েছে।"); } catch (error) { console.error("OTP Error:", error); alert("সমস্যা হয়েছে: " + error.message); } finally { setLoading(btn, false); }
+    
+    try { 
+        const { error } = await supabaseClient.auth.signInWithOtp({ phone: phone }); 
+        if (error) throw error; 
+        
+        document.getElementById('phoneInputStep').style.display = 'none'; 
+        document.getElementById('otpInputStep').style.display = 'block'; 
+        alert("কোড পাঠানো হয়েছে।"); 
+    } catch (error) { 
+        console.error("OTP Error:", error); 
+        alert("সমস্যা হয়েছে: " + error.message); 
+    } finally { 
+        setLoading(btn, false); 
+    }
 }
 
-// --- OTP Verification ---
+// 4. OTP VERIFICATION (Phone Login Step 2)
 async function handleVerifyOtp() {
-    const phoneInput = document.getElementById('phoneInput'); const otpInput = document.getElementById('otpInput'); const btn = document.getElementById('verifyOtpBtn');
-    let phone = phoneInput.value.trim(); if (!phone.startsWith('+') && phone.startsWith('01')) { phone = '+88' + phone; }
-    const token = otpInput.value.trim(); if (!token) { alert("কোডটি লিখুন।"); return; }
+    const phoneInput = document.getElementById('phoneInput'); 
+    const otpInput = document.getElementById('otpInput'); 
+    const btn = document.getElementById('verifyOtpBtn');
+    
+    let phone = phoneInput.value.trim(); 
+    if (!phone.startsWith('+') && phone.startsWith('01')) { phone = '+88' + phone; }
+    
+    const token = otpInput.value.trim(); 
+    if (!token) { alert("কোডটি লিখুন।"); return; }
+    
     setLoading(btn, true);
-    try { const { data, error } = await supabaseClient.auth.verifyOtp({ phone: phone, token: token, type: 'sms' }); if (error) throw error; if (data.session) { document.getElementById('loginPage').style.display = 'none'; alert("লগইন সফল হয়েছে!"); } } catch (error) { console.error("Verify Error:", error); alert("ভুল কোড। আবার চেষ্টা করুন।"); } finally { setLoading(btn, false); }
+    
+    try { 
+        const { data, error } = await supabaseClient.auth.verifyOtp({ 
+            phone: phone, 
+            token: token, 
+            type: 'sms' 
+        }); 
+        
+        if (error) throw error; 
+        
+        if (data.session) { 
+            document.getElementById('loginPage').style.display = 'none'; 
+            alert("লগইন সফল হয়েছে!"); 
+            // main.js এর listener অটোমেটিক handleUserLoggedIn কল করবে
+        } 
+    } catch (error) { 
+        console.error("Verify Error:", error); 
+        alert("ভুল কোড। আবার চেষ্টা করুন।"); 
+    } finally { 
+        setLoading(btn, false); 
+    }
 }
 
-// --- User Logged In Handler ---
+// 5. USER LOGGED IN HANDLER (Main Logic)
 async function handleUserLoggedIn(user) {
     try {
-        let { data: profile, error } = await supabaseClient.from('users').select('*').eq('id', user.id).single();
+        // ১. ডাটাবেজ থেকে প্রোফাইল চেক করা
+        let { data: profile, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
         
+        // ২. প্রোফাইল না থাকলে তৈরি করা (Auto Create)
         if (error && error.code === 'PGRST116') {
             const { data: newProfile } = await supabaseClient.from('users').insert([{ 
                 id: user.id, 
@@ -55,24 +125,37 @@ async function handleUserLoggedIn(user) {
                 display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                 photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture
             }]).select().single();
+            
             if (error) throw error;
             profile = newProfile;
         } else if (error) throw error;
         
+        // ৩. একাউন্ট ব্যান আছে কিনা চেক
         if (profile && profile.status === 'SUSPENDED') {
             alert('আপনার অ্যাকাউন্টটি সাসপেন্ড করা হয়েছে।');
             await supabaseClient.auth.signOut();
             return;
         }
         
+        // ৪. গ্লোবাল ভ্যারিয়েবল আপডেট
         currentUser = { ...user, profile };
         updateHeaderProfileIcon(profile.photo_url);
 
+        // ৫. OneSignal Login (নোটিফিকেশনের জন্য)
+        if (window.OneSignalDeferred) {
+            window.OneSignalDeferred.push(function(OneSignal) {
+                OneSignal.login(user.id);
+                console.log("✅ OneSignal User ID Registered:", user.id);
+            });
+        }
+
+        // ৬. ডাটা ফেচিং
         await Promise.all([
             fetchSavedPostIds(),
             fetchUserReactions() 
         ]);
 
+        // ৭. পেজ অনুযায়ী কন্টেন্ট লোড
         const pageId = document.body.id;
         if (pageId === 'home-page') {
             if (typeof initHomePage === 'function') await initHomePage();
@@ -80,7 +163,10 @@ async function handleUserLoggedIn(user) {
             await initProfilePage();
         }
         
+        // ৮. অ্যাডমিন বাটন দেখানো
         showAdminUI();
+        
+        // ৯. নোটিফিকেশন লোড
         if (typeof loadNotifications === 'function') loadNotifications();
         
     } catch (err) {
@@ -89,7 +175,7 @@ async function handleUserLoggedIn(user) {
     }
 }
 
-// --- User Logged Out Handler ---
+// 6. USER LOGGED OUT HANDLER
 function handleUserLoggedOut() {
     currentUser = null;
     savedPostIds.clear(); 
@@ -97,30 +183,45 @@ function handleUserLoggedOut() {
     userAmeenedPrayers.clear();
     updateHeaderProfileIcon(null);
 
+    // OneSignal Logout
+    if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(function(OneSignal) {
+            OneSignal.logout();
+            console.log("🚫 OneSignal Logged Out");
+        });
+    }
+
     const pageId = document.body.id;
     
+    // প্রোফাইল পেজে থাকলে হোম পেজে পাঠানো (যদি নিজের প্রোফাইল হয়)
     if (pageId === 'profile-page') {
         const urlParams = new URLSearchParams(window.location.search);
         if (!urlParams.get('id')) { 
              window.location.href = '/index.html'; 
              return;
         }
-        initProfilePage(); 
+        initProfilePage(); // অন্যের প্রোফাইল হলে শুধু ভিউ রিলোড
     }
 
     document.getElementById('loginPage').style.display = 'none';
     
-    showAdminUI();
-    if (prayersSubscription) { supabaseClient.removeChannel(prayersSubscription); prayersSubscription = null; }
+    showAdminUI(); // বাটন লুকানো
+    
+    // রিয়েলটাইম সাবস্ক্রিপশন বন্ধ
+    if (prayersSubscription) { 
+        supabaseClient.removeChannel(prayersSubscription); 
+        prayersSubscription = null; 
+    }
     
     if (pageId === 'home-page') {
         if(typeof renderStoriesList === 'function') renderStoriesList(document.getElementById('storyContainer')); 
         if(typeof initHomePage === 'function') initHomePage();
     }
+    
     if(typeof updateNotificationBadge === 'function') updateNotificationBadge(0);
 }
 
-// --- Admin UI Toggle ---
+// 7. ADMIN UI TOGGLE
 function showAdminUI() {
     const isAdmin = currentUser && ADMIN_USERS.includes(currentUser.email);
     const adminLink = document.getElementById('adminLink');
@@ -130,7 +231,7 @@ function showAdminUI() {
     if (campaignAdminLink) campaignAdminLink.style.display = isAdmin ? 'block' : 'none';
 }
 
-// --- Fetch Saved Posts ---
+// 8. FETCH SAVED POSTS
 async function fetchSavedPostIds() {
     if (!currentUser) return;
     try {
@@ -140,7 +241,7 @@ async function fetchSavedPostIds() {
     } catch (error) { console.error("Saved posts error:", error); }
 }
 
-// --- Fetch User Reactions (Love/Ameen) ---
+// 9. FETCH USER REACTIONS (Love/Ameen cache)
 async function fetchUserReactions() {
     if (!currentUser) return;
     try {
@@ -156,22 +257,24 @@ async function fetchUserReactions() {
     } catch (error) { console.error("Error fetching user reactions:", error); }
 }
 
-// --- Header Profile Icon Update ---
+// 10. HEADER PROFILE ICON UPDATE
 function updateHeaderProfileIcon(photoUrl) {
     const profileTab = document.querySelector('.header-nav-row a[href="/profile.html"]');
     if (!profileTab) return;
-    if (photoUrl) { profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`; } 
-    else { profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`; }
+    if (photoUrl) { 
+        profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`; 
+    } else { 
+        profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`; 
+    }
 }
 
 // ====================================
-// PROFILE PAGE LOGIC
+// PROFILE PAGE LOGIC (View, Edit, Upload)
 // ====================================
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
     let userId = urlParams.get('id');
 
-    // ১. আইডি না থাকলে বর্তমান ইউজারের আইডি সেট করা
     if (!userId && currentUser) { 
         userId = currentUser.id; 
     } else if (!userId && !currentUser) { 
@@ -182,7 +285,7 @@ async function initProfilePage() {
     filteredUserId = userId; 
     const myPostsContainer = document.getElementById('myPostsContainer');
     
-    // ২. ডাটাবেজ লোড হওয়ার আগেই সেশন থেকে নাম ও ছবি বসিয়ে দেওয়া
+    // প্রি-লোডিং ডাটা (UI ফাস্ট করার জন্য)
     if(currentUser && currentUser.id === userId) {
          const metaName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0];
          document.getElementById('profileName').textContent = currentUser.profile?.display_name || metaName || 'নাম নেই';
@@ -210,9 +313,9 @@ async function initProfilePage() {
             .eq('id', userId)
             .maybeSingle();
 
-        // ৪. [AUTO-FIX] প্রোফাইল না থাকলে তৈরি করা
+        // প্রোফাইল মিসিং হলে অটো তৈরি
         if (!userProfile && currentUser && currentUser.id === userId) {
-            console.log("Profile missing in DB, creating automatically...");
+            console.log("Creating profile on the fly...");
             const newProfileData = {
                 id: currentUser.id,
                 email: currentUser.email,
@@ -227,7 +330,7 @@ async function initProfilePage() {
 
         if (!userProfile && userId !== currentUser?.id) {
             document.getElementById('profileName').textContent = 'ইউজার পাওয়া যায়নি';
-            throw new Error("User not found in DB");
+            throw new Error("User not found");
         }
 
         if (userProfile) {
@@ -248,6 +351,7 @@ async function initProfilePage() {
             }
         }
 
+        // পরিসংখ্যান লোড
         const [postsCount, followersCount, followingCount] = await Promise.all([
             supabaseClient.from('prayers').select('*', { count: 'exact', head: true }).eq('author_uid', userId).eq('status', 'active'),
             supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userId),
@@ -258,6 +362,7 @@ async function initProfilePage() {
         document.getElementById('followersCount').innerHTML = `<strong>${followersCount.count || 0}</strong> অনুসারী`;
         document.getElementById('followingCount').innerHTML = `<strong>${followingCount.count || 0}</strong> অনুসরণ`;
 
+        // বাটন ম্যানেজমেন্ট
         const editBtn = document.getElementById('editProfileBtn');
         const followBtn = document.getElementById('followBtn');
         const signOutBtn = document.getElementById('signOutBtn');
@@ -270,6 +375,7 @@ async function initProfilePage() {
         });
 
         if (currentUser && currentUser.id === userId) {
+            // নিজের প্রোফাইল
             if(editBtn) editBtn.style.display = 'inline-block'; 
             if(signOutBtn) signOutBtn.style.display = 'inline-block';
             if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; 
@@ -277,6 +383,7 @@ async function initProfilePage() {
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'inline-block');
             setupProfileImageUploads(); 
         } else {
+            // অন্যের প্রোফাইল
             if(followBtn) {
                 followBtn.style.display = 'inline-block'; 
                 followBtn.dataset.userId = userId;
@@ -298,7 +405,6 @@ async function initProfilePage() {
         }
 
         setupProfileTabs(userId);
-        // fetchAndRenderPrayers ফাংশনটি feed.js এ থাকবে, তাই চেক করে কল করা হবে
         if(typeof fetchAndRenderPrayers === 'function') {
             fetchAndRenderPrayers(myPostsContainer, 'active', userId, true);
         }
@@ -312,7 +418,7 @@ async function initProfilePage() {
     }
 }
 
-// --- Setup Profile Tabs ---
+// 11. PROFILE TABS
 function setupProfileTabs(userId) {
     const tabs = document.querySelectorAll('.profile-tabs .tab-btn');
     tabs.forEach(tab => {
@@ -333,32 +439,47 @@ function setupProfileTabs(userId) {
     });
 }
 
-// --- Follow User Handler ---
-async function handleFollow(btn) {
-    if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
-    const userIdToFollow = btn.dataset.userId;
-    const isFollowing = btn.classList.contains('following');
-    setLoading(btn, true);
-    try {
-        if (isFollowing) {
-            const { error } = await supabaseClient.from('followers').delete().match({ follower_id: currentUser.id, following_id: userIdToFollow });
-            if (error) throw error;
-            btn.textContent = 'অনুসরণ করুন'; btn.classList.remove('following');
-        } else {
-            const { error } = await supabaseClient.from('followers').insert({ follower_id: currentUser.id, following_id: userIdToFollow });
-            if (error) throw error;
-            btn.textContent = 'আনফলো'; btn.classList.add('following');
-            const notificationContent = `${currentUser.profile.display_name} আপনাকে অনুসরণ করা শুরু করেছেন।`;
-            if(typeof createNotification === 'function') {
-                await createNotification(userIdToFollow, currentUser.id, 'follow', notificationContent, `/profile.html?id=${currentUser.id}`);
+// 12. FOLLOW/UNFOLLOW HANDLER
+function handleFollow(btn) {
+    if(typeof window.handleFollowAuth === 'function') {
+        window.handleFollowAuth(btn);
+    } else {
+        // Fallback Logic
+        if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
+        const userIdToFollow = btn.dataset.userId;
+        const isFollowing = btn.classList.contains('following');
+        setLoading(btn, true);
+        
+        (async () => {
+            try {
+                if (isFollowing) {
+                    const { error } = await supabaseClient.from('followers').delete().match({ follower_id: currentUser.id, following_id: userIdToFollow });
+                    if (error) throw error;
+                    btn.textContent = 'অনুসরণ করুন'; btn.classList.remove('following');
+                } else {
+                    const { error } = await supabaseClient.from('followers').insert({ follower_id: currentUser.id, following_id: userIdToFollow });
+                    if (error) throw error;
+                    btn.textContent = 'আনফলো'; btn.classList.add('following');
+                    const notificationContent = `${currentUser.profile.display_name} আপনাকে অনুসরণ করা শুরু করেছেন।`;
+                    
+                    if(typeof createNotification === 'function') {
+                        await createNotification(userIdToFollow, currentUser.id, 'follow', notificationContent, `/profile.html?id=${currentUser.id}`);
+                    }
+                }
+                const { count } = await supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userIdToFollow);
+                document.getElementById('followersCount').innerHTML = `<strong>${count || 0}</strong> অনুসারী`;
+            } catch (error) { 
+                alert('দুঃখিত, প্রক্রিয়াটি সম্পন্ন করা যায়নি।'); 
+                console.error('Follow error:', error); 
+            } finally { 
+                setLoading(btn, false); 
             }
-        }
-        const { count } = await supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userIdToFollow);
-        document.getElementById('followersCount').innerHTML = `<strong>${count || 0}</strong> অনুসারী`;
-    } catch (error) { alert('দুঃখিত, প্রক্রিয়াটি সম্পন্ন করা যায়নি।'); console.error('Follow/Unfollow error:', error); } finally { setLoading(btn, false); }
+        })();
+    }
 }
+window.handleFollowAuth = handleFollow;
 
-// --- Profile Image Upload Helpers ---
+// 13. IMAGE UPLOAD HANDLERS (Profile & Cover)
 function setupProfileImageUploads() {
     const coverBtn = document.getElementById('changeCoverBtn');
     const profileBtn = document.getElementById('changeProfilePicBtn');
@@ -393,16 +514,23 @@ async function handleProfileImageUpload(e, type) {
         const { data: userData, error: fetchError } = await supabaseClient.from('users').select(dbColumn).eq('id', currentUser.id).single();
         if (fetchError) throw fetchError;
         const oldUrl = userData ? userData[dbColumn] : null;
+        
+        // পুরাতন ছবি ডিলেট
         if (oldUrl) {
             try { const pathParts = oldUrl.split('/post_images/'); if (pathParts.length > 1) { const oldPath = pathParts[1]; await supabaseClient.storage.from('post_images').remove([oldPath]); } } catch (delErr) { console.warn("Old image delete failed:", delErr); }
         }
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
         const filePath = `${type}s/${fileName}`;
+        
+        // নতুন ছবি আপলোড
         const { data, error: uploadError } = await supabaseClient.storage.from('post_images').upload(filePath, file, { upsert: true });
         if (uploadError) throw uploadError;
+        
         const { data: publicUrlData } = supabaseClient.storage.from('post_images').getPublicUrl(filePath);
         const imageUrl = publicUrlData.publicUrl;
+        
         const updateData = {}; updateData[dbColumn] = imageUrl;
         const { error: dbError } = await supabaseClient.from('users').update(updateData).eq('id', currentUser.id);
         if (dbError) throw dbError;
@@ -416,17 +544,22 @@ async function handleProfileImageUpload(e, type) {
             updateHeaderProfileIcon(imageUrl);
         }
         alert("আপলোড সফল হয়েছে!");
-    } catch (error) { console.error("Upload Error:", error); alert("আপলোড করতে সমস্যা হয়েছে: " + error.message); } finally { if(loadingModal) loadingModal.style.display = 'none'; e.target.value = ''; }
+    } catch (error) { 
+        console.error("Upload Error:", error); 
+        alert("আপলোড করতে সমস্যা হয়েছে: " + error.message); 
+    } finally { 
+        if(loadingModal) loadingModal.style.display = 'none'; 
+        e.target.value = ''; 
+    }
 }
 
-// --- Edit Profile Handler ---
+// 14. EDIT PROFILE HANDLERS
 function handleEditProfile() { 
     document.getElementById('editNameInput').value = currentUser.profile?.display_name || ''; 
     document.getElementById('editAddressInput').value = currentUser.profile?.address || ''; 
     document.getElementById('editProfileModal').style.display = 'flex'; 
 }
 
-// --- Submit Profile Edit ---
 async function handleEditProfileSubmit(e) { 
     e.preventDefault(); 
     await supabaseClient.from('users').update({ 

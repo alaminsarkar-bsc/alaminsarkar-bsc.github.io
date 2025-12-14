@@ -7,14 +7,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 iPray App Initializing...");
 
     // ১. অ্যাপ কন্টেইনার দৃশ্যমান করা (Default hidden থাকে)
+    // এটি না থাকলে পেজ সাদা দেখাবে
     const appContainer = document.getElementById('appContainer');
     if (appContainer) {
         appContainer.style.display = 'block';
     }
 
     // ২. গ্লোবাল ইভেন্ট লিসেনার সেটআপ (interactions.js থেকে)
+    // এটি সবচেয়ে জরুরি: নোটিফিকেশন, ডোনেশন, রিপোর্ট বাটন কাজ করার জন্য
     if (typeof setupEventListeners === 'function') {
         setupEventListeners();
+        console.log("✅ Global Event Listeners Attached");
     } else {
         console.error("❌ Error: setupEventListeners function not found in interactions.js");
     }
@@ -65,9 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const loginPage = document.getElementById('loginPage');
                 if (loginPage) loginPage.style.display = 'none';
                 
-                await handleUserLoggedIn(session.user);
+                if(typeof handleUserLoggedIn === 'function') {
+                    await handleUserLoggedIn(session.user);
+                }
             } else if (event === 'SIGNED_OUT') {
-                handleUserLoggedOut();
+                if(typeof handleUserLoggedOut === 'function') {
+                    handleUserLoggedOut();
+                }
             }
         });
 
