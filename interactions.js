@@ -2,6 +2,7 @@
 // FILE: interactions.js
 // বিবরণ: রিয়্যাকশন, পোল, পোস্ট ম্যানেজমেন্ট, ডোনেশন, শর্টস কমেন্ট,
 // গ্লোবাল ইভেন্ট, নোটিফিকেশন এবং মেসেজ ব্যাজ সিস্টেম।
+// আপডেট: শর্টস ট্যাবে ক্লিক করলে প্রতিবার নতুন ভিডিও আসবে (Re-shuffle)।
 // ====================================================================
 
 console.log("Interactions Module Loaded");
@@ -73,7 +74,7 @@ window.setupNavigationLogic = function() {
     console.log("Initializing Navigation Logic...");
 
     document.querySelectorAll('.nav-tab').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => { // async যোগ করা হলো
             const buttonId = link.id; 
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
@@ -90,16 +91,39 @@ window.setupNavigationLogic = function() {
 
             e.preventDefault();
             
-            // Shorts (Video Feed) বাটন লজিক
+            // ----------------------------------------------------
+            // SHORTS (VIDEO FEED) BUTTON LOGIC - UPDATED
+            // ----------------------------------------------------
             if(buttonId === 'videoFeedBtn') { 
+                // UI আপডেট
                 document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
                 link.classList.add('active');
                 
                 isVideoFeedActive = true; 
-                const container = document.getElementById('feedContainer');
-                if(container) container.innerHTML = ''; // ক্লিয়ার কন্টেইনার
                 
-                if(typeof initHomePage === 'function') initHomePage(); 
+                // কন্টেইনার ক্লিয়ার করা
+                const container = document.getElementById('feedContainer');
+                if(container) container.innerHTML = ''; 
+
+                // পেজিনেশন রিসেট
+                currentPage = 0;
+                noMorePrayers = false;
+                isLoadingMore = false;
+
+                // **মেইন আপডেট:** প্রতিবার ট্যাবে চাপ দিলে লিস্ট আবার শাফেল (Shuffle) হবে
+                if (typeof shuffledPrayerIds !== 'undefined' && shuffledPrayerIds.length > 0) {
+                    console.log("Shuffling videos for fresh feed...");
+                    shuffledPrayerIds = shuffleArray(shuffledPrayerIds);
+                    
+                    // নতুন করে রেন্ডার করা
+                    if(typeof fetchAndRenderPrayers === 'function') {
+                        fetchAndRenderPrayers(container, 'active', null, true);
+                    }
+                } else {
+                    // যদি লিস্ট খালি থাকে, নতুন করে ফেচ করবে
+                    isFeedInitialized = false;
+                    if(typeof initHomePage === 'function') await initHomePage(); 
+                }
             } 
             // Home বাটন লজিক
             else if (buttonId === 'homeTabBtn') { 
@@ -110,6 +134,7 @@ window.setupNavigationLogic = function() {
                 const container = document.getElementById('feedContainer');
                 if(container) container.innerHTML = '';
                 
+                // হোম ট্যাবেও রিফ্রেশ চাইলে এখানেও শাফেল লজিক দেওয়া যায়, তবে আপাতত ডিফল্ট রাখা হলো
                 if(typeof initHomePage === 'function') initHomePage(); 
             }
             // Feed Toggle (Following/For You)
@@ -644,9 +669,9 @@ function handleEditPost(btn) {
     });
 }
 
-// ==========================================
-// ৯. রিপোর্ট লজিক
-// ==========================================
+// ====================================
+// REPORT LOGIC
+// ====================================
 function showReportModal(contentId, contentType) { 
     const reportModal = document.getElementById('reportModal'); 
     if (!reportModal) return; 
