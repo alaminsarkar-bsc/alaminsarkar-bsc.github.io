@@ -1,6 +1,6 @@
 // ===========================================
 // FILE: qibla.js
-// বিবরণ: স্মুথ কিবলা কম্পাস, লো-পাস ফিল্টার এবং অটো লোকেশন
+// বিবরণ: স্মুথ কিবলা কম্পাস, লো-পাস ফিল্টার এবং অটো লোকেশন (ফিক্সড)
 // ===========================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,26 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const permissionBtn = document.getElementById('permission-btn');
     const loader = document.getElementById('loader');
     const compassFrame = document.getElementById('compassFrame');
-    const errorMsg = document.getElementById('errorMsg');
+    const degreeLabel = document.querySelector('.degree-label');
 
     // কনস্ট্যান্টস
     const MECCA_LAT = 21.422487;
     const MECCA_LNG = 39.826206;
 
     // ভ্যারিয়েবলস
-    let qiblaAngle = 0; // মক্কার দিক (True North সাপেক্ষে)
-    let currentHeading = 0; // ফোনের বর্তমান দিক (Raw)
-    let smoothHeading = 0; // ফিল্টার করা দিক (Smooth)
-    
-    // স্মুথিং ফ্যাক্টর (যত কম, তত বেশি স্মুথ কিন্তু লেট হবে। ০.১ - ০.২ আদর্শ)
+    let qiblaAngle = 0; // মক্কার দিক (ফিক্সড)
+    let currentHeading = 0; // ফোনের বর্তমান দিক (রিয়েলটাইম)
+    let smoothHeading = 0; // ফিল্টার করা দিক
+    let isAbsolute = false; // সেন্সর কি সঠিক উত্তর দিক দিচ্ছে?
+
+    // স্মুথিং ফ্যাক্টর (০.১ - ০.২ এর মধ্যে রাখা ভালো)
     const SMOOTHING_FACTOR = 0.15; 
 
-    // ১. অটো স্টার্ট এবং পারমিশন
-    function initApp() {
-        // লোকেশন আগে শুরু করি
+    // ১. অ্যাপ শুরু এবং অটো লোকেশন
+    function startApp() {
         initLocation();
 
-        // আইফোন (iOS 13+) হলে পারমিশন বাটন দেখাতে হবে
+        // iOS ডিটেকশন (পারমিশন বাটন লাগবে)
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             permissionBtn.style.display = 'block';
             permissionBtn.addEventListener('click', () => {
@@ -42,39 +42,37 @@ document.addEventListener('DOMContentLoaded', () => {
                             permissionBtn.style.display = 'none';
                             window.addEventListener('deviceorientation', handleOrientation);
                         } else {
-                            alert('সেন্সর পারমিশন প্রয়োজন।');
+                            alert('সেন্সর পারমিশন ছাড়া কম্পাস কাজ করবে না।');
                         }
                     })
                     .catch(console.error);
             });
         } else {
-            // অ্যান্ড্রয়েড বা অন্য ব্রাউজার (অটোমেটিক)
+            // Android: 'deviceorientationabsolute' ইভেন্ট ট্রাই করবে (সঠিক উত্তর দিকের জন্য)
             if ('ondeviceorientationabsolute' in window) {
-                window.addEventListener('deviceorientationabsolute', handleOrientation);
-            } else if ('ondeviceorientation' in window) {
-                window.addEventListener('deviceorientation', handleOrientation);
+                window.addEventListener('deviceorientationabsolute', (e) => handleOrientation(e, true));
             } else {
-                showError("আপনার ডিভাইসে কম্পাস সেন্সর নেই।");
+                window.addEventListener('deviceorientation', (e) => handleOrientation(e, false));
             }
         }
         
-        // এনিমেশন লুপ চালু করা
+        // এনিমেশন লুপ
         requestAnimationFrame(updateCompassFrame);
     }
 
     // ২. অটোমেটিক লোকেশন (GPS)
     function initLocation() {
         loader.style.display = 'block';
-        cityDisplay.innerText = "খোঁজা হচ্ছে...";
+        cityDisplay.innerText = "লোকেশন খুঁজছে...";
         
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(successLocation, errorLocation, {
                 enableHighAccuracy: true,
-                timeout: 15000,
+                timeout: 10000,
                 maximumAge: 0
             });
         } else {
-            showError("জিওলোকেশন সাপোর্ট করছে না।");
+            cityDisplay.innerText = "লোকেশন অফ";
         }
     }
 
@@ -92,17 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function errorLocation(err) {
         loader.style.display = 'none';
-        cityDisplay.innerText = "লোকেশন অফ";
-        
-        // ডিফল্ট ঢাকা (জাস্ট দেখানোর জন্য, যাতে অ্যাপ খালি না দেখায়)
+        cityDisplay.innerText = "লোকেশন পাওয়া যায়নি";
+        // ডিফল্ট ঢাকা (যাতে অ্যাপ খালি না থাকে)
         calculateQiblaDetails(23.8103, 90.4125); 
-        
-        // ব্যবহারকারীকে জানানো
-        if (err.code === 1) alert("দয়া করে লোকেশন পারমিশন দিন।");
-        else if (err.code === 2) alert("লোকেশন পাওয়া যাচ্ছে না। জিপিএস অন করুন।");
+        console.warn("Location Error: " + err.message);
     }
 
-    // ৩. গণিত: কিবলা এবং দূরত্ব
+    // ৩. গাণিতিক হিসাব (কিবলা এঙ্গেল)
     function calculateQiblaDetails(lat, lng) {
         const phiK = MECCA_LAT * Math.PI / 180.0;
         const lambdaK = MECCA_LNG * Math.PI / 180.0;
@@ -115,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let qibla = Math.atan2(y, x) * 180.0 / Math.PI;
         qiblaAngle = (qibla + 360) % 360; 
 
-        // দূরত্ব (Haversine)
+        // দূরত্ব
         const R = 6371; 
         const dLat = (MECCA_LAT - lat) * Math.PI / 180;
         const dLon = (MECCA_LNG - lng) * Math.PI / 180;
@@ -128,31 +122,34 @@ document.addEventListener('DOMContentLoaded', () => {
         distanceDisplay.innerText = `${distance.toLocaleString()} km`;
     }
 
-    // ৪. সেন্সর ডেটা হ্যান্ডলিং
-    function handleOrientation(event) {
-        let heading = event.alpha;
+    // ৪. সেন্সর ডেটা হ্যান্ডলিং (আসল সমস্যা ফিক্স)
+    function handleOrientation(event, isAbsoluteEvent) {
+        let heading = null;
 
         if (event.webkitCompassHeading) {
-            heading = event.webkitCompassHeading; // iOS
-        } else if (event.absolute) {
-            heading = 360 - heading; // Android Absolute
+            // iOS (সরাসরি সঠিক দিক দেয়)
+            heading = event.webkitCompassHeading;
+            isAbsolute = true;
+        } else if (isAbsoluteEvent && event.alpha != null) {
+            // Android Absolute (সঠিক উত্তর দিক)
+            // Android এ alpha বাড়ে এন্টি-ক্লকওয়াইজ, তাই ৩৬০ থেকে বিয়োগ করতে হয়
+            heading = 360 - event.alpha;
+            isAbsolute = true;
+        } else if (event.alpha != null) {
+            // সাধারণ ফলব্যাক (হয়তো সঠিক উত্তর দিক নাও হতে পারে)
+            heading = 360 - event.alpha;
         }
-        
+
         if (heading == null) return;
         
-        // Raw Heading স্টোর করা, UI লুপে আপডেট হবে
-        currentHeading = heading;
+        // নরমালাইজেশন (০-৩৬০ এর মধ্যে রাখা)
+        currentHeading = heading % 360;
     }
 
-    // ৫. স্মুথ এনিমেশন লুপ (requestAnimationFrame)
+    // ৫. স্মুথ এনিমেশন এবং UI আপডেট লুপ
     function updateCompassFrame() {
-        if (qiblaAngle === 0 && currentHeading === 0) {
-            requestAnimationFrame(updateCompassFrame);
-            return;
-        }
-
-        // --- স্মার্ট স্মুথিং লজিক (Low Pass Filter) ---
-        // ৩৬০ ডিগ্রি থেকে ০ ডিগ্রিতে লাফানো আটকানো
+        // --- স্মার্ট স্মুথিং লজিক (জাম্প ফিক্স সহ) ---
+        // ৩৬০ থেকে ০ ডিগ্রিতে যাওয়ার সময় যাতে চাকা উল্টো না ঘোরে
         let delta = currentHeading - smoothHeading;
         
         if (delta > 180) delta -= 360;
@@ -160,38 +157,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         smoothHeading += delta * SMOOTHING_FACTOR;
 
-        // নরমালাইজেশন (০-৩৬০ এর মধ্যে রাখা)
-        smoothHeading = (smoothHeading + 360) % 360;
+        // ভ্যালু নরমালাইজ করা
+        let displayHeading = (smoothHeading % 360);
+        if(displayHeading < 0) displayHeading += 360;
 
-        // --- UI আপডেট ---
+        // --- UI রোটেশন ---
         
         // ১. ডায়াল ঘোরানো (বিপরীত দিকে)
-        // আমরা যখন ফোন ঘোরাই, ডায়াল স্থির থাকার কথা (নর্থের দিকে), তাই এটি উল্টো ঘোরে।
-        dialGroup.style.transform = `rotate(${-smoothHeading}deg)`;
+        // ফোন ডান দিকে (৯০°) ঘুরলে, ডায়াল বাম দিকে (-৯০°) ঘুরবে যাতে "N" উত্তরে স্থির থাকে।
+        dialGroup.style.transform = `rotate(${-displayHeading}deg)`;
 
         // ২. কিবলা পয়েন্টার ঘোরানো
-        // পয়েন্টার সবসময় মক্কার দিকে থাকবে।
-        // লজিক: মক্কার দিক (qiblaAngle) - ফোনের দিক (smoothHeading)
-        const pointerRotation = qiblaAngle - smoothHeading;
-        
-        // পয়েন্টারটি ৩৬০ ডিগ্রির শর্টেস্ট পথে ঘোরানো (জাম্প ফিক্স)
-        // এটি CSS transition এর ঝামেলা কমায়, তবে এখানে আমরা JS দিয়ে পজিশন দিচ্ছি
+        // পয়েন্টার সবসময় কাবার দিকে (qiblaAngle) থাকবে।
+        // যেহেতু ডায়াল ঘুরছে, তাই পয়েন্টারকেও ডায়ালের সাপেক্ষে এডজাস্ট করতে হবে।
+        const pointerRotation = qiblaAngle - displayHeading;
         qiblaPointerGroup.style.transform = `rotate(${pointerRotation}deg)`;
 
-        // ৩. ডিজিটাল ডিসপ্লে
-        degreeDisplay.innerText = `${Math.round(qiblaAngle)}°`;
+        // ৩. ডিজিটাল ডিসপ্লে আপডেট (এখন এটি ফোনের ঘূর্ণন দেখাবে)
+        // এটি আপনার চাওয়া অনুযায়ী ফিক্স করা হয়েছে। ফোন ঘোরালে সংখ্যা কমবে/বাড়বে।
+        degreeDisplay.innerText = `${Math.round(displayHeading)}°`;
+        
+        // লেবেল আপডেট (বোঝার সুবিধার জন্য)
+        if (Math.abs(displayHeading - qiblaAngle) < 5) {
+            degreeLabel.innerText = "QIBLA ALIGNED";
+            degreeLabel.style.color = "#2ecc71";
+        } else {
+            degreeLabel.innerText = `QIBLA IS AT ${Math.round(qiblaAngle)}°`;
+            degreeLabel.style.color = "#D4AF37";
+        }
 
         // ৪. এলাইনমেন্ট চেক (স্মার্ট গ্রিন গ্লো)
-        // যখন পয়েন্টার একদম সোজাসুজি (0 এর কাছে) থাকে
-        let relativeAngle = (pointerRotation % 360);
-        if(relativeAngle < 0) relativeAngle += 360;
+        // যখন ফোনের মাথা (0°) এবং কিবলা এঙ্গেল (qiblaAngle) একই লাইনে আসবে।
+        let diff = Math.abs(displayHeading - qiblaAngle);
+        // ৩৬০ ডিগ্রির র‍্যাপ অ্যারাউন্ড হ্যান্ডেল করা
+        if (diff > 180) diff = 360 - diff;
 
-        // ৫ ডিগ্রি মার্জিন
-        if (relativeAngle < 5 || relativeAngle > 355) {
+        // ৩ ডিগ্রি মার্জিন
+        if (diff < 3) {
             compassFrame.classList.add('aligned');
-            // ভাইব্রেশন (অল্প)
             if (navigator.vibrate) {
-                // লুপে বারবার ভাইব্রেশন না হওয়ার জন্য চেক করা উচিত, তবে এখানে সিম্পল রাখা হলো
+               // ভাইব্রেশন (খুব হালকা)
+               // navigator.vibrate(10); 
             }
         } else {
             compassFrame.classList.remove('aligned');
@@ -209,15 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const city = data.address.city || data.address.town || data.address.suburb || "আপনার অবস্থান";
             cityDisplay.innerText = city;
         } catch (e) {
-            cityDisplay.innerText = "লোকেশন ডিটেক্টেড";
+            cityDisplay.innerText = "GPS Connected";
         }
     }
 
-    function showError(msg) {
-        errorMsg.style.display = 'block';
-        errorMsg.innerText = msg;
-    }
-
     // শুরু করুন
-    initApp();
+    startApp();
 });
