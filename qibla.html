@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPray - কিবলা কম্পাস</title>
-    <!-- ফন্ট -->
+    <title>iPray - স্মুথ কিবলা কম্পাস</title>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -36,7 +35,7 @@
             background-image: radial-gradient(circle at center, #232b35 0%, #0F1216 100%);
         }
 
-        /* হেডার স্টাইল */
+        /* হেডার */
         .qibla-header {
             padding: 20px;
             display: flex;
@@ -90,7 +89,7 @@
             position: relative;
         }
 
-        /* কম্পাসের বডি (ফ্রেম) */
+        /* মেইন ফ্রেম */
         .compass-frame {
             width: 320px;
             height: 320px;
@@ -105,9 +104,15 @@
             align-items: center;
             justify-content: center;
             border: 4px solid #252c36;
+            /* স্মুথ এনিমেশনের জন্য ট্রানজিশন */
+            transition: box-shadow 0.5s ease, border-color 0.5s ease;
         }
 
-        /* সোনালী বর্ডার রিং */
+        .compass-frame.aligned {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 40px rgba(46, 204, 113, 0.4), inset 0 0 20px rgba(46, 204, 113, 0.2);
+        }
+
         .gold-ring {
             position: absolute;
             width: 290px;
@@ -115,17 +120,34 @@
             border-radius: 50%;
             border: 2px solid rgba(212, 175, 55, 0.3);
             pointer-events: none;
+            transition: border-color 0.5s ease;
+        }
+        
+        .compass-frame.aligned .gold-ring {
+            border-color: var(--accent-green);
         }
 
-        /* ঘুরন্ত ডায়াল (SVG) */
+        /* ডায়াল এবং পয়েন্টার গ্রুপ */
+        /* এই ডিভগুলো জাভাস্ক্রিপ্ট দিয়ে ঘোরানো হবে */
+        .compass-rotating-group {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* উইল-চেঞ্জ পারফরম্যান্স বাড়াবে */
+            will-change: transform; 
+        }
+
         .compass-dial-svg {
             width: 280px;
             height: 280px;
-            transition: transform 0.1s cubic-bezier(0.2, 0.6, 0.4, 1); /* স্মুথ রোটেশন */
             filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
         }
 
-        /* SVG টেক্সট স্টাইল */
         .dial-text {
             font-family: 'Poppins', sans-serif;
             font-weight: 700;
@@ -136,17 +158,16 @@
         .degree-tick { stroke: rgba(255,255,255,0.3); stroke-width: 2; }
         .degree-tick.major { stroke: var(--gold); stroke-width: 3; }
 
-        /* কাবার আইকন এবং নিডল (SVG) */
+        /* কাবা এবং নিডল আলাদা গ্রুপে থাকবে কারণ এটি কাবার দিকে ফিক্সড থাকবে */
         .qibla-pointer-group {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             pointer-events: none;
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
             z-index: 20;
+            will-change: transform;
         }
 
-        /* কাবা আইকন SVG স্টাইল */
         .kaaba-svg {
             position: absolute;
             top: 45px;
@@ -157,7 +178,6 @@
             filter: drop-shadow(0 0 8px var(--gold));
         }
 
-        /* গোল্ডেন নিডল */
         .qibla-needle {
             position: absolute;
             top: 50%; left: 50%;
@@ -169,7 +189,6 @@
             box-shadow: 0 -5px 15px rgba(212, 175, 55, 0.4);
         }
 
-        /* সেন্ট্রাল নব */
         .center-knob {
             position: absolute;
             width: 16px; height: 16px;
@@ -184,7 +203,7 @@
 
         /* ইনফো প্যানেল */
         .info-panel {
-            background: rgba(26, 31, 38, 0.9);
+            background: rgba(26, 31, 38, 0.95);
             border-radius: 25px 25px 0 0;
             padding: 25px;
             width: 100%;
@@ -245,7 +264,7 @@
         .status-text h4 { font-size: 0.7rem; color: #888; font-weight: 400; text-transform: uppercase; }
         .status-text span { font-size: 0.9rem; font-weight: 600; color: #fff; }
 
-        /* পারমিশন বাটন (iOS) */
+        /* পারমিশন বাটন (iOS এর জন্য স্পেশাল) */
         #permission-btn {
             position: absolute;
             z-index: 100;
@@ -256,28 +275,26 @@
             border-radius: 50px;
             font-weight: bold;
             box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
-            display: none;
-            animation: pulse-btn 2s infinite;
-        }
-
-        /* এলাইনমেন্ট এফেক্ট */
-        .compass-frame.aligned {
-            border-color: var(--accent-green);
-            box-shadow: 0 0 30px rgba(46, 204, 113, 0.3);
-        }
-        .compass-frame.aligned .gold-ring {
-            border-color: var(--accent-green);
-        }
-
-        @keyframes pulse-btn {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+            display: none; /* ডিফল্ট হাইড, দরকার হলে JS শো করবে */
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
         }
 
         .loader {
             position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
             color: var(--gold);
+            display: none;
+            z-index: 90;
+        }
+        
+        .error-msg {
+            position: absolute;
+            bottom: 150px;
+            color: #e74c3c;
+            background: rgba(0,0,0,0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
             display: none;
         }
     </style>
@@ -290,54 +307,47 @@
         </a>
         <div class="header-title">
             <h1>কিবলা কম্পাস</h1>
-            <p>সঠিক দিক নির্দেশনা</p>
+            <p>নির্ভুল দিক নির্দেশনা</p>
         </div>
         <div style="width: 45px;"></div>
     </header>
 
     <div class="compass-container">
         
-        <button id="permission-btn">কম্পাস চালু করুন</button>
+        <button id="permission-btn">সেন্সর চালু করুন</button>
         <div class="loader" id="loader"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+        <div class="error-msg" id="errorMsg"></div>
 
-        <!-- মেইন কম্পাস ফ্রেম -->
         <div class="compass-frame" id="compassFrame">
             <div class="gold-ring"></div>
             
-            <!-- ডায়াল (SVG) -->
-            <svg class="compass-dial-svg" id="compassDial" viewBox="0 0 100 100">
-                <!-- ডায়াল মার্কস (JS দিয়ে জেনারেট করা হবে না, সরাসরি এখানে) -->
-                <circle cx="50" cy="50" r="48" fill="none" stroke="#333" stroke-width="0.5"/>
-                
-                <!-- দিক নির্দেশক লেখা -->
-                <text x="50" y="14" text-anchor="middle" class="dial-text north">N</text>
-                <text x="50" y="92" text-anchor="middle" class="dial-text">S</text>
-                <text x="90" y="52" text-anchor="middle" class="dial-text">E</text>
-                <text x="10" y="52" text-anchor="middle" class="dial-text">W</text>
-
-                <!-- ছোট দাগ (Ticks) -->
-                <line x1="50" y1="2" x2="50" y2="6" class="degree-tick major" /> <!-- N -->
-                <line x1="98" y1="50" x2="94" y2="50" class="degree-tick major" /> <!-- E -->
-                <line x1="50" y1="98" x2="50" y2="94" class="degree-tick major" /> <!-- S -->
-                <line x1="2" y1="50" x2="6" y2="50" class="degree-tick major" /> <!-- W -->
-                
-                <!-- সাব-কার্ডিনাল (NE, SE, etc) -->
-                <line x1="84" y1="16" x2="81" y2="19" class="degree-tick" />
-                <line x1="84" y1="84" x2="81" y2="81" class="degree-tick" />
-                <line x1="16" y1="84" x2="19" y2="81" class="degree-tick" />
-                <line x1="16" y1="16" x2="19" y2="19" class="degree-tick" />
-            </svg>
-
-            <!-- কিবলা পয়েন্টার গ্রুপ -->
-            <div class="qibla-pointer-group" id="qiblaPointer">
-                <!-- কাবার ভেক্টর আইকন (SVG Path) -->
-                <svg class="kaaba-svg" viewBox="0 0 512 512">
-                    <path fill="#D4AF37" d="M120 120h272v272H120z"/> <!-- গোল্ড বর্ডার -->
-                    <path fill="#1a1a1a" d="M130 130h252v252H130z"/> <!-- কালো বডি -->
-                    <path fill="#D4AF37" d="M130 160h252v20H130z"/> <!-- গোল্ড বেল্ট -->
-                    <path fill="#D4AF37" d="M220 220h72v100h-72z"/> <!-- দরজা -->
+            <!-- ডায়াল গ্রুপ (নর্থের দিকে ঘুরবে) -->
+            <div class="compass-rotating-group" id="dialGroup">
+                <svg class="compass-dial-svg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="none" stroke="#333" stroke-width="0.5"/>
+                    <text x="50" y="14" text-anchor="middle" class="dial-text north">N</text>
+                    <text x="50" y="92" text-anchor="middle" class="dial-text">S</text>
+                    <text x="90" y="52" text-anchor="middle" class="dial-text">E</text>
+                    <text x="10" y="52" text-anchor="middle" class="dial-text">W</text>
+                    <line x1="50" y1="2" x2="50" y2="6" class="degree-tick major" />
+                    <line x1="98" y1="50" x2="94" y2="50" class="degree-tick major" />
+                    <line x1="50" y1="98" x2="50" y2="94" class="degree-tick major" />
+                    <line x1="2" y1="50" x2="6" y2="50" class="degree-tick major" />
+                    <line x1="84" y1="16" x2="81" y2="19" class="degree-tick" />
+                    <line x1="84" y1="84" x2="81" y2="81" class="degree-tick" />
+                    <line x1="16" y1="84" x2="19" y2="81" class="degree-tick" />
+                    <line x1="16" y1="16" x2="19" y2="19" class="degree-tick" />
                 </svg>
-                
+            </div>
+
+            <!-- কিবলা পয়েন্টার গ্রুপ (কাবার দিকে ঘুরবে) -->
+            <div class="qibla-pointer-group" id="qiblaPointerGroup">
+                <svg class="kaaba-svg" viewBox="0 0 512 512">
+                    <path fill="#D4AF37" d="M120 120h272v272H120z"/>
+                    <path fill="#1a1a1a" d="M130 130h252v252H130z"/>
+                    <path fill="#D4AF37" d="M130 160h252v20H130z"/>
+                    <path fill="#D4AF37" d="M220 220h72v100h-72z"/>
+                </svg>
                 <div class="qibla-needle"></div>
             </div>
 
@@ -345,7 +355,6 @@
         </div>
     </div>
 
-    <!-- ইনফো প্যানেল -->
     <div class="info-panel">
         <div class="degree-box">
             <div class="degree-display" id="degreeDisplay">--°</div>
@@ -356,15 +365,15 @@
             <div class="status-card">
                 <div class="status-icon"><i class="fas fa-location-arrow"></i></div>
                 <div class="status-text">
-                    <h4>Current Location</h4>
-                    <span id="cityDisplay">Detecting...</span>
+                    <h4>অবস্থান</h4>
+                    <span id="cityDisplay">যাচাই হচ্ছে...</span>
                 </div>
             </div>
             <div class="status-card">
                 <div class="status-icon"><i class="fas fa-route"></i></div>
                 <div class="status-text">
-                    <h4>Distance</h4>
-                    <span id="distanceDisplay">-- km</span>
+                    <h4>দূরত্ব</h4>
+                    <span id="distanceDisplay">-- কি.মি.</span>
                 </div>
             </div>
         </div>

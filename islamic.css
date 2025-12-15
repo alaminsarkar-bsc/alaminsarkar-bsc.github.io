@@ -1273,3 +1273,14 @@ html[dir="rtl"] .namaz-step-details p {
     align-items: center;
     justify-content: center;
 }
+
+.header-btn.header-btn-right {
+     width: 40px; 
+     text-align: right;
+     justify-content: flex-end;
+     text-decoration: none;
+     display: flex;
+     align-items: center;
+     visibility: visible !important; /* আগে hidden থাকলে তা ফিক্স করবে */
+     color: #FFA500; /* হেডারের আইকন কালার */
+}
