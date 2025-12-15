@@ -1,6 +1,6 @@
 // ====================================================================
 // FILE: utils.js
-// বিবরণ: হেল্পার ফাংশন, ফরম্যাটার, ইউটিলিটি ক্লাস এবং রিপোর্ট সিস্টেম
+// বিবরণ: হেল্পার ফাংশন, ফরম্যাটার, ইউটিলিটি ক্লাস, রিপোর্ট সিস্টেম এবং অফলাইন ম্যানেজার
 // ====================================================================
 
 console.log("Utils Module Loaded");
@@ -47,7 +47,7 @@ const mediaObserver = new IntersectionObserver((entries) => {
     });
 }, { threshold: 0.5 });
 
-// 4. REPORT SYSTEM CLASS (এটি ছাড়া রিপোর্ট বাটন কাজ করবে না)
+// 4. REPORT SYSTEM CLASS
 class ReportSystem {
     constructor() {
         this.categories = {
@@ -101,7 +101,6 @@ class ReportSystem {
     }
 }
 
-// রিপোর্ট সিস্টেমের ইনস্ট্যান্স তৈরি (গ্লোবালি এক্সেস করার জন্য)
 const reportSystem = new ReportSystem();
 
 // 5. BUTTON LOADING STATE TOGGLER
@@ -158,11 +157,7 @@ const timeAgo = dateString => {
 // 9. LINKIFY TEXT (URL & Hashtags)
 const linkifyText = (text) => {
     if (!text) return '';
-    
-    // URL Regex
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])|(\bwww\.[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-    
-    // Hashtag Regex
     const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
     
     let linkedText = text.replace(urlRegex, (url) => {
@@ -172,7 +167,6 @@ const linkifyText = (text) => {
     });
     
     linkedText = linkedText.replace(hashtagRegex, `<span class="hashtag">#$1</span>`);
-    
     return linkedText;
 };
 
@@ -182,7 +176,6 @@ const showSkeletonLoader = (show, containerId = null) => {
     const storySkeletonContainer = document.getElementById('storySkeletonContainer');
     const storyContainer = document.getElementById('storyContainer');
     
-    // নির্দিষ্ট কন্টেইনারের জন্য (যেমন প্রোফাইল পেজ)
     if (containerId) {
         const target = document.getElementById(containerId);
         if (target) {
@@ -198,7 +191,6 @@ const showSkeletonLoader = (show, containerId = null) => {
         return;
     }
 
-    // হোম পেজের জন্য
     if (show) {
         if(skeletonContainer) skeletonContainer.style.display = 'block';
         if(storySkeletonContainer) storySkeletonContainer.style.display = 'flex';
@@ -210,7 +202,7 @@ const showSkeletonLoader = (show, containerId = null) => {
     }
 };
 
-// 11. ARRAY SHUFFLER (ফিশার-ইয়েটস অ্যালগরিদম)
+// 11. ARRAY SHUFFLER
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -224,7 +216,220 @@ function showLoginModal() {
     const loginPage = document.getElementById('loginPage');
     if (loginPage) {
         loginPage.style.display = 'flex';
-        // URL এ হ্যাশ বা স্টেট যোগ করা যেতে পারে ব্যাক বাটন হ্যান্ডল করার জন্য
         history.pushState(null, null, window.location.href);
     }
 }
+
+// 13. GLOBAL UPLOAD HELPERS (Shared for Online/Offline)
+async function compressImageFile(imageFile) {
+    if (typeof imageCompression === 'undefined') return imageFile;
+    const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1920, useWebWorker: true, initialQuality: 0.7 };
+    try {
+        const compressedFile = await imageCompression(imageFile, options);
+        return compressedFile;
+    } catch (error) {
+        console.error("Compression Error:", error);
+        return imageFile;
+    }
+}
+
+const uploadWithProgress = async (bucket, fileName, file, showUI = true) => {
+    let container, progressBar, progressText;
+    let interval;
+
+    if (showUI) {
+        container = document.getElementById('uploadProgressContainer');
+        progressBar = document.getElementById('uploadProgressBar');
+        progressText = document.getElementById('progressText');
+        
+        if (container) {
+            container.style.display = 'block';
+            let progress = 0;
+            interval = setInterval(() => {
+                if (progress < 90) {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${progress}%`;
+                }
+            }, 200);
+        }
+    }
+
+    try {
+        const { data, error } = await supabaseClient.storage
+            .from(bucket)
+            .upload(fileName, file, { cacheControl: '3600', upsert: false });
+        
+        if (interval) clearInterval(interval);
+        
+        if (error) throw error;
+
+        if (showUI && container) {
+            progressBar.style.width = `100%`;
+            progressText.textContent = `100%`;
+            setTimeout(() => { container.style.display = 'none'; }, 1000);
+        }
+
+        return supabaseClient.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
+    } catch (err) {
+        if (interval) clearInterval(interval);
+        if (showUI && container) container.style.display = 'none';
+        throw err;
+    }
+};
+
+// ==========================================
+// 14. OFFLINE POST MANAGER (INDEXED DB)
+// ==========================================
+const DB_NAME = 'iPrayOfflineDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'offline_posts';
+
+// ডাটাবেজ ওপেন করা
+function openOfflineDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject(event.target.error);
+    });
+}
+
+// পোস্ট সেভ করা (অফলাইনে)
+async function savePostOffline(postData, imageFile, videoFile, audioFile, recordedBlob) {
+    const db = await openOfflineDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    // ফাইলগুলোকে ব্লব হিসেবে সেভ করতে হবে
+    const offlineData = {
+        ...postData,
+        timestamp: Date.now(),
+        imageBlob: imageFile || null,
+        videoBlob: videoFile || null,
+        audioBlob: audioFile || null,
+        recordedAudioBlob: recordedBlob || null
+    };
+
+    return new Promise((resolve, reject) => {
+        const request = store.add(offlineData);
+        request.onsuccess = () => resolve(true);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// সব অফলাইন পোস্ট পাওয়া
+async function getOfflinePosts() {
+    const db = await openOfflineDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// পোস্ট ডিলিট করা (আপলোডের পর)
+async function deleteOfflinePost(id) {
+    const db = await openOfflineDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    store.delete(id);
+}
+
+// ==========================================
+// 15. SYNC FUNCTION (অটোমেটিক আপলোড)
+// ==========================================
+async function syncOfflinePosts() {
+    if (!navigator.onLine) return;
+
+    const posts = await getOfflinePosts();
+    if (posts.length === 0) return;
+
+    console.log(`Syncing ${posts.length} offline posts...`);
+    
+    // টোস্ট মেসেজ দেখানো
+    const toast = document.createElement('div');
+    toast.className = 'notification info';
+    toast.innerHTML = `<div class="notification-content"><span>ইন্টারনেট ফিরে এসেছে। ${posts.length}টি অফলাইন পোস্ট আপলোড হচ্ছে...</span></div>`;
+    document.body.appendChild(toast);
+
+    for (const post of posts) {
+        try {
+            let imageUrl = null, uploadedVideoUrl = null, audioFileUrl = null, videoThumbnailUrl = null;
+
+            // ১. ইমেজ আপলোড
+            if (post.imageBlob) {
+                const compressed = await compressImageFile(post.imageBlob);
+                imageUrl = await uploadWithProgress('post_images', `${post.author_uid}_img_${Date.now()}`, compressed, false);
+            }
+
+            // ২. ভিডিও আপলোড
+            if (post.videoBlob) {
+                uploadedVideoUrl = await uploadWithProgress('post_videos', `${post.author_uid}_vid_${Date.now()}`, post.videoBlob, false);
+            }
+
+            // ৩. অডিও আপলোড
+            if (post.recordedAudioBlob) {
+                audioFileUrl = await uploadWithProgress('audio_prayers', `audio-${post.author_uid}-${Date.now()}.webm`, post.recordedAudioBlob, false);
+            } else if (post.audioBlob) {
+                audioFileUrl = await uploadWithProgress('audio_prayers', `audio-${post.author_uid}-${Date.now()}.mp3`, post.audioBlob, false);
+            }
+
+            // ৪. মেইন ডাটা অবজেক্ট তৈরি
+            const finalPostData = {
+                author_uid: post.author_uid,
+                title: post.title,
+                details: post.details,
+                youtube_url: post.youtube_url,
+                image_url: imageUrl,
+                uploaded_video_url: uploadedVideoUrl,
+                audio_url: audioFileUrl,
+                video_thumbnail_url: videoThumbnailUrl,
+                is_poll: post.is_poll,
+                poll_options: post.poll_options,
+                poll_votes: post.poll_votes,
+                is_fundraising: post.is_fundraising,
+                organization_name: post.organization_name,
+                goal_amount: post.goal_amount,
+                current_amount: post.current_amount,
+                payment_details: post.payment_details,
+                is_anonymous: post.is_anonymous,
+                status: 'active'
+            };
+
+            // ৫. ডাটাবেজে ইনসার্ট
+            const { error } = await supabaseClient.from('prayers').insert([finalPostData]);
+            
+            if (!error) {
+                // সফল হলে লোকাল ডিবি থেকে ডিলিট
+                await deleteOfflinePost(post.id);
+            } else {
+                console.error("Sync insert error:", error);
+            }
+
+        } catch (err) {
+            console.error("Sync failed for post:", post.id, err);
+        }
+    }
+
+    toast.remove();
+    alert("আপনার অফলাইন পোস্টগুলো সফলভাবে আপলোড হয়েছে!");
+    
+    // হোমপেজে থাকলে ফিড রিফ্রেশ
+    if (window.location.pathname === '/' || window.location.pathname.includes('index.html')) {
+        window.location.reload();
+    }
+}
+
+// উইন্ডো অবজেক্টে সিঙ্ক ফাংশন এক্সপোজ করা (যাতে main.js ব্যবহার করতে পারে)
+window.syncOfflinePosts = syncOfflinePosts;
+window.savePostOffline = savePostOffline;
+window.uploadWithProgress = uploadWithProgress;
+window.compressImageFile = compressImageFile;

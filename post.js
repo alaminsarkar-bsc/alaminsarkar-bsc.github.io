@@ -53,32 +53,6 @@ async function checkContentSafety(imgElement) {
 }
 
 // ====================================
-// ইমেজ কমপ্রেশন ফাংশন (NEW FEATURE)
-// ====================================
-async function compressImageFile(imageFile) {
-    // যদি লাইব্রেরি লোড না হয়, অরিজিনাল ফাইল ফেরত দিবে
-    if (typeof imageCompression === 'undefined') return imageFile;
-
-    console.log(`Original Size: ${(imageFile.size / 1024 / 1024).toFixed(2)} MB`);
-
-    const options = {
-        maxSizeMB: 0.5,          // সর্বোচ্চ সাইজ ০.৫ এমবি (500KB)
-        maxWidthOrHeight: 1920,  // সর্বোচ্চ ১৯২০ পিক্সেল
-        useWebWorker: true,      // ফাস্ট প্রসেসিং
-        initialQuality: 0.7      // ৭০% কোয়ালিটি
-    };
-
-    try {
-        const compressedFile = await imageCompression(imageFile, options);
-        console.log(`Compressed Size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-        return compressedFile;
-    } catch (error) {
-        console.error("Compression Error:", error);
-        return imageFile; // কমপ্রেশন ফেইল করলে অরিজিনাল ফাইল যাবে
-    }
-}
-
-// ====================================
 // অ্যাপলিকেশন শুরু
 // ====================================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -278,7 +252,7 @@ const generateVideoThumbnailFromFile = (videoFile) => {
 };
 
 // ====================================
-// ফর্ম সাবমিশন এবং মিডিয়া আপলোড
+// ফর্ম সাবমিশন এবং মিডিয়া আপলোড (অফলাইন সাপোর্ট সহ)
 // ====================================
 function setupFormSubmissions() {
     const prayerForm = document.getElementById('prayerForm');
@@ -286,54 +260,9 @@ function setupFormSubmissions() {
         prayerForm.addEventListener('submit', handleNewPost);
         setupMediaUploads();
         setupAudioRecording();
-        setupProfileImageUploads(); // প্রোফাইল আপলোডের জন্য
+        setupProfileImageUploads(); 
     }
 }
-
-const uploadWithProgress = async (bucket, fileName, file) => {
-    const container = document.getElementById('uploadProgressContainer');
-    const progressBar = document.getElementById('uploadProgressBar');
-    const progressText = document.getElementById('progressText');
-    const progressLabel = document.getElementById('progressLabel');
-
-    let label = 'ফাইল';
-    if (file.type.startsWith('video/')) label = 'ভিডিও';
-    else if (file.type.startsWith('audio/')) label = 'অডিও';
-    else if (file.type.startsWith('image/')) label = 'ছবি';
-
-    progressLabel.textContent = `${label} আপলোড হচ্ছে...`;
-    container.style.display = 'block';
-
-    let progress = 0;
-    const interval = setInterval(() => {
-        if (progress < 90) {
-            progress += 10;
-            progressBar.style.width = `${progress}%`;
-            progressText.textContent = `${progress}%`;
-        }
-    }, 200);
-
-    try {
-        const { data, error } = await supabaseClient.storage
-            .from(bucket)
-            .upload(fileName, file, { cacheControl: '3600', upsert: false });
-        
-        clearInterval(interval);
-        
-        if (error) throw error;
-
-        progressBar.style.width = `100%`;
-        progressText.textContent = `100%`;
-        
-        setTimeout(() => { container.style.display = 'none'; }, 1000);
-
-        return supabaseClient.storage.from(bucket).getPublicUrl(data.path).data.publicUrl;
-    } catch (err) {
-        clearInterval(interval);
-        container.style.display = 'none';
-        throw err;
-    }
-};
 
 async function handleNewPost(e) {
     e.preventDefault();
@@ -348,56 +277,36 @@ async function handleNewPost(e) {
 
     const imageFile = document.getElementById('imageUploadInput').files[0];
     const videoFile = document.getElementById('videoUploadInput').files[0];
+    const audioInputFile = document.getElementById('audioUploadInput').files[0];
     
     setLoading(btn, true);
 
-    // --- AI MODERATION CHECK ---
-    try {
-        if (imageFile) {
-            console.log("Checking image safety...");
-            const img = new Image();
-            img.src = URL.createObjectURL(imageFile);
-            await new Promise(r => img.onload = r);
-            
-            const isSafe = await checkContentSafety(img);
-            if (!isSafe) {
-                alert("দুঃখিত! আপনার ছবিতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
-                setLoading(btn, false);
-                return; 
-            }
-        }
-
-        if (videoFile) {
-            console.log("Checking video safety...");
-            try {
-                const thumbnailBlob = await generateVideoThumbnailFromFile(videoFile);
-                const thumbImg = new Image();
-                thumbImg.src = URL.createObjectURL(thumbnailBlob);
-                await new Promise(r => thumbImg.onload = r);
-
-                const isSafe = await checkContentSafety(thumbImg);
+    // --- AI MODERATION CHECK (Online Only) ---
+    // অফলাইনে থাকলে AI চেক স্কিপ করা হবে, আপলোডের সময় আবার চেক হতে পারে
+    if (navigator.onLine) {
+        try {
+            if (imageFile) {
+                console.log("Checking image safety...");
+                const img = new Image();
+                img.src = URL.createObjectURL(imageFile);
+                await new Promise(r => img.onload = r);
+                
+                const isSafe = await checkContentSafety(img);
                 if (!isSafe) {
-                    alert("দুঃখিত! আপনার ভিডিওতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
+                    alert("দুঃখিত! আপনার ছবিতে আপত্তিকর কন্টেন্ট শনাক্ত হয়েছে। এটি আপলোড করা যাবে না।");
                     setLoading(btn, false);
                     return; 
                 }
-            } catch (thumbErr) {
-                console.warn("Thumbnail check skipped due to error:", thumbErr);
             }
+        } catch (checkError) {
+            console.error("Moderation check failed:", checkError);
         }
-    } catch (checkError) {
-        console.error("Moderation check failed:", checkError);
     }
 
     const youtubeUrl = document.getElementById('youtubeLinkInput').value.trim();
-    const audioInputFile = document.getElementById('audioUploadInput').files[0];
 
     try {
-        let imageUrl = null, uploadedVideoUrl = null, audioFileUrl = null, videoThumbnailUrl = null;
         let pollOptions = [];
-        let pollVotes = {};
-
-        // --- POLL LOGIC ---
         if (isPollMode) {
             const inputs = document.querySelectorAll('.poll-option-input');
             inputs.forEach((input, index) => {
@@ -411,58 +320,25 @@ async function handleNewPost(e) {
                 setLoading(btn, false);
                 return;
             }
-        } 
-        // --- NORMAL POST LOGIC ---
-        else {
-            if (imageFile) {
-                // Image Compression
-                const compressedFile = await compressImageFile(imageFile);
-                imageUrl = await uploadWithProgress('post_images', `${currentUser.id}_img_${Date.now()}`, compressedFile);
-            } 
-            else if (videoFile) {
-                // Video Size Limit (100MB)
-                if (videoFile.size > 100 * 1024 * 1024) {
-                    alert("ভিডিওর সাইজ অনেক বড়! দয়া করে ১০০ এমবির নিচে ভিডিও আপলোড করুন।");
-                    setLoading(btn, false);
-                    return;
-                }
-
-                try {
-                    const thumbnailBlob = await generateVideoThumbnailFromFile(videoFile);
-                    const thumbnailFileName = `${currentUser.id}_thumb_${Date.now()}.jpg`;
-                    videoThumbnailUrl = await uploadWithProgress('video_thumbnails', thumbnailFileName, thumbnailBlob);
-                } catch (thumbError) {
-                    console.warn("থাম্বনেইল তৈরি করা যায়নি:", thumbError);
-                }
-                uploadedVideoUrl = await uploadWithProgress('post_videos', `${currentUser.id}_vid_${Date.now()}`, videoFile);
-            } 
-            else if (recordedAudioBlob) {
-                audioFileUrl = await uploadWithProgress('audio_prayers', `audio-${currentUser.id}-${Date.now()}.webm`, recordedAudioBlob);
-            } else if (audioInputFile) {
-                const fileName = `audio-${currentUser.id}-${Date.now()}.${audioInputFile.name.split('.').pop()}`;
-                audioFileUrl = await uploadWithProgress('audio_prayers', fileName, audioInputFile);
-            }
         }
-        
+
+        // --- POST DATA OBJECT PREPARATION ---
         const postData = {
             author_uid: currentUser.id,
             title,
             details,
             youtube_url: youtubeUrl,
-            image_url: imageUrl,
-            uploaded_video_url: uploadedVideoUrl,
-            audio_url: audioFileUrl,
-            video_thumbnail_url: videoThumbnailUrl,
             is_poll: isPollMode,
             poll_options: isPollMode ? pollOptions : [],
-            poll_votes: isPollMode ? {} : null
+            poll_votes: isPollMode ? {} : null,
+            is_fundraising: false,
+            status: 'active'
         };
 
         // Fundraising Logic
         if (postType === 'fundraising') {
             const organization_name = document.getElementById('organizationName').value.trim();
             const goal_amount = parseFloat(document.getElementById('goalAmount').value);
-            
             const paymentRows = document.querySelectorAll('.payment-dynamic-row');
             const methods = [];
             
@@ -470,39 +346,66 @@ async function handleNewPost(e) {
                 const type = row.querySelector('.pay-method-name').textContent.toLowerCase();
                 const number = row.querySelector('.pay-number-input').value.trim();
                 const mode = row.querySelector('.pay-type-select').value;
-                
-                if (number) {
-                    methods.push({ type, number, mode });
-                }
+                if (number) methods.push({ type, number, mode });
             });
 
             const otherDetails = document.getElementById('campaignOtherDetails').value.trim();
             
-            if (!organization_name || !goal_amount) {
-                alert("প্রতিষ্ঠানের নাম এবং টাকার লক্ষ্য পূরণ করুন।");
-                setLoading(btn, false);
-                return;
-            }
-            
-            if (methods.length === 0 && !otherDetails) {
-                alert("অন্তত একটি পেমেন্ট নাম্বার বা বিবরণ যোগ করুন।");
-                setLoading(btn, false);
-                return;
-            }
-
             postData.is_fundraising = true;
             postData.organization_name = organization_name;
             postData.goal_amount = goal_amount;
             postData.current_amount = 0;
             postData.payment_details = { methods: methods, other_info: otherDetails };
-            postData.is_anonymous = false; 
-            postData.status = 'active';
         } else {
-            postData.is_fundraising = false;
             const anonCheck = document.getElementById('anonymousCheckbox');
             postData.is_anonymous = anonCheck ? anonCheck.checked : false;
-            postData.status = 'active';
         }
+
+        // --- OFFLINE CHECK & SAVE ---
+        if (!navigator.onLine) {
+            console.log("No internet. Saving to IndexedDB...");
+            if (window.savePostOffline) {
+                await window.savePostOffline(postData, imageFile, videoFile, audioInputFile, recordedAudioBlob);
+                alert("ইন্টারনেট সংযোগ নেই। পোস্টটি অফলাইনে সংরক্ষণ করা হয়েছে। ইন্টারনেট সংযোগ ফিরে আসলে এটি স্বয়ংক্রিয়ভাবে আপলোড হবে।");
+                window.location.href = '/index.html';
+                return;
+            } else {
+                alert("ইন্টারনেট সংযোগ নেই এবং অফলাইন সেভ ফিচার লোড হয়নি।");
+                setLoading(btn, false);
+                return;
+            }
+        }
+
+        // --- ONLINE UPLOAD LOGIC ---
+        let imageUrl = null, uploadedVideoUrl = null, audioFileUrl = null, videoThumbnailUrl = null;
+
+        if (!isPollMode) {
+            if (imageFile) {
+                const compressedFile = await window.compressImageFile(imageFile); // utils.js থেকে
+                imageUrl = await window.uploadWithProgress('post_images', `${currentUser.id}_img_${Date.now()}`, compressedFile);
+            } 
+            else if (videoFile) {
+                // Video Size Limit Check
+                if (videoFile.size > 100 * 1024 * 1024) {
+                    alert("ভিডিওর সাইজ ১০০ এমবির বেশি হতে পারবে না।");
+                    setLoading(btn, false);
+                    return;
+                }
+                uploadedVideoUrl = await window.uploadWithProgress('post_videos', `${currentUser.id}_vid_${Date.now()}`, videoFile);
+            } 
+            else if (recordedAudioBlob) {
+                audioFileUrl = await window.uploadWithProgress('audio_prayers', `audio-${currentUser.id}-${Date.now()}.webm`, recordedAudioBlob);
+            } else if (audioInputFile) {
+                const fileName = `audio-${currentUser.id}-${Date.now()}.${audioInputFile.name.split('.').pop()}`;
+                audioFileUrl = await window.uploadWithProgress('audio_prayers', fileName, audioInputFile);
+            }
+        }
+
+        // ফাইনাল ডাটা আপডেট
+        postData.image_url = imageUrl;
+        postData.uploaded_video_url = uploadedVideoUrl;
+        postData.audio_url = audioFileUrl;
+        postData.video_thumbnail_url = videoThumbnailUrl;
 
         const { error: insertError } = await supabaseClient.from('prayers').insert([postData]);
 
@@ -620,8 +523,7 @@ async function handleProfileImageUpload(e, type) {
     if(loadingModal) loadingModal.style.display = 'flex';
 
     try {
-        // ইমেজ কমপ্রেশন
-        const compressedFile = await compressImageFile(file);
+        const compressedFile = await window.compressImageFile(file); // utils.js থেকে
 
         const dbColumn = type === 'cover' ? 'cover_photo_url' : 'photo_url';
         const { data: userData, error: fetchError } = await supabaseClient.from('users').select(dbColumn).eq('id', currentUser.id).single();
@@ -636,7 +538,6 @@ async function handleProfileImageUpload(e, type) {
         const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
         const filePath = `${type}s/${fileName}`;
         
-        // আপলোড কমপ্রেসড ফাইল
         const { data, error: uploadError } = await supabaseClient.storage.from('post_images').upload(filePath, compressedFile, { upsert: true });
         if (uploadError) throw uploadError;
         
