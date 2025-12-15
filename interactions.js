@@ -1,18 +1,24 @@
-// ====================================
+// ====================================================================
 // FILE: interactions.js
-// বিবরণ: রিয়্যাকশন, পোল, পোস্ট ম্যানেজমেন্ট, ডোনেশন, শর্টস কমেন্ট এবং গ্লোবাল ইভেন্ট হ্যান্ডলার
-// ====================================
+// বিবরণ: রিয়্যাকশন, পোল, পোস্ট ম্যানেজমেন্ট, ডোনেশন, শর্টস কমেন্ট,
+// গ্লোবাল ইভেন্ট, নোটিফিকেশন এবং মেসেজ ব্যাজ সিস্টেম।
+// ====================================================================
 
 console.log("Interactions Module Loaded");
 
-// --- OneSignal Configuration ---
-// আপনার OneSignal ড্যাশবোর্ড থেকে পাওয়া কী
+// ==========================================
+// ১. কনফিগারেশন (OneSignal)
+// ==========================================
 const ONESIGNAL_APP_ID = "f32cfd0e-9004-4b77-99e1-0a668f4b0df4";
 const ONESIGNAL_REST_API_KEY = "hlmvlcdziujz5fwiariyhrsqo"; 
 
-// --- Create Notification Helper ---
+// ==========================================
+// ২. নোটিফিকেশন হেল্পার ফাংশন
+// ==========================================
+
+// অ্যাপ এবং পুশ নোটিফিকেশন তৈরি করা
 async function createNotification(userId, actorId, type, content, targetUrl) { 
-    if (userId === actorId) return; 
+    if (userId === actorId) return; // নিজেকে নোটিফিকেশন পাঠানোর দরকার নেই
     
     try { 
         // ১. ডাটাবেজে সেভ করা (ইন-অ্যাপ নোটিফিকেশনের জন্য)
@@ -25,7 +31,7 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
             is_read: false
         }); 
 
-        // ২. পুশ নোটিফিকেশন পাঠানো
+        // ২. পুশ নোটিফিকেশন পাঠানো (ব্রাউজার/মোবাইল পপ-আপের জন্য)
         await sendPushNotification(userId, content, targetUrl);
 
     } catch (error) { 
@@ -33,7 +39,7 @@ async function createNotification(userId, actorId, type, content, targetUrl) {
     } 
 }
 
-// --- Send Push Notification Function ---
+// OneSignal API এর মাধ্যমে পুশ পাঠানো
 async function sendPushNotification(receiverId, message, url) {
     if (!ONESIGNAL_REST_API_KEY) return;
 
@@ -60,9 +66,9 @@ async function sendPushNotification(receiverId, message, url) {
     }
 }
 
-// ====================================
-// NAVIGATION LOGIC (Tabs & Feeds)
-// ====================================
+// ==========================================
+// ৩. নেভিগেশন লজিক (ট্যাব ও ফিড সুইচিং)
+// ==========================================
 window.setupNavigationLogic = function() {
     console.log("Initializing Navigation Logic...");
 
@@ -72,8 +78,8 @@ window.setupNavigationLogic = function() {
             const href = link.getAttribute('href');
             const isHomePage = document.body.id === 'home-page';
 
-            // পোস্ট এবং প্রোফাইল পেজের লিংক স্বাভাবিকভাবে কাজ করবে
-            if (buttonId === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html')) { 
+            // এই বাটনগুলো ডিফল্ট লিংকে যাবে
+            if (buttonId === 'addPostLink' || href?.includes('post.html') || href?.includes('profile.html') || href?.includes('messages.html')) { 
                 return; 
             }
             
@@ -84,18 +90,18 @@ window.setupNavigationLogic = function() {
 
             e.preventDefault();
             
-            // Shorts Button Logic
+            // Shorts (Video Feed) বাটন লজিক
             if(buttonId === 'videoFeedBtn') { 
                 document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
                 link.classList.add('active');
                 
                 isVideoFeedActive = true; 
                 const container = document.getElementById('feedContainer');
-                if(container) container.innerHTML = '';
+                if(container) container.innerHTML = ''; // ক্লিয়ার কন্টেইনার
                 
                 if(typeof initHomePage === 'function') initHomePage(); 
             } 
-            // Home Button Logic
+            // Home বাটন লজিক
             else if (buttonId === 'homeTabBtn') { 
                 document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
                 link.classList.add('active');
@@ -106,7 +112,7 @@ window.setupNavigationLogic = function() {
                 
                 if(typeof initHomePage === 'function') initHomePage(); 
             }
-            // Feed Toggle (Login Check)
+            // Feed Toggle (Following/For You)
             else if (buttonId === 'feedToggleBtn') {
                 if (!currentUser) {
                     showLoginModal();
@@ -121,16 +127,16 @@ window.setupNavigationLogic = function() {
     });
 };
 
-// ====================================
-// GLOBAL EVENT LISTENER SETUP
-// ====================================
+// ==========================================
+// ৪. গ্লোবাল ইভেন্ট লিসেনার সেটআপ
+// ==========================================
 window.setupEventListeners = function() {
     console.log("Setting up Global Event Listeners...");
     
-    // 1. Global Click Handler (সব বাটনের কাজ এখানে হ্যান্ডেল হবে)
+    // ১. সেন্ট্রাল ক্লিক হ্যান্ডলার (সব ডায়নামিক বাটনের জন্য)
     document.addEventListener('click', handleGlobalClick);
 
-    // 2. Notification Toggles
+    // ২. নোটিফিকেশন প্যানেল টগল
     const notifBtn = document.getElementById('notificationBtn');
     if (notifBtn) {
         notifBtn.addEventListener('click', (e) => {
@@ -138,7 +144,7 @@ window.setupEventListeners = function() {
             if (!currentUser) { showLoginModal(); return; }
             const modal = document.getElementById('notificationModal');
             modal.classList.add('active');
-            loadNotifications(); // নোটিফিকেশন লোড করার কল
+            loadNotifications(); 
         });
     }
 
@@ -159,41 +165,53 @@ window.setupEventListeners = function() {
         markReadBtn.addEventListener('click', markAllNotificationsAsRead);
     }
 
-    // 3. Form Submissions
+    // ৩. ডোনেশন ও রিপোর্ট ফর্ম সাবমিশন
     const generalDonationForm = document.getElementById('submitGeneralDonation');
     if (generalDonationForm) {
         generalDonationForm.addEventListener('submit', handleGeneralDonationSubmit);
     }
 
-    // রিপোর্ট বাটন ফিক্স
     const reportSubmitBtn = document.getElementById('submitReportBtn');
     if(reportSubmitBtn) {
-        // পুরোনো লিসেনার রিমুভ করে নতুন যোগ করা
         const newBtn = reportSubmitBtn.cloneNode(true);
         reportSubmitBtn.parentNode.replaceChild(newBtn, reportSubmitBtn);
         newBtn.addEventListener('click', handleReportSubmit);
     }
 
-    // 4. Shorts Comment Form
+    // ৪. শর্টস কমেন্ট ফর্ম
     const shortsForm = document.getElementById('shortsCommentForm');
     if (shortsForm) {
         shortsForm.addEventListener('submit', handleShortsCommentSubmit);
     }
 
-    // 5. Story Navigation
+    // ৫. স্টোরি নেভিগেশন
     document.getElementById('closeStoryViewerBtn')?.addEventListener('click', closeStoryViewer); 
     document.getElementById('nextStoryBtn')?.addEventListener('click', nextStoryItem); 
     document.getElementById('prevStoryBtn')?.addEventListener('click', prevStoryItem);
 
-    // 6. Search
+    // ৬. সার্চ ফাংশনালিটি
     setupSearchFunctionality();
+
+    // ৭. মেসেজ ব্যাজ চেক (লগইন থাকলে)
+    if (currentUser) {
+        checkUnreadMessages();
+        setupMessageBadgeListener();
+    } else {
+        // auth.js লোড হওয়ার জন্য একটু অপেক্ষা
+        setTimeout(() => {
+            if(currentUser) {
+                checkUnreadMessages();
+                setupMessageBadgeListener();
+            }
+        }, 1500);
+    }
 };
 
-// ====================================
-// GLOBAL CLICK HANDLER
-// ====================================
+// ==========================================
+// ৫. গ্লোবাল ক্লিক হ্যান্ডলার (Central Click Logic)
+// ==========================================
 async function handleGlobalClick(e) {
-    // 1. Notification Delete
+    // --- Notification Delete ---
     const deleteNotifBtn = e.target.closest('.delete-notif-btn');
     if(deleteNotifBtn) { 
         e.stopPropagation(); 
@@ -201,11 +219,14 @@ async function handleGlobalClick(e) {
         return; 
     }
 
-    // 2. Profile Link Protection
+    // --- Protected Links ---
     const profileLink = e.target.closest('a[href="/profile.html"]');
     if (profileLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
 
-    // 3. Donate Buttons
+    const messengerLink = e.target.closest('a[href="messages.html"]');
+    if (messengerLink && !currentUser) { e.preventDefault(); showLoginModal(); return; }
+
+    // --- Donation Triggers ---
     if (e.target.closest('#globalDonateBtn')) { openGeneralDonationModal(); return; }
     
     const donateBtn = e.target.closest('.donate-btn, .donate-btn-modern');
@@ -215,14 +236,14 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // 4. Follow Button (FIXED)
+    // --- Follow Button ---
     const followBtn = e.target.closest('#followBtn, .follow-btn'); 
     if (followBtn) { 
-        handleFollow(followBtn); // Calls handleFollow from auth.js
+        handleFollow(followBtn); 
         return; 
     }
     
-    // 5. Reactions
+    // --- Reactions (Love/Ameen) ---
     if (e.target.closest('.ameen-btn') || e.target.closest('.love-btn')) {
         const btn = e.target.closest('.action-btn') || e.target.closest('.short-action-btn'); 
         const id = parseInt(btn.dataset.id, 10);
@@ -231,7 +252,7 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // 6. SHORTS COMMENT TRIGGER
+    // --- Shorts Comments ---
     const shortsCommentBtn = e.target.closest('.shorts-comment-trigger');
     if (shortsCommentBtn) {
         e.preventDefault(); 
@@ -240,13 +261,12 @@ async function handleGlobalClick(e) {
         return;
     }
 
-    // 7. SHORTS MODAL CLOSE
     if (e.target.closest('#closeShortsModalBtn') || e.target.closest('#closeShortsModalOverlay')) {
         closeShortsModal();
         return;
     }
 
-    // 8. Notification Click
+    // --- Notification Item Click ---
     const notifItem = e.target.closest('.notification-item');
     if (notifItem && !e.target.closest('.delete-notif-btn')) { 
         const url = notifItem.dataset.url; 
@@ -261,72 +281,138 @@ async function handleGlobalClick(e) {
         return; 
     }
     
-    // 9. Other Buttons
-    const storyItem = e.target.closest('.story-item:not(.my-story)'); if (storyItem) return;
-    
+    // --- Share Button ---
     const shareBtn = e.target.closest('.share-btn'); 
     if (shareBtn) { 
-        const prayerId = shareBtn.dataset.id; const prayerTitle = shareBtn.dataset.title; const prayerText = shareBtn.dataset.text || '';
+        const prayerId = shareBtn.dataset.id; 
+        const prayerTitle = shareBtn.dataset.title; 
+        const prayerText = shareBtn.dataset.text || '';
         const url = `${window.location.origin}/comments.html?postId=${prayerId}`;
         const fullShareText = `${prayerTitle}\n\n${prayerText}\n\nআমিন বলতে নিচের লিংকে ক্লিক করুন:\n${url}`;
-        if (navigator.share) { navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); } else { navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক কপি হয়েছে!'); }, () => { alert('কপি করা যায়নি।'); }); } 
+        
+        if (navigator.share) { 
+            navigator.share({ title: prayerTitle, text: fullShareText, url: url }).catch(error => console.log('শেয়ার এরর:', error)); 
+        } else { 
+            navigator.clipboard.writeText(fullShareText).then(() => { alert('লিংক কপি হয়েছে!'); }, () => { alert('কপি করা যায়নি।'); }); 
+        } 
         return; 
     }
     
-    const postImage = e.target.closest('.post-image, .fundraising-image'); if (postImage) { const modal = document.getElementById('image-view-modal'); const modalImg = document.getElementById('modal-image'); modal.style.display = "flex"; modalImg.src = postImage.dataset.src || postImage.src; return; }
-    const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); if (closeImageModal && !e.target.closest('.image-modal-content')) { document.getElementById('image-view-modal').style.display = "none"; return; }
+    // --- Image Viewer ---
+    const postImage = e.target.closest('.post-image, .fundraising-image'); 
+    if (postImage) { 
+        const modal = document.getElementById('image-view-modal'); 
+        const modalImg = document.getElementById('modal-image'); 
+        modal.style.display = "flex"; 
+        modalImg.src = postImage.dataset.src || postImage.src; 
+        return; 
+    }
+    const closeImageModal = e.target.closest('.close-image-modal, .image-modal'); 
+    if (closeImageModal && !e.target.closest('.image-modal-content')) { 
+        document.getElementById('image-view-modal').style.display = "none"; 
+        return; 
+    }
     
+    // --- Auth Buttons ---
     if (e.target.closest('#googleSignInBtn')) handleGoogleSignIn();
     if (e.target.closest('#facebookSignInBtn')) handleFacebookSignIn();
     if (e.target.closest('#signOutBtn')) { await supabaseClient.auth.signOut(); handleUserLoggedOut(); }
     
-    const addPostLink = e.target.closest('#addPostLink'); if (addPostLink && !currentUser) { e.preventDefault(); showLoginModal(); }
-    const saveBtn = e.target.closest('.save-btn'); if (saveBtn) { handleSavePost(saveBtn); return; }
+    const addPostLink = e.target.closest('#addPostLink'); 
+    if (addPostLink && !currentUser) { e.preventDefault(); showLoginModal(); }
     
-    // --- Post Management Actions (FIXED) ---
+    const saveBtn = e.target.closest('.save-btn'); 
+    if (saveBtn) { handleSavePost(saveBtn); return; }
+    
+    // --- Post Management Actions ---
     const editPostBtn = e.target.closest('.edit-post-btn'); if (editPostBtn) handleEditPost(editPostBtn);
     const deletePostBtn = e.target.closest('.delete-post-btn'); if (deletePostBtn) handleDeletePost(deletePostBtn);
     const hidePostBtn = e.target.closest('.hide-post-btn'); if (hidePostBtn) handleHidePost(hidePostBtn);
     const unhidePostBtn = e.target.closest('.unhide-post-btn'); if (unhidePostBtn) handleUnhidePost(unhidePostBtn);
     const toggleAnsweredBtn = e.target.closest('.toggle-answered-btn'); if (toggleAnsweredBtn) handleToggleAnswered(toggleAnsweredBtn);
     
-    // --- Report Action (FIXED) ---
+    // --- Report Action ---
     const reportContentBtn = e.target.closest('.report-content-btn');
     if (reportContentBtn) {
         showReportModal(reportContentBtn.dataset.id, reportContentBtn.dataset.type);
-        // ড্রপডাউন বন্ধ করা
         const dropdown = reportContentBtn.closest('.dropdown-menu');
         if(dropdown) dropdown.style.display = 'none';
     }
 
-    // মডাল ক্লোজ
+    // --- Modal Close ---
     if (e.target.closest('.close-btn')) { const modal = e.target.closest('.modal'); if(modal) modal.style.display = 'none'; }
     
-    // মেনু ট্রিগার (Dropdown)
+    // --- Dropdown Menu Trigger ---
     const menuTrigger = e.target.closest('.actions-menu-trigger');
     if (menuTrigger) {
         e.stopPropagation();
         const dropdownId = menuTrigger.dataset.dropdownId;
         const dropdown = document.getElementById(dropdownId);
-        
-        // অন্য সব ড্রপডাউন বন্ধ করা
-        document.querySelectorAll('.dropdown-menu').forEach(d => {
-            if (d.id !== dropdownId) d.style.display = 'none';
-        });
-        
-        // টগল করা
-        if (dropdown) {
-            dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
-        }
+        document.querySelectorAll('.dropdown-menu').forEach(d => { if (d.id !== dropdownId) d.style.display = 'none'; });
+        if (dropdown) dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
     } else {
-        // বাইরে ক্লিক করলে ড্রপডাউন বন্ধ
+        // Outside click closes dropdowns
         document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none');
     }
 }
 
-// ====================================
-// NOTIFICATION LOGIC (NEW & FIXED)
-// ====================================
+// ==========================================
+// ৬. মেসেজ ব্যাজ লজিক (Message Badge)
+// ==========================================
+
+// আনরেড মেসেজ চেক করা
+async function checkUnreadMessages() {
+    if (!currentUser) return;
+    try {
+        const { count, error } = await supabaseClient
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', currentUser.id)
+            .eq('is_read', false);
+
+        if (!error) {
+            updateMsgBadgeUI(count);
+        }
+    } catch (e) { 
+        console.error("Badge Check Error:", e); 
+    }
+}
+
+// UI আপডেট করা
+function updateMsgBadgeUI(count) {
+    const badge = document.getElementById('msg-badge-count');
+    if (badge) {
+        if (count > 0) {
+            badge.style.display = 'flex';
+            badge.style.alignItems = 'center';
+            badge.style.justifyContent = 'center';
+            badge.innerText = count > 99 ? '99+' : count;
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// রিয়েলটাইম লিসেনার (মেসেজ আসলে বা পড়লে আপডেট হবে)
+function setupMessageBadgeListener() {
+    if(!currentUser) return;
+    
+    // আগের চ্যানেল থাকলে রিমুভ করা
+    supabaseClient.removeChannel('msg-badge-channel');
+
+    supabaseClient.channel('msg-badge-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+            // যদি নতুন মেসেজ আসে (INSERT) অথবা মেসেজ পড়া হয় (UPDATE)
+            if (payload.new.receiver_id === currentUser.id || payload.old?.receiver_id === currentUser.id) {
+                checkUnreadMessages();
+            }
+        })
+        .subscribe();
+}
+
+// ==========================================
+// ৭. নোটিফিকেশন লোডিং এবং ম্যানেজমেন্ট
+// ==========================================
 async function loadNotifications() {
     const list = document.getElementById('notification-list-modal');
     if (!list) return;
@@ -371,7 +457,6 @@ async function loadNotifications() {
             list.appendChild(item);
         });
         
-        // ব্যাজ আপডেট
         updateNotificationBadge(data.filter(n => !n.is_read).length);
 
     } catch (err) {
@@ -395,7 +480,6 @@ function updateNotificationBadge(count) {
 async function markNotificationAsRead(id) {
     try {
         await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
-        // UI আপডেট (লোকালি)
         const item = document.querySelector(`.notification-item[data-id="${id}"]`);
         if(item) item.classList.remove('unread');
     } catch (e) { console.error(e); }
@@ -425,29 +509,24 @@ async function clearAllNotifications() {
     } catch (e) { console.error(e); }
 }
 
-// ====================================
-// POST MANAGEMENT (DELETE / HIDE / UPDATE)
-// ====================================
+// ==========================================
+// ৮. পোস্ট ম্যানেজমেন্ট (Delete/Hide/Edit/Unhide)
+// ==========================================
 async function handleDeletePost(btn) {
     const postId = btn.dataset.id;
     if (!confirm('আপনি কি নিশ্চিত যে এই পোস্টটি ডিলিট করতে চান?')) return;
 
     try {
-        // ডাটাবেজ থেকে ডিলিট
         const { error } = await supabaseClient.from('prayers').delete().eq('id', postId);
-        
         if (error) throw error;
 
-        // UI থেকে রিমুভ
         const card = document.getElementById(`prayer-${postId}`);
         if (card) {
             card.style.transition = 'opacity 0.5s';
             card.style.opacity = '0';
             setTimeout(() => card.remove(), 500);
         }
-        
         alert('পোস্ট ডিলিট করা হয়েছে।');
-
     } catch (error) {
         console.error('Delete error:', error);
         alert('পোস্ট ডিলিট করতে সমস্যা হয়েছে।');
@@ -459,21 +538,12 @@ async function handleHidePost(btn) {
     if (!confirm('পোস্টটি লুকাতে চান?')) return;
 
     try {
-        const { error } = await supabaseClient
-            .from('prayers')
-            .update({ status: 'hidden' })
-            .eq('id', postId);
-
+        const { error } = await supabaseClient.from('prayers').update({ status: 'hidden' }).eq('id', postId);
         if (error) throw error;
-
-        // UI আপডেট (কার্ড রিমুভ)
         const card = document.getElementById(`prayer-${postId}`);
         if (card) card.remove();
-        
         alert('পোস্টটি লুকানো হয়েছে।');
-
     } catch (error) {
-        console.error('Hide error:', error);
         alert('সমস্যা হয়েছে।');
     }
 }
@@ -481,21 +551,12 @@ async function handleHidePost(btn) {
 async function handleUnhidePost(btn) {
     const postId = btn.dataset.id;
     try {
-        const { error } = await supabaseClient
-            .from('prayers')
-            .update({ status: 'active' })
-            .eq('id', postId);
-
+        const { error } = await supabaseClient.from('prayers').update({ status: 'active' }).eq('id', postId);
         if (error) throw error;
-
-        // UI আপডেট (কার্ড রিমুভ কারণ এটি হিডেন লিস্টে ছিল)
         const card = document.getElementById(`prayer-${postId}`);
         if (card) card.remove();
-        
         alert('পোস্টটি এখন সবার জন্য দৃশ্যমান।');
-
     } catch (error) {
-        console.error('Unhide error:', error);
         alert('সমস্যা হয়েছে।');
     }
 }
@@ -507,23 +568,16 @@ async function handleToggleAnswered(btn) {
     const newStatus = !currentStatus;
 
     try {
-        const { error } = await supabaseClient
-            .from('prayers')
-            .update({ is_answered: newStatus })
-            .eq('id', postId);
-
+        const { error } = await supabaseClient.from('prayers').update({ is_answered: newStatus }).eq('id', postId);
         if (error) throw error;
 
-        // UI আপডেট
         const card = document.getElementById(`prayer-${postId}`);
         if (card) {
-            // ড্রপডাউন মেনু আপডেট
             btn.dataset.current = newStatus;
             btn.innerHTML = newStatus 
                 ? '<i class="fas fa-times-circle"></i> আনমার্ক করুন' 
                 : '<i class="fas fa-check-circle"></i> দোয়া কবুল হয়েছে';
             
-            // ব্যাজ আপডেট
             const existingBadge = card.querySelector('.answered-badge');
             if (newStatus && !existingBadge) {
                 const badge = document.createElement('div');
@@ -535,16 +589,12 @@ async function handleToggleAnswered(btn) {
                 existingBadge.remove();
             }
         }
-        
         alert(newStatus ? 'দোয়া কবুল হিসেবে মার্ক করা হলো।' : 'আনমার্ক করা হলো।');
-
     } catch (error) {
-        console.error('Update error:', error);
         alert('আপডেট করতে সমস্যা হয়েছে।');
     }
 }
 
-// পোস্ট এডিট হ্যান্ডলার
 function handleEditPost(btn) {
     const postId = btn.dataset.id;
     const card = document.getElementById(`prayer-${postId}`);
@@ -552,19 +602,13 @@ function handleEditPost(btn) {
 
     const titleEl = card.querySelector('.prayer-title');
     const detailsEl = card.querySelector('.prayer-details');
-    // ইউটিউব লিঙ্ক UI তে নাও থাকতে পারে, তাই ফেচ করতে হতে পারে, 
-    // তবে এখানে আমরা সিম্পল টেক্সট এডিট দেখাচ্ছি। 
-    // আরও ভালো হয় যদি ডাটাবেজ থেকে ফেচ করে মডালে দেখান হয়।
     
-    // মডাল পপুলেট
     document.getElementById('editPrayerId').value = postId;
     document.getElementById('editPrayerTitleInput').value = titleEl ? titleEl.innerText : '';
     document.getElementById('editPrayerDetailsTextarea').value = detailsEl ? detailsEl.innerText : '';
     
-    // মডাল ওপেন
     document.getElementById('editPrayerModal').style.display = 'flex';
     
-    // ফর্ম সাবমিট লিসেনার একবারই অ্যাড করতে হবে বা ক্লোন করে রিপ্লেস করতে হবে
     const form = document.getElementById('editPrayerForm');
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
@@ -579,26 +623,20 @@ function handleEditPost(btn) {
         const newYoutube = document.getElementById('editYoutubeLinkInput').value;
 
         try {
-            const { error } = await supabaseClient
-                .from('prayers')
-                .update({ 
-                    title: newTitle, 
-                    details: newDetails,
-                    youtube_url: newYoutube 
-                })
-                .eq('id', postId);
+            const { error } = await supabaseClient.from('prayers').update({ 
+                title: newTitle, 
+                details: newDetails,
+                youtube_url: newYoutube 
+            }).eq('id', postId);
 
             if (error) throw error;
 
-            // UI আপডেট
             if (titleEl) titleEl.innerText = newTitle;
             if (detailsEl) detailsEl.innerText = newDetails;
             
             alert('পোস্ট আপডেট হয়েছে!');
             document.getElementById('editPrayerModal').style.display = 'none';
-
         } catch (err) {
-            console.error(err);
             alert('আপডেট করতে সমস্যা হয়েছে।');
         } finally {
             setLoading(saveBtn, false);
@@ -606,14 +644,13 @@ function handleEditPost(btn) {
     });
 }
 
-// ====================================
-// REPORT LOGIC (FIXED)
-// ====================================
+// ==========================================
+// ৯. রিপোর্ট লজিক
+// ==========================================
 function showReportModal(contentId, contentType) { 
     const reportModal = document.getElementById('reportModal'); 
     if (!reportModal) return; 
     
-    // ফর্ম রিসেট
     const reportForm = document.getElementById('reportForm'); 
     if (reportForm) reportForm.reset(); 
     
@@ -634,14 +671,12 @@ async function handleReportSubmit() {
     
     setLoading(btn, true); 
     
-    // reportSystem ক্লাস ব্যবহার করা হচ্ছে (utils.js থেকে)
     if (typeof reportSystem !== 'undefined') {
         const success = await reportSystem.submitReport(contentId, contentType, category, description); 
         if (success) { 
             document.getElementById('reportModal').style.display = 'none'; 
         }
     } else {
-        // Fallback যদি reportSystem না থাকে
         try {
             const { error } = await supabaseClient.from('content_reports').insert([{
                 content_id: contentId,
@@ -668,7 +703,6 @@ function handleFollowingFeedSwitch() {
     isVideoFeedActive = false; filteredUserId = null; 
     currentFeedType = (currentFeedType === 'for_you') ? 'following' : 'for_you'; 
     
-    // Feed Refresh Call
     const feedContainer = document.getElementById('feedContainer');
     if(feedContainer) {
         feedContainer.innerHTML = '';
@@ -716,9 +750,9 @@ function handleFollow(btn) {
     }
 }
 
-// ====================================
-// REACTION LOGIC
-// ====================================
+// ==========================================
+// ১০. রিয়্যাকশন লজিক (Reaction)
+// ==========================================
 window.handleReaction = async function(prayerId, type, btn) {
     if (!currentUser) { showLoginModal(); return; }
     prayerId = parseInt(prayerId, 10); if (isNaN(prayerId)) return;
@@ -767,9 +801,9 @@ window.handleReaction = async function(prayerId, type, btn) {
     } finally { setTimeout(() => { btn.disabled = false; }, 300); }
 };
 
-// ====================================
-// OTHER INTERACTIONS (POLL, SAVE, ETC)
-// ====================================
+// ==========================================
+// ১১. অন্যান্য লজিক (Poll, Save)
+// ==========================================
 window.handlePollVote = async function(prayerId, optionId) {
     if (!currentUser) { showLoginModal(); return; }
     try {
@@ -795,7 +829,9 @@ async function handleSavePost(btn) {
     } catch (error) { alert('দুঃখিত, সমস্যা হয়েছে।'); console.error('Save/Unsave error:', error); } finally { btn.disabled = false; }
 }
 
-// ডোনেশন মডাল লজিক
+// ==========================================
+// ১২. ডোনেশন ম্যানেজমেন্ট (Donation Logic)
+// ==========================================
 window.openGeneralDonationModal = function() {
     const modal = document.getElementById('generalDonationModal');
     if (modal) { modal.style.display = 'flex'; loadAdminPaymentMethods(); }
@@ -948,7 +984,9 @@ async function loadDonationHistory() {
     } catch(err) { container.innerHTML = '<p>হিস্ট্রি লোড করা যায়নি।</p>'; }
 }
 
-// SHORTS MODAL LOGIC
+// ==========================================
+// ১৩. শর্টস কমেন্ট এবং মডাল লজিক (Shorts)
+// ==========================================
 function openShortsModal(postId) {
     const modal = document.getElementById('shortsCommentModal');
     if (!modal) return;

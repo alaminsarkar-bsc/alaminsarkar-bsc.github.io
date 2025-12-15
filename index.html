@@ -112,10 +112,11 @@
                         <i class="fas fa-book-open" style="color: #8e44ad;"></i>
                     </a>
                     
-                    <!-- Messenger Link -->
-                    <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার">
+                    <!-- Messenger Link (With Badge) -->
+                    <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার" style="position: relative;">
                         <i class="fab fa-facebook-messenger" style="color: #0084ff;"></i>
-                        <span id="msg-badge-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:50%;">0</span>
+                        <!-- Unread Message Badge -->
+                        <span id="msg-badge-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:50%; min-width: 10px; text-align: center;">0</span>
                     </a>
                     
                     <!-- Create Story Button -->
@@ -531,6 +532,7 @@
     <script src="auth.js"></script>
     <script src="stories.js"></script>
     <script src="feed.js"></script>
+    <!-- interactions.js এর ভিতরেই ব্যাজ আপডেটের লজিক আছে -->
     <script src="interactions.js"></script>
     
     <!-- 3. MAIN ENTRY POINT (App Starts Here) -->
