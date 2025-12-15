@@ -47,7 +47,7 @@ const mediaObserver = new IntersectionObserver((entries) => {
     });
 }, { threshold: 0.5 });
 
-// 4. REPORT SYSTEM CLASS
+// 4. REPORT SYSTEM CLASS (এটি ছাড়া রিপোর্ট বাটন কাজ করবে না)
 class ReportSystem {
     constructor() {
         this.categories = {
@@ -84,7 +84,7 @@ class ReportSystem {
 
             if (error) throw error;
             
-            alert('রিপোর্ট জমা দেওয়া হয়েছে।');
+            alert('রিপোর্ট জমা দেওয়া হয়েছে। এডমিন এটি যাচাই করবেন।');
             return true;
 
         } catch (error) { 
@@ -101,7 +101,7 @@ class ReportSystem {
     }
 }
 
-// রিপোর্ট সিস্টেমের ইনস্ট্যান্স তৈরি
+// রিপোর্ট সিস্টেমের ইনস্ট্যান্স তৈরি (গ্লোবালি এক্সেস করার জন্য)
 const reportSystem = new ReportSystem();
 
 // 5. BUTTON LOADING STATE TOGGLER

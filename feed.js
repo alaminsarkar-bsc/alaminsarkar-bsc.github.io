@@ -750,7 +750,6 @@ function handleCommentChange(payload) {
                 const currentCount = parseInt(currentText) || 0;
                 countSpan.innerText = `${currentCount + 1} টি কমেন্ট`;
             }
-            // Shorts Button Update
             const shortCommentBtn = card.querySelector('.shorts-comment-trigger span');
             if(shortCommentBtn) {
                 const currentCount = parseInt(shortCommentBtn.innerText) || 0;
@@ -769,7 +768,6 @@ function handleCommentChange(payload) {
                 const currentCount = parseInt(currentText) || 0;
                 countSpan.innerText = `${Math.max(0, currentCount - 1)} টি কমেন্ট`;
             }
-            // Shorts Button Update
             const shortCommentBtn = card.querySelector('.shorts-comment-trigger span');
             if(shortCommentBtn) {
                 const currentCount = parseInt(shortCommentBtn.innerText) || 0;

@@ -11,7 +11,7 @@ async function handleGoogleSignIn() {
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
             options: { 
-                redirectTo: 'https://doa-angina.vercel.app/', // আপনার লাইভ লিংক বা লোকালহোস্ট
+                redirectTo: 'https://doa-angina.vercel.app/', 
                 queryParams: { 
                     access_type: 'offline', 
                     prompt: 'consent select_account' 
@@ -376,7 +376,10 @@ async function initProfilePage() {
 
         if (currentUser && currentUser.id === userId) {
             // নিজের প্রোফাইল
-            if(editBtn) editBtn.style.display = 'inline-block'; 
+            if(editBtn) {
+                editBtn.style.display = 'inline-block';
+                editBtn.addEventListener('click', handleEditProfile); // বাটন লিসেনার যুক্ত করা হলো
+            }
             if(signOutBtn) signOutBtn.style.display = 'inline-block';
             if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; 
             if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'flex';
@@ -558,15 +561,49 @@ function handleEditProfile() {
     document.getElementById('editNameInput').value = currentUser.profile?.display_name || ''; 
     document.getElementById('editAddressInput').value = currentUser.profile?.address || ''; 
     document.getElementById('editProfileModal').style.display = 'flex'; 
+    
+    // ফরম সাবমিট ইভেন্ট সেটআপ
+    const form = document.getElementById('editProfileForm');
+    const newForm = form.cloneNode(true); // পুরোনো লিসেনার রিমুভ করতে
+    form.parentNode.replaceChild(newForm, form);
+    newForm.addEventListener('submit', handleEditProfileSubmit);
 }
 
 async function handleEditProfileSubmit(e) { 
     e.preventDefault(); 
-    await supabaseClient.from('users').update({ 
-        display_name: document.getElementById('editNameInput').value, 
-        address: document.getElementById('editAddressInput').value 
-    }).eq('id', currentUser.id); 
-    
-    document.getElementById('editProfileModal').style.display = 'none'; 
-    if (document.body.id === 'profile-page') initProfilePage(); 
+    const btn = document.getElementById('saveProfileBtn');
+    setLoading(btn, true);
+
+    const displayName = document.getElementById('editNameInput').value.trim();
+    const address = document.getElementById('editAddressInput').value.trim();
+
+    try {
+        const { error } = await supabaseClient
+            .from('users')
+            .update({ 
+                display_name: displayName, 
+                address: address 
+            })
+            .eq('id', currentUser.id);
+        
+        if(error) throw error;
+
+        // UI আপডেট (রিফ্রেশ ছাড়াই)
+        if(currentUser && currentUser.profile) {
+            currentUser.profile.display_name = displayName;
+            currentUser.profile.address = address;
+        }
+        
+        document.getElementById('profileName').textContent = displayName;
+        document.getElementById('profileAddress').textContent = address;
+        
+        alert('প্রোফাইল আপডেট সফল হয়েছে!');
+        document.getElementById('editProfileModal').style.display = 'none';
+
+    } catch (error) {
+        console.error("Profile Update Error:", error);
+        alert('আপডেট করতে সমস্যা হয়েছে।');
+    } finally {
+        setLoading(btn, false);
+    }
 }

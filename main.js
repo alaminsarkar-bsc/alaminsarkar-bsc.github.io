@@ -23,8 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ৩. নেভিগেশন লজিক সেটআপ (interactions.js থেকে)
+    // এটি 'শর্টস' বা 'ভিডিও' বাটন কাজ করার জন্য জরুরি
     if (typeof setupNavigationLogic === 'function') {
         setupNavigationLogic();
+        console.log("✅ Navigation Logic Attached");
     }
 
     // ৪. স্টোরি এডিটর সেটআপ (stories.js থেকে)
