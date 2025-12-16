@@ -9,23 +9,40 @@ console.log("Feed Module Loaded");
 // 1. HOME PAGE INITIALIZATION
 // ====================================
 async function initHomePage() {
+    // ১. ফান্ডরাইজিং পোস্ট লোড (বিজ্ঞাপনের মতো দেখানোর জন্য)
     await fetchFundraisingPosts();
+    
+    // ২. শাফেল করা ফিড আইডি তৈরি
     await initializeShuffledFeed(); 
     
-    // স্টোরি লোড করা (যদি stories.js লোড হয়ে থাকে)
+    // ৩. স্টোরি লোড করা (যদি stories.js লোড হয়ে থাকে)
     if (typeof fetchAndRenderStories === 'function') {
         await fetchAndRenderStories();
     }
     
     const feedContainer = document.getElementById('feedContainer');
-    // ডিফল্ট লোড (যদি কন্টেইনার খালি থাকে)
-    if(feedContainer && feedContainer.innerHTML.trim() === "") {
-        fetchAndRenderPrayers(feedContainer, 'active', null, true);
-    } else if (feedContainer) {
-        // যদি অলরেডি ডাটা থাকে, তবুও নতুন করে লোড করুন (রিফ্রেশ বা ট্যাব চেঞ্জের ক্ষেত্রে)
+    
+    // ৪. ফিড লোড করা
+    // যদি কন্টেইনার খালি থাকে অথবা আমরা ট্যাব সুইচ করি, তখন নতুন করে লোড হবে
+    if (feedContainer) {
+        // শর্টস মোড চেক করে ক্লাস সেট করা
+        if (isVideoFeedActive) {
+            feedContainer.innerHTML = ''; // ক্লিয়ার
+            feedContainer.classList.add('shorts-feed-container');
+            feedContainer.classList.remove('feed-container');
+        } else {
+            // যদি আগে শর্টস থেকে এসে থাকি, ক্লিয়ার করব
+            if (feedContainer.classList.contains('shorts-feed-container')) {
+                feedContainer.innerHTML = '';
+            }
+            feedContainer.classList.remove('shorts-feed-container');
+            feedContainer.classList.add('feed-container');
+        }
+        
         fetchAndRenderPrayers(feedContainer, 'active', null, true);
     }
     
+    // ৫. রিয়েলটাইম এবং স্ক্রল লিসেনার চালু করা
     setupRealtimeSubscription();
     setupIntersectionObserver(); 
 }
@@ -77,6 +94,9 @@ async function initializeShuffledFeed() {
 function setupIntersectionObserver() {
     const options = { root: null, rootMargin: '300px', threshold: 0.1 };
     
+    // আগের অবজারভার ডিসকানেক্ট করা (মেমোরি লিক রোধে)
+    if (feedObserver) feedObserver.disconnect();
+
     feedObserver = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && !isLoadingMore && !noMorePrayers) {
             const feedContainer = document.getElementById('feedContainer');
@@ -121,8 +141,9 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
     
     isLoadingMore = true;
     
+    // লোডার দেখানো
     if (isInitialLoad && currentPage === 0 && container.id !== 'myPostsContainer') { 
-        showSkeletonLoader(true); 
+        showSkeletonLoader(true, container.id); 
     } else { 
         const trigger = document.getElementById('infinite-scroll-trigger'); 
         if(trigger) trigger.innerHTML = '<div class="loader" style="border-color:#999;border-bottom-color:transparent;"></div>'; 
@@ -159,7 +180,6 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
                         .in('id', idsToFetch);
                         
                     if (data) {
-                        // Sort by saved order (newest saved first logic not here, but basic sorting)
                         data.sort((a, b) => idsToFetch.indexOf(b.id) - idsToFetch.indexOf(a.id)); 
                     }
                     prayerList = data; 
@@ -169,7 +189,7 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
                 }
             }
         } 
-        // --- Case B: Main Feed (For You) ---
+        // --- Case B: Main Feed (For You - Shuffled) ---
         else if (!isProfilePage && currentFeedType === 'for_you' && !filteredUserId && !isVideoFeedActive) {
             const start = currentPage * prayersPerPage; 
             const end = start + prayersPerPage;
@@ -183,7 +203,7 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
                         .in('id', idsToFetch);
                         
                     if(data) { 
-                        // Map back to maintain shuffled order
+                        // আইডি অর্ডার অনুযায়ী সাজানো
                         const idMap = new Map(data.map(item => [item.id, item])); 
                         prayerList = idsToFetch.map(id => idMap.get(id)).filter(Boolean); 
                     }
@@ -192,7 +212,7 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
                     noMorePrayers = true; 
                 }
             } else {
-                 // Fallback if shuffle fails
+                 // ফলব্যাক: নরমাল অর্ডার
                  const { data, err } = await query
                     .eq('status', 'active')
                     .eq('is_fundraising', false)
@@ -233,7 +253,7 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
                     .eq('is_fundraising', false);
             } 
             else if (isVideoFeedActive) {
-                // Shorts Logic: Only fetch videos
+                // **SHORTS LOGIC**: Only fetch videos
                 query = query.eq('status', 'active')
                     .eq('is_fundraising', false)
                     .not('uploaded_video_url', 'is', null);
@@ -259,11 +279,11 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
         }
 
         if (prayerList && prayerList.length > 0) {
-            // Cache Data
+            // ডাটা ক্যাশে রাখা
             const prayersWithUsers = prayerList.map(p => ({ ...p, users: p.users }));
             prayersWithUsers.forEach(p => allFetchedPrayers.set(p.id, p));
             
-            // Render
+            // রেন্ডার করা
             renderPrayersFromList(container, prayersWithUsers, !isInitialLoad);
             currentPage++;
             
@@ -272,7 +292,7 @@ const fetchAndRenderPrayers = async (container, status, userId = null, isInitial
             }
         } else {
             if (isInitialLoad && container.innerHTML.trim() === '') {
-                // Clear skeletons if empty
+                // এম্পটি স্টেট
                 if (container.querySelector('.skeleton-card')) container.innerHTML = '';
                 container.innerHTML = `<div class="no-results-message" style="text-align: center; padding: 40px;"><p style="font-size: 18px; color: #666;">এখনো কোনো পোস্ট নেই</p></div>`;
             }
@@ -314,14 +334,14 @@ const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
         container.classList.remove('shorts-feed-container');
         container.classList.add('feed-container');
         
-        // Show Stories in Normal Mode
+        // Show Stories in Normal Mode (Only on Home Page)
         const storyContainer = document.getElementById('storyContainer');
-        if(storyContainer) storyContainer.style.display = 'flex';
+        if(storyContainer && document.body.id === 'home-page') storyContainer.style.display = 'flex';
     }
 
     let prayersToRender = [...prayerList];
     
-    // Fundraising Injection (Only on Home Feed)
+    // Fundraising Injection (Only on Home Feed, Not Shorts)
     if (!isVideoFeedActive && document.body.id === 'home-page' && currentFeedType === 'for_you' && !filteredUserId && fundraisingPosts.length > 0) {
         const injectionIndex = 4; 
         if (prayersToRender.length >= injectionIndex) {
@@ -339,18 +359,18 @@ const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
     const fragment = document.createDocumentFragment();
     
     prayersToRender.forEach(prayer => {
-        // Prevent Duplicates
+        // ডুপ্লিকেট রোধ
         if (!shouldAppend && document.getElementById(isVideoFeedActive ? `short-${prayer.id}` : `prayer-${prayer.id}`)) return;
         
         let card;
         
         if (isVideoFeedActive) {
-            // Only render video posts in Shorts mode
+            // **SHORTS CARD** (ভিডিও থাকলে)
             if (prayer.uploaded_video_url) {
                 card = createShortsCardElement(prayer);
             }
         } else {
-            // Normal Feed Logic
+            // **NORMAL CARDS**
             if (prayer.is_fundraising) { 
                 card = createFundraisingCardElement(prayer); 
             } else if (prayer.is_poll) { 
@@ -370,7 +390,7 @@ const renderPrayersFromList = (container, prayerList, shouldAppend = false) => {
         container.appendChild(fragment); 
     }
 
-    // Initialize Auto-play for Shorts
+    // Shorts অটো-প্লে চালু করা
     if (isVideoFeedActive) {
         setupShortsObserver();
     }
@@ -411,7 +431,7 @@ function createShortsCardElement(prayer) {
                 <span class="love-count">${prayer.love_count || 0}</span>
             </button>
             
-            <!-- Comment Button (Triggers Modal) -->
+            <!-- UPDATE: Modal Trigger Button -->
             <button class="short-action-btn shorts-comment-trigger" data-id="${prayer.id}">
                 <i class="fas fa-comment-dots"></i>
                 <span>${prayer.comment_count || 0}</span>
@@ -435,7 +455,7 @@ function createShortsCardElement(prayer) {
     const video = card.querySelector('video');
     let lastTap = 0;
 
-    // Double Tap Logic
+    // ডাবল ট্যাপ লজিক (লাভ রিয়্যাকশন)
     card.addEventListener('click', (e) => {
         if (e.target.closest('button') || e.target.closest('a')) return;
         
@@ -443,7 +463,7 @@ function createShortsCardElement(prayer) {
         const tapLength = currentTime - lastTap;
 
         if (tapLength < 300 && tapLength > 0) {
-            // Double Tap Detected
+            // Double Tap
             const loveBtn = card.querySelector('.love-btn');
             if (!loveBtn.classList.contains('loved')) {
                 if(typeof handleReaction === 'function') handleReaction(prayer.id, 'love', loveBtn);
@@ -451,7 +471,7 @@ function createShortsCardElement(prayer) {
             showHeartAnimation(e.clientX, e.clientY, card);
             e.preventDefault();
         } else {
-            // Single Tap Detected (Play/Pause)
+            // Single Tap
             setTimeout(() => {
                 if (new Date().getTime() - lastTap >= 300) {
                     if (video.paused) video.play();
@@ -574,7 +594,7 @@ function createFundraisingCardElement(campaign) {
     return card;
 }
 
-// --- D. Regular Post Card ---
+// --- D. Regular Post Card (Full Featured) ---
 const createPrayerCardElement = (prayer) => {
     if (!prayer) return null;
     if (prayer.is_fundraising) return createFundraisingCardElement(prayer);
@@ -639,7 +659,7 @@ const createPrayerCardElement = (prayer) => {
 }
 
 // ====================================
-// 6. REALTIME HANDLERS
+// 6. REALTIME HANDLERS (Notification Update Here)
 // ====================================
 function setupRealtimeSubscription() { 
     if (prayersSubscription) { supabaseClient.removeChannel(prayersSubscription); prayersSubscription = null; } 
@@ -648,7 +668,10 @@ function setupRealtimeSubscription() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'prayers' }, handlePrayerChange)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, handleCommentChange)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => { 
-            if (currentUser && payload.new.user_id === currentUser.id && typeof loadNotifications === 'function') loadNotifications(); 
+            // শুধু নিজের নোটিফিকেশন আসলে আপডেট হবে
+            if (currentUser && payload.new.user_id === currentUser.id) {
+                if(typeof loadNotifications === 'function') loadNotifications();
+            }
         })
         .subscribe(); 
 }
@@ -684,6 +707,7 @@ async function handlePrayerChange(payload) {
         if (updatedPrayer) {
             allFetchedPrayers.set(prayerId, updatedPrayer);
             if (existingCard) {
+                // UI Counters Update
                 const ameenCountSpan = existingCard.querySelector('.ameen-count');
                 const ameenBtn = existingCard.querySelector('.ameen-btn');
                 if (ameenCountSpan) ameenCountSpan.innerText = updatedPrayer.ameen_count || 0;
@@ -750,6 +774,7 @@ function handleCommentChange(payload) {
                 const currentCount = parseInt(currentText) || 0;
                 countSpan.innerText = `${currentCount + 1} টি কমেন্ট`;
             }
+            // Shorts Button
             const shortCommentBtn = card.querySelector('.shorts-comment-trigger span');
             if(shortCommentBtn) {
                 const currentCount = parseInt(shortCommentBtn.innerText) || 0;
@@ -779,4 +804,19 @@ function handleCommentChange(payload) {
             allFetchedPrayers.set(prayerId, prayerData);
         }
     }
+}
+
+// --- Video View Handler ---
+async function handleVideoView(videoId) {
+    if (viewedVideosSession.has(videoId)) return;
+    try {
+        const { error } = await supabaseClient.rpc('increment_view_count', { post_id: videoId });
+        if (error) throw error;
+        viewedVideosSession.add(videoId);
+        const countSpan = document.getElementById(`view-count-${videoId}`);
+        if (countSpan) {
+            let currentCount = parseInt(countSpan.innerText.replace(/,/g, '')) || 0;
+            countSpan.innerText = (currentCount + 1).toLocaleString('bn-BD');
+        }
+    } catch (err) { console.error("View count error:", err); }
 }

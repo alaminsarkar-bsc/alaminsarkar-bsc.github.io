@@ -1,17 +1,23 @@
 // ====================================================================
 // FILE: auth.js
-// বিবরণ: অথেন্টিকেশন, প্রোফাইল ম্যানেজমেন্ট, OneSignal এবং ইউজার অ্যাকশন
+// বিবরণ: অথেন্টিকেশন, প্রোফাইল ম্যানেজমেন্ট, মেসেজ ব্যাজ এবং OneSignal সেটআপ
 // ====================================================================
 
-console.log("Auth Module Loaded");
+console.log("Auth Module Loaded Successfully");
 
-// 1. GOOGLE SIGN IN
+// ====================================================================
+// 1. লগইন মেথডসমূহ (Login Methods)
+// ====================================================================
+
+/**
+ * Google Sign In
+ */
 async function handleGoogleSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
             provider: 'google', 
             options: { 
-                redirectTo: 'https://doa-angina.vercel.app/', 
+                redirectTo: 'https://doa-angina.vercel.app/', // আপনার লাইভ সাইটের লিংক
                 queryParams: { 
                     access_type: 'offline', 
                     prompt: 'consent select_account' 
@@ -24,7 +30,9 @@ async function handleGoogleSignIn() {
     } 
 }
 
-// 2. FACEBOOK SIGN IN
+/**
+ * Facebook Sign In
+ */
 async function handleFacebookSignIn() { 
     try { 
         const { error } = await supabaseClient.auth.signInWithOAuth({ 
@@ -37,7 +45,9 @@ async function handleFacebookSignIn() {
     } 
 }
 
-// 3. OTP SENDING (Phone Login Step 1)
+/**
+ * Phone Login: Send OTP (Step 1)
+ */
 async function handleSendOtp() {
     const phoneInput = document.getElementById('phoneInput'); 
     const btn = document.getElementById('sendOtpBtn');
@@ -45,7 +55,7 @@ async function handleSendOtp() {
     let phone = phoneInput.value.trim(); 
     if (!phone) { alert("মোবাইল নাম্বার দিন।"); return; }
     
-    // নাম্বার ফরম্যাটিং (+880 যোগ করা)
+    // নাম্বার ফরম্যাটিং (+880)
     if (!phone.startsWith('+')) { 
         if (phone.startsWith('01')) { 
             phone = '+88' + phone; 
@@ -71,7 +81,9 @@ async function handleSendOtp() {
     }
 }
 
-// 4. OTP VERIFICATION (Phone Login Step 2)
+/**
+ * Phone Login: Verify OTP (Step 2)
+ */
 async function handleVerifyOtp() {
     const phoneInput = document.getElementById('phoneInput'); 
     const otpInput = document.getElementById('otpInput'); 
@@ -107,7 +119,10 @@ async function handleVerifyOtp() {
     }
 }
 
-// 5. USER LOGGED IN HANDLER (Main Logic)
+// ====================================================================
+// 2. মেইন লগইন হ্যান্ডলার (সিস্টেম সেটআপ)
+// ====================================================================
+
 async function handleUserLoggedIn(user) {
     try {
         // ১. ডাটাবেজ থেকে প্রোফাইল চেক করা
@@ -117,7 +132,7 @@ async function handleUserLoggedIn(user) {
             .eq('id', user.id)
             .single();
         
-        // ২. প্রোফাইল না থাকলে তৈরি করা (Auto Create)
+        // ২. প্রোফাইল না থাকলে অটোমেটিক তৈরি করা (Auto Create Profile)
         if (error && error.code === 'PGRST116') {
             const { data: newProfile } = await supabaseClient.from('users').insert([{ 
                 id: user.id, 
@@ -130,18 +145,18 @@ async function handleUserLoggedIn(user) {
             profile = newProfile;
         } else if (error) throw error;
         
-        // ৩. একাউন্ট ব্যান আছে কিনা চেক
+        // ৩. সাসপেনশন চেক
         if (profile && profile.status === 'SUSPENDED') {
             alert('আপনার অ্যাকাউন্টটি সাসপেন্ড করা হয়েছে।');
             await supabaseClient.auth.signOut();
             return;
         }
         
-        // ৪. গ্লোবাল ভ্যারিয়েবল আপডেট
+        // ৪. গ্লোবাল ভ্যারিয়েবল সেট করা
         currentUser = { ...user, profile };
         updateHeaderProfileIcon(profile.photo_url);
 
-        // ৫. OneSignal Login (নোটিফিকেশনের জন্য)
+        // ৫. OneSignal Login (নোটিফিকেশন রেজিস্টার)
         if (window.OneSignalDeferred) {
             window.OneSignalDeferred.push(function(OneSignal) {
                 OneSignal.login(user.id);
@@ -149,13 +164,16 @@ async function handleUserLoggedIn(user) {
             });
         }
 
-        // ৬. ডাটা ফেচিং
+        // ৬. মেসেজ ব্যাজ লিসেনার চালু করা
+        setupMessageBadgeListener();
+
+        // ৭. ইউজারের সেভ করা পোস্ট এবং রিয়্যাকশন লোড করা
         await Promise.all([
             fetchSavedPostIds(),
             fetchUserReactions() 
         ]);
 
-        // ৭. পেজ অনুযায়ী কন্টেন্ট লোড
+        // ৮. পেজ অনুযায়ী কন্টেন্ট লোড করা
         const pageId = document.body.id;
         if (pageId === 'home-page') {
             if (typeof initHomePage === 'function') await initHomePage();
@@ -163,10 +181,8 @@ async function handleUserLoggedIn(user) {
             await initProfilePage();
         }
         
-        // ৮. অ্যাডমিন বাটন দেখানো
+        // ৯. অ্যাডমিন প্যানেল বাটন এবং নোটিফিকেশন লোড
         showAdminUI();
-        
-        // ৯. নোটিফিকেশন লোড
         if (typeof loadNotifications === 'function') loadNotifications();
         
     } catch (err) {
@@ -175,8 +191,12 @@ async function handleUserLoggedIn(user) {
     }
 }
 
-// 6. USER LOGGED OUT HANDLER
+// ====================================================================
+// 3. লগআউট হ্যান্ডলার
+// ====================================================================
+
 function handleUserLoggedOut() {
+    // স্টেট ক্লিয়ার করা
     currentUser = null;
     savedPostIds.clear(); 
     userLovedPrayers.clear();
@@ -191,27 +211,25 @@ function handleUserLoggedOut() {
         });
     }
 
+    // পেজ রিডাইরেক্ট (প্রয়োজন হলে)
     const pageId = document.body.id;
-    
-    // প্রোফাইল পেজে থাকলে হোম পেজে পাঠানো (যদি নিজের প্রোফাইল হয়)
     if (pageId === 'profile-page') {
         const urlParams = new URLSearchParams(window.location.search);
+        // নিজের প্রোফাইল পেজ হলে হোমে পাঠাবে
         if (!urlParams.get('id')) { 
              window.location.href = '/index.html'; 
              return;
         }
-        initProfilePage(); // অন্যের প্রোফাইল হলে শুধু ভিউ রিলোড
+        // অন্যের প্রোফাইল হলে ভিউ রিফ্রেশ করবে (লগইন বাটন দেখাবে)
+        if(typeof initProfilePage === 'function') initProfilePage(); 
     }
 
     document.getElementById('loginPage').style.display = 'none';
+    showAdminUI(); // অ্যাডমিন বাটন লুকাবে
     
-    showAdminUI(); // বাটন লুকানো
-    
-    // রিয়েলটাইম সাবস্ক্রিপশন বন্ধ
-    if (prayersSubscription) { 
-        supabaseClient.removeChannel(prayersSubscription); 
-        prayersSubscription = null; 
-    }
+    // রিয়েলটাইম চ্যানেল বন্ধ করা
+    supabaseClient.removeAllChannels();
+    prayersSubscription = null;
     
     if (pageId === 'home-page') {
         if(typeof renderStoriesList === 'function') renderStoriesList(document.getElementById('storyContainer')); 
@@ -219,62 +237,66 @@ function handleUserLoggedOut() {
     }
     
     if(typeof updateNotificationBadge === 'function') updateNotificationBadge(0);
+    updateMessageBadgeUI(0);
 }
 
-// 7. ADMIN UI TOGGLE
-function showAdminUI() {
-    const isAdmin = currentUser && ADMIN_USERS.includes(currentUser.email);
-    const adminLink = document.getElementById('adminLink');
-    const campaignAdminLink = document.getElementById('campaignAdminLink');
+// ====================================================================
+// 4. মেসেজ ব্যাজ (লাল বাতি) লজিক
+// ====================================================================
+
+async function setupMessageBadgeListener() {
+    if (!currentUser) return;
+
+    // ১. ইনিশিয়াল কাউন্ট লোড
+    const { count } = await supabaseClient
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', currentUser.id)
+        .eq('is_read', false);
     
-    if (adminLink) adminLink.style.display = isAdmin ? 'block' : 'none';
-    if (campaignAdminLink) campaignAdminLink.style.display = isAdmin ? 'block' : 'none';
+    updateMessageBadgeUI(count || 0);
+
+    // ২. রিয়েলটাইম লিসেনার (নতুন মেসেজ আসলে বাটন লাল হবে)
+    supabaseClient.channel('message_badge_channel')
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages', 
+            filter: `receiver_id=eq.${currentUser.id}` 
+        }, (payload) => {
+             const badge = document.getElementById('msg-badge-count');
+             let current = badge && badge.innerText && badge.style.display !== 'none' 
+                           ? parseInt(badge.innerText.replace('+', '')) 
+                           : 0;
+             if(isNaN(current)) current = 0;
+             updateMessageBadgeUI(current + 1);
+        })
+        .subscribe();
 }
 
-// 8. FETCH SAVED POSTS
-async function fetchSavedPostIds() {
-    if (!currentUser) return;
-    try {
-        const { data, error } = await supabaseClient.from('saved_posts').select('post_id').eq('user_id', currentUser.id);
-        if (error) throw error;
-        savedPostIds = new Set(data.map(item => item.post_id));
-    } catch (error) { console.error("Saved posts error:", error); }
-}
-
-// 9. FETCH USER REACTIONS (Love/Ameen cache)
-async function fetchUserReactions() {
-    if (!currentUser) return;
-    try {
-        const { data: lovedPrayers, error: loveError } = await supabaseClient.from('prayers').select('id').contains('loved_by', [currentUser.id]);
-        if (loveError) throw loveError;
-        
-        const { data: ameenedPrayers, error: ameenError } = await supabaseClient.from('prayers').select('id').contains('ameened_by', [currentUser.id]);
-        if (ameenError) throw ameenError;
-        
-        userLovedPrayers = new Set(lovedPrayers?.map(p => p.id) || []);
-        userAmeenedPrayers = new Set(ameenedPrayers?.map(p => p.id) || []);
-        
-    } catch (error) { console.error("Error fetching user reactions:", error); }
-}
-
-// 10. HEADER PROFILE ICON UPDATE
-function updateHeaderProfileIcon(photoUrl) {
-    const profileTab = document.querySelector('.header-nav-row a[href="/profile.html"]');
-    if (!profileTab) return;
-    if (photoUrl) { 
-        profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`; 
-    } else { 
-        profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`; 
+function updateMessageBadgeUI(count) {
+    const badge = document.getElementById('msg-badge-count');
+    if (badge) {
+        if (count > 0) {
+            badge.innerText = count > 9 ? '9+' : count;
+            badge.style.display = 'flex';
+            badge.style.alignItems = 'center';
+            badge.style.justifyContent = 'center';
+        } else {
+            badge.style.display = 'none';
+        }
     }
 }
 
-// ====================================
-// PROFILE PAGE LOGIC (View, Edit, Upload)
-// ====================================
+// ====================================================================
+// 5. প্রোফাইল পেজ লজিক (View & Edit)
+// ====================================================================
+
 async function initProfilePage() {
     const urlParams = new URLSearchParams(window.location.search);
     let userId = urlParams.get('id');
 
+    // আইডি না থাকলে নিজের আইডি, লগইন না থাকলে মডাল
     if (!userId && currentUser) { 
         userId = currentUser.id; 
     } else if (!userId && !currentUser) { 
@@ -285,7 +307,7 @@ async function initProfilePage() {
     filteredUserId = userId; 
     const myPostsContainer = document.getElementById('myPostsContainer');
     
-    // প্রি-লোডিং ডাটা (UI ফাস্ট করার জন্য)
+    // UI ফাস্ট করার জন্য প্রি-লোডিং
     if(currentUser && currentUser.id === userId) {
          const metaName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0];
          document.getElementById('profileName').textContent = currentUser.profile?.display_name || metaName || 'নাম নেই';
@@ -313,9 +335,9 @@ async function initProfilePage() {
             .eq('id', userId)
             .maybeSingle();
 
-        // প্রোফাইল মিসিং হলে অটো তৈরি
+        // প্রোফাইল মিসিং হলে অটোমেটিক তৈরি
         if (!userProfile && currentUser && currentUser.id === userId) {
-            console.log("Creating profile on the fly...");
+            console.log("Auto-creating profile...");
             const newProfileData = {
                 id: currentUser.id,
                 email: currentUser.email,
@@ -351,7 +373,7 @@ async function initProfilePage() {
             }
         }
 
-        // পরিসংখ্যান লোড
+        // পরিসংখ্যান লোড (Post, Follower, Following)
         const [postsCount, followersCount, followingCount] = await Promise.all([
             supabaseClient.from('prayers').select('*', { count: 'exact', head: true }).eq('author_uid', userId).eq('status', 'active'),
             supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userId),
@@ -362,7 +384,7 @@ async function initProfilePage() {
         document.getElementById('followersCount').innerHTML = `<strong>${followersCount.count || 0}</strong> অনুসারী`;
         document.getElementById('followingCount').innerHTML = `<strong>${followingCount.count || 0}</strong> অনুসরণ`;
 
-        // বাটন ম্যানেজমেন্ট
+        // বাটন ভিজিবিলিটি কন্ট্রোল
         const editBtn = document.getElementById('editProfileBtn');
         const followBtn = document.getElementById('followBtn');
         const signOutBtn = document.getElementById('signOutBtn');
@@ -370,23 +392,25 @@ async function initProfilePage() {
         const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
         const msgBtn = document.getElementById('profileMessageBtn');
         
+        // সব লুকিয়ে ফেলা
         [editBtn, followBtn, signOutBtn, changeCoverBtn, changeProfilePicBtn, msgBtn].forEach(el => {
             if(el) el.style.display = 'none';
         });
 
         if (currentUser && currentUser.id === userId) {
-            // নিজের প্রোফাইল
-            if(editBtn) {
-                editBtn.style.display = 'inline-block';
-                editBtn.addEventListener('click', handleEditProfile); // বাটন লিসেনার যুক্ত করা হলো
-            }
+            // নিজের প্রোফাইল হলে এডিট বাটন দেখাবে
+            if(editBtn) editBtn.style.display = 'inline-block'; 
             if(signOutBtn) signOutBtn.style.display = 'inline-block';
             if(changeCoverBtn) changeCoverBtn.style.display = 'flex'; 
             if(changeProfilePicBtn) changeProfilePicBtn.style.display = 'flex';
+            
+            // সেভ ও হিডেন ট্যাব দেখাবে
             document.querySelectorAll('.tab-btn[data-tab="saved"], .tab-btn[data-tab="hidden"]').forEach(btn => btn.style.display = 'inline-block');
+            
+            // আপলোড লিসেনার সেটআপ
             setupProfileImageUploads(); 
         } else {
-            // অন্যের প্রোফাইল
+            // অন্যের প্রোফাইল হলে ফলো ও মেসেজ বাটন দেখাবে
             if(followBtn) {
                 followBtn.style.display = 'inline-block'; 
                 followBtn.dataset.userId = userId;
@@ -408,20 +432,81 @@ async function initProfilePage() {
         }
 
         setupProfileTabs(userId);
+        
+        // feed.js লোড হলে পোস্ট দেখাবে
         if(typeof fetchAndRenderPrayers === 'function') {
             fetchAndRenderPrayers(myPostsContainer, 'active', userId, true);
         }
 
     } catch (err) {
         console.error("Profile Logic Error:", err);
-        if (!document.getElementById('profileName').textContent || document.getElementById('profileName').textContent === 'লোড হচ্ছে...') {
-             document.getElementById('profileName').textContent = 'নেটওয়ার্ক সমস্যা';
-        }
-        myPostsContainer.innerHTML = '<p style="text-align:center;">তথ্য লোড করতে সমস্যা হয়েছে।</p>';
+        if(myPostsContainer) myPostsContainer.innerHTML = '<p style="text-align:center;">তথ্য লোড করতে সমস্যা হয়েছে।</p>';
     }
 }
 
-// 11. PROFILE TABS
+// প্রোফাইল এডিট হ্যান্ডলার (গ্লোবাল স্কোপে রাখা হলো interactions.js থেকে কল করার জন্য)
+window.handleEditProfileSubmit = async function(e) { 
+    e.preventDefault(); 
+    const name = document.getElementById('editNameInput').value;
+    const bio = document.getElementById('editAddressInput').value;
+    
+    const btn = e.target.querySelector('button');
+    setLoading(btn, true);
+
+    try {
+        const { error } = await supabaseClient.from('users').update({ 
+            display_name: name, 
+            address: bio 
+        }).eq('id', currentUser.id); 
+        
+        if(error) throw error;
+
+        currentUser.profile.display_name = name;
+        currentUser.profile.address = bio;
+        
+        document.getElementById('editProfileModal').style.display = 'none'; 
+        alert('প্রোফাইল আপডেট হয়েছে!');
+        
+        if (document.body.id === 'profile-page' && typeof initProfilePage === 'function') initProfilePage(); 
+
+    } catch(err) {
+        alert("আপডেট ব্যর্থ হয়েছে: " + err.message);
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+// 13. ইউটিলিটি ফাংশনস
+function showAdminUI() {
+    const isAdmin = currentUser && ADMIN_USERS.includes(currentUser.email);
+    const adminLink = document.getElementById('adminLink');
+    const campaignAdminLink = document.getElementById('campaignAdminLink');
+    if (adminLink) adminLink.style.display = isAdmin ? 'block' : 'none';
+    if (campaignAdminLink) campaignAdminLink.style.display = isAdmin ? 'block' : 'none';
+}
+
+async function fetchSavedPostIds() {
+    if (!currentUser) return;
+    try { const { data, error } = await supabaseClient.from('saved_posts').select('post_id').eq('user_id', currentUser.id); if (error) throw error; savedPostIds = new Set(data.map(item => item.post_id)); } catch (error) { console.error("Saved posts error:", error); }
+}
+
+async function fetchUserReactions() {
+    if (!currentUser) return;
+    try {
+        const { data: lovedPrayers } = await supabaseClient.from('prayers').select('id').contains('loved_by', [currentUser.id]);
+        const { data: ameenedPrayers } = await supabaseClient.from('prayers').select('id').contains('ameened_by', [currentUser.id]);
+        userLovedPrayers = new Set(lovedPrayers?.map(p => p.id) || []);
+        userAmeenedPrayers = new Set(ameenedPrayers?.map(p => p.id) || []);
+    } catch (error) { console.error("Error fetching reactions:", error); }
+}
+
+function updateHeaderProfileIcon(photoUrl) {
+    const profileTab = document.querySelector('.header-nav-row a[href="/profile.html"]');
+    if (!profileTab) return;
+    if (photoUrl) { profileTab.innerHTML = `<img src="${photoUrl}" class="header-profile-img" alt="Profile">`; } else { profileTab.innerHTML = `<i class="fas fa-user-circle"></i>`; }
+}
+
+// প্রোফাইল ট্যাব সেটআপ
 function setupProfileTabs(userId) {
     const tabs = document.querySelectorAll('.profile-tabs .tab-btn');
     tabs.forEach(tab => {
@@ -442,47 +527,7 @@ function setupProfileTabs(userId) {
     });
 }
 
-// 12. FOLLOW/UNFOLLOW HANDLER
-function handleFollow(btn) {
-    if(typeof window.handleFollowAuth === 'function') {
-        window.handleFollowAuth(btn);
-    } else {
-        // Fallback Logic
-        if (!currentUser) { document.getElementById('loginPage').style.display = 'flex'; return; }
-        const userIdToFollow = btn.dataset.userId;
-        const isFollowing = btn.classList.contains('following');
-        setLoading(btn, true);
-        
-        (async () => {
-            try {
-                if (isFollowing) {
-                    const { error } = await supabaseClient.from('followers').delete().match({ follower_id: currentUser.id, following_id: userIdToFollow });
-                    if (error) throw error;
-                    btn.textContent = 'অনুসরণ করুন'; btn.classList.remove('following');
-                } else {
-                    const { error } = await supabaseClient.from('followers').insert({ follower_id: currentUser.id, following_id: userIdToFollow });
-                    if (error) throw error;
-                    btn.textContent = 'আনফলো'; btn.classList.add('following');
-                    const notificationContent = `${currentUser.profile.display_name} আপনাকে অনুসরণ করা শুরু করেছেন।`;
-                    
-                    if(typeof createNotification === 'function') {
-                        await createNotification(userIdToFollow, currentUser.id, 'follow', notificationContent, `/profile.html?id=${currentUser.id}`);
-                    }
-                }
-                const { count } = await supabaseClient.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userIdToFollow);
-                document.getElementById('followersCount').innerHTML = `<strong>${count || 0}</strong> অনুসারী`;
-            } catch (error) { 
-                alert('দুঃখিত, প্রক্রিয়াটি সম্পন্ন করা যায়নি।'); 
-                console.error('Follow error:', error); 
-            } finally { 
-                setLoading(btn, false); 
-            }
-        })();
-    }
-}
-window.handleFollowAuth = handleFollow;
-
-// 13. IMAGE UPLOAD HANDLERS (Profile & Cover)
+// ইমেজ আপলোড সেটআপ
 function setupProfileImageUploads() {
     const coverBtn = document.getElementById('changeCoverBtn');
     const profileBtn = document.getElementById('changeProfilePicBtn');
@@ -514,20 +559,10 @@ async function handleProfileImageUpload(e, type) {
 
     try {
         const dbColumn = type === 'cover' ? 'cover_photo_url' : 'photo_url';
-        const { data: userData, error: fetchError } = await supabaseClient.from('users').select(dbColumn).eq('id', currentUser.id).single();
-        if (fetchError) throw fetchError;
-        const oldUrl = userData ? userData[dbColumn] : null;
-        
-        // পুরাতন ছবি ডিলেট
-        if (oldUrl) {
-            try { const pathParts = oldUrl.split('/post_images/'); if (pathParts.length > 1) { const oldPath = pathParts[1]; await supabaseClient.storage.from('post_images').remove([oldPath]); } } catch (delErr) { console.warn("Old image delete failed:", delErr); }
-        }
-        
         const fileExt = file.name.split('.').pop();
         const fileName = `${type}_${currentUser.id}_${Date.now()}.${fileExt}`;
         const filePath = `${type}s/${fileName}`;
         
-        // নতুন ছবি আপলোড
         const { data, error: uploadError } = await supabaseClient.storage.from('post_images').upload(filePath, file, { upsert: true });
         if (uploadError) throw uploadError;
         
@@ -556,54 +591,9 @@ async function handleProfileImageUpload(e, type) {
     }
 }
 
-// 14. EDIT PROFILE HANDLERS
+// এডিট প্রোফাইল মডাল ওপেন
 function handleEditProfile() { 
     document.getElementById('editNameInput').value = currentUser.profile?.display_name || ''; 
     document.getElementById('editAddressInput').value = currentUser.profile?.address || ''; 
     document.getElementById('editProfileModal').style.display = 'flex'; 
-    
-    // ফরম সাবমিট ইভেন্ট সেটআপ
-    const form = document.getElementById('editProfileForm');
-    const newForm = form.cloneNode(true); // পুরোনো লিসেনার রিমুভ করতে
-    form.parentNode.replaceChild(newForm, form);
-    newForm.addEventListener('submit', handleEditProfileSubmit);
-}
-
-async function handleEditProfileSubmit(e) { 
-    e.preventDefault(); 
-    const btn = document.getElementById('saveProfileBtn');
-    setLoading(btn, true);
-
-    const displayName = document.getElementById('editNameInput').value.trim();
-    const address = document.getElementById('editAddressInput').value.trim();
-
-    try {
-        const { error } = await supabaseClient
-            .from('users')
-            .update({ 
-                display_name: displayName, 
-                address: address 
-            })
-            .eq('id', currentUser.id);
-        
-        if(error) throw error;
-
-        // UI আপডেট (রিফ্রেশ ছাড়াই)
-        if(currentUser && currentUser.profile) {
-            currentUser.profile.display_name = displayName;
-            currentUser.profile.address = address;
-        }
-        
-        document.getElementById('profileName').textContent = displayName;
-        document.getElementById('profileAddress').textContent = address;
-        
-        alert('প্রোফাইল আপডেট সফল হয়েছে!');
-        document.getElementById('editProfileModal').style.display = 'none';
-
-    } catch (error) {
-        console.error("Profile Update Error:", error);
-        alert('আপডেট করতে সমস্যা হয়েছে।');
-    } finally {
-        setLoading(btn, false);
-    }
 }
