@@ -21,12 +21,10 @@
     
     <!-- CSS Links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Google Fonts (For Premium Look) -->
-    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
 
-    <!-- OneSignal SDK (Push Notification Setup) -->
+    <!-- OneSignal SDK (Push Notification) -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -114,10 +112,11 @@
                         <i class="fas fa-book-open" style="color: #8e44ad;"></i>
                     </a>
                     
-                    <!-- Messenger Link -->
-                    <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার">
+                    <!-- Messenger Link (With Badge) -->
+                    <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার" style="position: relative;">
                         <i class="fab fa-facebook-messenger" style="color: #0084ff;"></i>
-                        <span id="msg-badge-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:50%;">0</span>
+                        <!-- Unread Message Badge -->
+                        <span id="msg-badge-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:50%; min-width: 10px; text-align: center;">0</span>
                     </a>
                     
                     <!-- Create Story Button -->
@@ -214,100 +213,6 @@
                 <div class="loader" style="border-color: #999; border-bottom-color: transparent;"></div>
             </div>
         </main>
-
-        <!-- ========================================= -->
-        <!-- 10. NEW: HEALER VIEW (AI প্রশান্তি পেজ)    -->
-        <!-- ========================================= -->
-        <div id="healer-view" class="view-container" style="display: none; background: #fff; z-index: 100;">
-            <!-- Healer Header -->
-            <div class="header-container" style="position: sticky;">
-                <div class="header-top-row">
-                    <button class="nav-btn" onclick="closeHealerView()">
-                        <i class="fas fa-arrow-left"></i> ফিরে যান
-                    </button>
-                    <h2 class="page-title">iPray প্রশান্তি</h2>
-                </div>
-            </div>
-
-            <!-- Content Area -->
-            <div class="healer-content-area" style="padding: 20px; padding-bottom: 100px;">
-                <!-- AI Loader -->
-                <div id="aiLoader" style="text-align: center; display: none; padding-top: 50px;">
-                    <div class="loader" style="width: 50px; height: 50px; margin: 0 auto; border-color: #1877f2; border-bottom-color: transparent;"></div>
-                    <p style="margin-top: 20px; color: #666; font-size: 16px; font-weight: 500;">আপনার জন্য সমাধান ও গল্প লেখা হচ্ছে...<br><small style="opacity: 0.7;">অনুগ্রহ করে অপেক্ষা করুন</small></p>
-                </div>
-
-                <!-- AI Result -->
-                <div id="aiResultContainer" style="display: none; animation: fadeIn 0.5s ease;">
-                    
-                    <!-- 1. Greeting Card -->
-                    <div class="healer-card greeting-card">
-                        <h2 id="aiGreeting">আসসালামু আলাইকুম</h2>
-                        <p id="aiMoodText">...</p>
-                    </div>
-
-                    <!-- 2. Quran Card -->
-                    <div class="healer-card quran-card">
-                        <div class="card-bg-icon"><i class="fas fa-quran"></i></div>
-                        <h3><i class="fas fa-book-open"></i> আপনার জন্য কুরআনের বাণী</h3>
-                        <p class="arabic-text" id="aiQuranArabic"></p>
-                        <p class="translation-text" id="aiQuranBangla"></p>
-                        <small id="aiQuranRef" class="ref-text"></small>
-                    </div>
-
-                    <!-- 3. Story Card (Highlight) -->
-                    <div class="healer-card story-card">
-                        <div class="card-bg-icon"><i class="fas fa-feather-alt"></i></div>
-                        <h3><i class="fas fa-heart"></i> একটি শিক্ষণীয় গল্প</h3>
-                        <div class="story-content" id="aiStory"></div>
-                    </div>
-
-                    <!-- 4. Action Card -->
-                    <div class="healer-card action-card">
-                        <h3><i class="fas fa-praying-hands"></i> করণীয় আমল</h3>
-                        <p id="aiAction" style="font-size: 18px; font-weight: 600; color: #27ae60;"></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ========================================= -->
-    <!-- 11. NEW: MOOD CHECK MODAL (Premium Pop-up) -->
-    <!-- ========================================= -->
-    <div id="moodModal" class="bottom-sheet-modal" style="display: none; z-index: 5000;">
-        <div class="bottom-sheet-overlay" onclick="document.getElementById('moodModal').style.display='none'"></div>
-        <div class="bottom-sheet-content" style="height: auto; max-height: 80vh; border-radius: 25px 25px 0 0;">
-            <div class="sheet-handle-bar"></div>
-            <div style="padding: 25px 20px; text-align: center;">
-                <h2 style="color: #2c3e50; margin-bottom: 5px; font-family: 'Hind Siliguri', sans-serif;">আসসালামু আলাইকুম, <span id="moodUserName" style="color: #1877F2;"></span></h2>
-                <p style="color: #666; margin-bottom: 25px; font-size: 15px;">আজ আপনার মনের অবস্থা কেমন?</p>
-                
-                <div class="mood-grid">
-                    <button class="mood-btn" onclick="generateHealing('happy')">
-                        <span class="mood-emoji">😊</span> <span class="mood-label">খুশি</span>
-                    </button>
-                    <button class="mood-btn" onclick="generateHealing('sad')">
-                        <span class="mood-emoji">😔</span> <span class="mood-label">মন খারাপ</span>
-                    </button>
-                    <button class="mood-btn" onclick="generateHealing('anxious')">
-                        <span class="mood-emoji">😟</span> <span class="mood-label">দুশ্চিন্তা</span>
-                    </button>
-                    <button class="mood-btn" onclick="generateHealing('angry')">
-                        <span class="mood-emoji">😠</span> <span class="mood-label">রাগ</span>
-                    </button>
-                    <button class="mood-btn" onclick="generateHealing('lazy')">
-                        <span class="mood-emoji">😴</span> <span class="mood-label">অলসতা</span>
-                    </button>
-                    <button class="mood-btn" onclick="generateHealing('confused')">
-                        <span class="mood-emoji">🤔</span> <span class="mood-label">দ্বিধাগ্রস্ত</span>
-                    </button>
-                </div>
-                
-                <button onclick="document.getElementById('moodModal').style.display='none'" style="margin-top: 20px; background: none; border: none; color: #999; text-decoration: none; cursor: pointer; font-size: 14px;">পরে জানাবো</button>
-            </div>
-        </div>
     </div>
 
     <!-- ========================================= -->
@@ -439,40 +344,7 @@
         </div>
     </div>
 
-    <!-- 3. Edit Profile Modal (NEW - Fixing missing issue) -->
-    <div id="editProfileModal" class="modal">
-        <div class="modal-content">
-            <form id="editProfileForm">
-                <div class="modal-header">
-                    <h2 class="modal-title">প্রোফাইল সম্পাদনা</h2>
-                    <span class="close-btn" onclick="document.getElementById('editProfileModal').style.display='none'">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>আপনার নাম</label>
-                        <input type="text" id="editNameInput" required placeholder="সম্পূর্ণ নাম">
-                    </div>
-                    <div class="form-group">
-                        <label>ঠিকানা / বায়ো</label>
-                        <textarea id="editAddressInput" rows="3" placeholder="আপনার সম্পর্কে..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="saveProfileBtn" type="submit">আপডেট করুন</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 4. Upload Progress Modal -->
-    <div id="uploadProgressModal" class="modal">
-        <div class="modal-content" style="text-align: center;">
-            <div class="loader" style="margin: 0 auto 10px; border-color: #666; border-bottom-color: transparent;"></div>
-            <p>আপলোড হচ্ছে...</p>
-        </div>
-    </div>
-
-    <!-- 5. Report Modal -->
+    <!-- 3. Report Modal -->
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -505,7 +377,7 @@
         </div>
     </div>
 
-    <!-- 6. General Donation Modal -->
+    <!-- 4. General Donation Modal -->
     <div id="generalDonationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -553,7 +425,7 @@
         </div>
     </div>
 
-    <!-- 7. Campaign Donation Details Modal -->
+    <!-- 5. Campaign Donation Details Modal -->
     <div id="donationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -566,7 +438,7 @@
         </div>
     </div>
 
-    <!-- 8. Notification Modal -->
+    <!-- 6. Notification Modal -->
     <div id="notificationModal" class="notification-modal">
         <div class="notification-modal-content">
             <div class="notification-modal-header">
@@ -583,7 +455,7 @@
         </div>
     </div>
 
-    <!-- 9. Fullscreen Story Viewer -->
+    <!-- 7. Fullscreen Story Viewer -->
     <div id="storyViewerModal" style="display: none;">
         <div id="storyProgressBars"></div>
         <div id="storyUserInfo"></div>
@@ -600,13 +472,13 @@
         </div>
     </div>
 
-    <!-- 10. Image Viewer Modal -->
+    <!-- 8. Image Viewer Modal -->
     <div id="image-view-modal" class="image-modal">
         <span class="close-image-modal">&times;</span>
         <img class="image-modal-content" id="modal-image">
     </div>
 
-    <!-- 11. SHORTS COMMENT MODAL (Bottom Sheet) -->
+    <!-- 9. SHORTS COMMENT MODAL (Bottom Sheet) -->
     <div id="shortsCommentModal" class="bottom-sheet-modal" style="display: none;">
         <div class="bottom-sheet-overlay" id="closeShortsModalOverlay"></div>
         <div class="bottom-sheet-content">
@@ -659,8 +531,8 @@
     <script src="utils.js"></script>
     <script src="auth.js"></script>
     <script src="stories.js"></script>
-    <script src="healer.js"></script> <!-- NEW -->
     <script src="feed.js"></script>
+    <!-- interactions.js এর ভিতরেই ব্যাজ আপডেটের লজিক আছে -->
     <script src="interactions.js"></script>
     
     <!-- 3. MAIN ENTRY POINT (App Starts Here) -->

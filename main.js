@@ -1,100 +1,94 @@
-// ====================================================================
+// ====================================
 // FILE: main.js
-// বিবরণ: অ্যাপের এন্ট্রি পয়েন্ট। এখান থেকেই অ্যাপ ইনিশিয়ালাইজ এবং রান হয়।
-// ====================================================================
+// বিবরণ: অ্যাপের এন্ট্রি পয়েন্ট (এখান থেকেই অ্যাপ শুরু হবে)
+// ====================================
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("🚀 iPray App Initializing...");
 
-    // ----------------------------------------------------------------
-    // 1. অ্যাপ কন্টেইনার দৃশ্যমান করা (White Screen Fix)
-    // ----------------------------------------------------------------
+    // ১. অ্যাপ কন্টেইনার দৃশ্যমান করা (Default hidden থাকে)
+    // এটি না থাকলে পেজ সাদা দেখাবে
     const appContainer = document.getElementById('appContainer');
     if (appContainer) {
         appContainer.style.display = 'block';
-    } else {
-        console.error("❌ Critical Error: 'appContainer' not found in DOM!");
     }
 
-    // ----------------------------------------------------------------
-    // 2. মডিউল সেটআপ (Dependencies Check)
-    // ----------------------------------------------------------------
-    
-    // গ্লোবাল ইভেন্ট লিসেনার (interactions.js)
+    // ২. গ্লোবাল ইভেন্ট লিসেনার সেটআপ (interactions.js থেকে)
+    // এটি সবচেয়ে জরুরি: নোটিফিকেশন, ডোনেশন, রিপোর্ট বাটন কাজ করার জন্য
     if (typeof setupEventListeners === 'function') {
         setupEventListeners();
         console.log("✅ Global Event Listeners Attached");
     } else {
-        console.error("⚠️ Warning: setupEventListeners function not found.");
+        console.error("❌ Error: setupEventListeners function not found in interactions.js");
     }
 
-    // নেভিগেশন লজিক (interactions.js)
+    // ৩. নেভিগেশন লজিক সেটআপ (interactions.js থেকে)
     if (typeof setupNavigationLogic === 'function') {
         setupNavigationLogic();
-        console.log("✅ Navigation Logic Initialized");
     }
 
-    // স্টোরি এডিটর (stories.js)
+    // ৪. স্টোরি এডিটর সেটআপ (stories.js থেকে)
     if (typeof setupStoryEditor === 'function') {
         setupStoryEditor();
-        console.log("✅ Story Editor Setup Complete");
     }
 
-    // ----------------------------------------------------------------
-    // 3. অথেন্টিকেশন চেক এবং অ্যাপ স্টার্ট
-    // ----------------------------------------------------------------
+    // ৫. অফলাইন সিঙ্ক লিসেনার সেটআপ (NEW FEATURE: Auto Sync)
+    // যখন ইন্টারনেট ফিরে আসবে, তখন অফলাইন পোস্টগুলো আপলোড হবে
+    window.addEventListener('online', () => {
+        console.log("Internet restored. Attempting to sync offline posts...");
+        if (typeof window.syncOfflinePosts === 'function') {
+            window.syncOfflinePosts();
+        }
+    });
+
+    // অ্যাপ চালু হওয়ার সময় যদি ইন্টারনেট থাকে, তবে পেন্ডিং পোস্ট চেক করবে
+    if (navigator.onLine && typeof window.syncOfflinePosts === 'function') {
+        // একটু সময় দিয়ে কল করা যাতে অন্য স্ক্রিপ্টগুলো লোড হয়ে যায়
+        setTimeout(() => {
+            window.syncOfflinePosts();
+        }, 3000);
+    }
+
+    // ৬. অথেন্টিকেশন চেক (লগইন আছে কি না)
     try {
-        // সুপাবেস সেশন চেক করা
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         
         if (error) throw error;
 
         if (session) {
-            // --- ইউজার লগইন অবস্থায় আছে ---
-            console.log("👤 User Logged In:", session.user.email);
+            // --- ইউজার লগইন করা আছে ---
+            console.log("✅ User Logged In:", session.user.email);
             
             // লগইন মডাল লুকানো
             const loginPage = document.getElementById('loginPage');
             if (loginPage) loginPage.style.display = 'none';
             
-            // ইউজার ডাটা এবং ফিড লোড করা (auth.js থেকে)
+            // ইউজার ডাটা লোড করা (auth.js থেকে)
             if(typeof handleUserLoggedIn === 'function') {
                 await handleUserLoggedIn(session.user);
-                
-                // হিলার মুড চেক (healer.js থেকে) - ইউজার লগইন হওয়ার পরেই চেক হবে
-                if (typeof checkMoodStatus === 'function') {
-                    // একটু দেরি করে চেক করা যাতে ইউজার ইন্টারফেস আগে লোড হয়
-                    setTimeout(() => checkMoodStatus(), 2000);
-                }
             }
         } else {
-            // --- ইউজার লগইন নেই (Guest Mode) ---
-            console.log("👤 No User Logged In (Guest Mode)");
+            // --- ইউজার লগইন নেই ---
+            console.log("ℹ️ No User Logged In");
             
-            // লগআউট হ্যান্ডলার কল করে ক্লিনআপ করা
+            // লগআউট হ্যান্ডলার কল করা (auth.js থেকে)
             if(typeof handleUserLoggedOut === 'function') {
                 handleUserLoggedOut();
             }
         }
 
-        // ----------------------------------------------------------------
-        // 4. অথেন্টিকেশন স্টেট মনিটর (Realtime Login/Logout Listener)
-        // ----------------------------------------------------------------
+        // ৭. অথেন্টিকেশন পরিবর্তনের লিসেনার (লগইন/লগআউট মনিটর)
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
             console.log("🔄 Auth State Changed:", event);
             
             if (event === 'SIGNED_IN' && session) {
-                // নতুন করে লগইন হলে
                 const loginPage = document.getElementById('loginPage');
                 if (loginPage) loginPage.style.display = 'none';
                 
                 if(typeof handleUserLoggedIn === 'function') {
                     await handleUserLoggedIn(session.user);
-                    // মুড চেক
-                    if (typeof checkMoodStatus === 'function') setTimeout(() => checkMoodStatus(), 2000);
                 }
             } else if (event === 'SIGNED_OUT') {
-                // লগআউট হলে
                 if(typeof handleUserLoggedOut === 'function') {
                     handleUserLoggedOut();
                 }
@@ -103,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (err) {
         console.error("❌ Auth Initialization Error:", err);
-        // কোনো ক্রিটিক্যাল এরর হলে অ্যাপ ক্র্যাশ না করে গেস্ট মোডে রাখা
+        // এরর হলেও অন্তত অ্যাপ যাতে ক্র্যাশ না করে, তাই লগআউট মোডে লোড করা
         if(typeof handleUserLoggedOut === 'function') {
             handleUserLoggedOut();
         }

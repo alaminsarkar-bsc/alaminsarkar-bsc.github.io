@@ -6,90 +6,80 @@
 console.log("Stories Module Loaded");
 
 // ====================================
-// 1. STORY EDITOR SETUP (ইভেন্ট লিসেনার)
+// 1. STORY EDITOR SETUP
 // ====================================
 function setupStoryEditor() {
-    // ১. এডিটর ওপেন করা
-    const createBtn = document.getElementById('createStoryBtn');
-    if (createBtn) {
-        createBtn.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            if(!currentUser) { 
-                showLoginModal(); 
-                return; 
-            } 
-            openProStoryEditor(); 
-        });
-    }
+    // Open Editor Button
+    document.getElementById('createStoryBtn')?.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        if(!currentUser) { 
+            showLoginModal(); 
+            return; 
+        } 
+        openProStoryEditor(); 
+    });
     
-    // ২. এডিটর বন্ধ করা
+    // Close Editor
     document.getElementById('closeStoryEditorBtn')?.addEventListener('click', closeStoryEditor);
     
-    // ৩. ট্যাব পরিবর্তন (টেক্সট বা মিডিয়া)
+    // Switch Tabs (Text vs Media)
     document.getElementById('tabTextBtn')?.addEventListener('click', () => switchEditorTab('text'));
     document.getElementById('tabMediaBtn')?.addEventListener('click', () => switchEditorTab('media'));
     
-    // ৪. ব্যাকগ্রাউন্ড কালার পরিবর্তন (টেক্সট মোড)
+    // Background Color Change (Text Mode)
     document.getElementById('storyBgColorBtn')?.addEventListener('click', cycleBgColor);
     
-    // ৫. ক্যামেরা ও মিডিয়া কন্ট্রোল
+    // Camera & Media Controls
     document.getElementById('openCameraBtn')?.addEventListener('click', initCamera);
     document.getElementById('recordBtn')?.addEventListener('click', toggleRecording);
     document.getElementById('storyMuteBtn')?.addEventListener('click', toggleMute);
     document.getElementById('resetMediaBtn')?.addEventListener('click', resetMediaState);
+    document.getElementById('storyFileUpload')?.addEventListener('change', handleFileSelect);
     
-    // ৬. ফাইল আপলোড
-    const fileInput = document.getElementById('storyFileUpload');
-    if (fileInput) {
-        fileInput.addEventListener('change', handleFileSelect);
-    }
-    
-    // ৭. পাবলিশ বাটন
+    // Publish Button
     document.getElementById('publishStoryBtn')?.addEventListener('click', publishProStory);
 }
 
-// এডিটর ওপেন ফাংশন
 function openProStoryEditor() {
     const modal = document.getElementById('storyCreateModal');
     if(!modal) return;
     
-    resetEditorState(); // স্টেট রিসেট
+    resetEditorState();
     modal.style.display = 'flex';
-    switchEditorTab('text'); // ডিফল্ট টেক্সট মোড
+    switchEditorTab('text'); // Default to text mode
 }
 
-// ট্যাব সুইচিং ফাংশন
 function switchEditorTab(mode) {
     storyEditorState.mode = mode;
     
-    // ট্যাব স্টাইল আপডেট
+    // Tab visual state
     document.querySelectorAll('.editor-tab-btn').forEach(b => b.classList.remove('active'));
     
     if(mode === 'text') {
         document.getElementById('tabTextBtn').classList.add('active');
         
-        // টেক্সট UI দেখানো
+        // Show Text UI
         document.getElementById('textCanvas').style.display = 'flex';
         document.getElementById('textModeTools').style.display = 'flex';
         
-        // মিডিয়া UI লুকানো
+        // Hide Media UI
         document.getElementById('mediaCanvas').style.display = 'none';
         document.getElementById('recordingArea').style.display = 'none';
         document.getElementById('storyMuteBtn').style.display = 'none';
         
-        stopCamera(); // ক্যামেরা চালু থাকলে বন্ধ করা
+        stopCamera(); // Stop camera if running
     } else {
         document.getElementById('tabMediaBtn').classList.add('active');
         
-        // মিডিয়া UI দেখানো
+        // Show Media UI
         document.getElementById('mediaCanvas').style.display = 'flex';
         document.getElementById('mediaPlaceholder').style.display = 'flex';
         
-        // টেক্সট UI লুকানো
+        // Hide Text UI
         document.getElementById('textCanvas').style.display = 'none';
         document.getElementById('textModeTools').style.display = 'none';
         
-        // নির্দিষ্ট মিডিয়া এলিমেন্ট রিসেট
+        // Hide specific media elements initially
         document.getElementById('liveCameraFeed').style.display = 'none';
         document.getElementById('recordingArea').style.display = 'none';
         document.getElementById('storyMuteBtn').style.display = 'none';
@@ -99,8 +89,6 @@ function switchEditorTab(mode) {
 // ====================================
 // 2. CAMERA & RECORDING LOGIC
 // ====================================
-
-// ক্যামেরা চালু করা
 async function initCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -113,12 +101,12 @@ async function initCamera() {
         video.srcObject = stream;
         video.style.display = 'block';
         
-        // UI আপডেট
+        // UI Updates
         document.getElementById('mediaPlaceholder').style.display = 'none';
         document.getElementById('recordingArea').style.display = 'flex'; 
         document.getElementById('storyMuteBtn').style.display = 'flex'; 
         
-        // প্রিভিউ ক্লিয়ার করা
+        // Clear previews
         document.getElementById('storyImgPreview').style.display = 'none';
         document.getElementById('storyVidPreview').style.display = 'none';
         
@@ -128,7 +116,6 @@ async function initCamera() {
     }
 }
 
-// ক্যামেরা বন্ধ করা
 function stopCamera() {
     if(storyEditorState.stream) {
         storyEditorState.stream.getTracks().forEach(track => track.stop());
@@ -137,7 +124,6 @@ function stopCamera() {
     document.getElementById('liveCameraFeed').style.display = 'none';
 }
 
-// রেকর্ডিং টগল
 function toggleRecording() { 
     if (storyEditorState.isRecording) {
         stopRecording(); 
@@ -146,17 +132,16 @@ function toggleRecording() {
     }
 }
 
-// রেকর্ডিং শুরু
 function startRecording() {
     if (!storyEditorState.stream) return;
     
     storyEditorState.isRecording = true;
     storyEditorState.recordedChunks = [];
     
-    // বাটন এনিমেশন
+    // UI Feedback
     document.getElementById('recordBtn').classList.add('recording');
     
-    // মিউট লজিক
+    // Mute/Unmute Logic
     storyEditorState.stream.getAudioTracks().forEach(track => { 
         track.enabled = !storyEditorState.isMuted; 
     });
@@ -165,7 +150,7 @@ function startRecording() {
         const options = { mimeType: 'video/webm;codecs=vp9,opus' };
         storyEditorState.mediaRecorder = new MediaRecorder(storyEditorState.stream, options);
     } catch (e) { 
-        // ফলব্যাক (Safari বা পুরোনো ব্রাউজারের জন্য)
+        // Fallback for Safari/Other browsers
         storyEditorState.mediaRecorder = new MediaRecorder(storyEditorState.stream); 
     }
     
@@ -184,7 +169,7 @@ function startRecording() {
         previewVid.style.display = 'block'; 
         previewVid.controls = true;
         
-        // UI ক্লিনআপ
+        // UI Cleanup
         document.getElementById('liveCameraFeed').style.display = 'none';
         stopCamera();
         document.getElementById('recordingArea').style.display = 'none';
@@ -194,18 +179,14 @@ function startRecording() {
     
     storyEditorState.mediaRecorder.start();
     
-    // সর্বোচ্চ সময়সীমা (৩০ সেকেন্ড)
+    // Max Duration Timer
     let startTime = Date.now();
     const maxTime = storyEditorState.maxDuration * 1000; 
-    
     storyEditorState.recordingTimer = setInterval(() => {
-        if (Date.now() - startTime >= maxTime) {
-            stopRecording();
-        }
+        if (Date.now() - startTime >= maxTime) stopRecording();
     }, 100);
 }
 
-// রেকর্ডিং বন্ধ
 function stopRecording() {
     if (!storyEditorState.isRecording) return;
     
@@ -219,7 +200,6 @@ function stopRecording() {
     document.getElementById('recordBtn').classList.remove('recording');
 }
 
-// মিউট টগল
 function toggleMute() {
     storyEditorState.isMuted = !storyEditorState.isMuted;
     const btn = document.getElementById('storyMuteBtn');
@@ -232,7 +212,7 @@ function toggleMute() {
 }
 
 // ====================================
-// 3. FILE HANDLING (Upload from Gallery)
+// 3. FILE HANDLING (Upload)
 // ====================================
 function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -282,7 +262,7 @@ function cycleBgColor() {
 }
 
 function resetEditorState() {
-    // ডিফল্ট স্টেটে রিসেট করা
+    // Reset to default state
     storyEditorState = { 
         mode: 'text', 
         mediaFile: null, 
@@ -309,7 +289,7 @@ function closeStoryEditor() {
 }
 
 // ====================================
-// 4. PUBLISH STORY (Upload to Supabase)
+// 4. PUBLISH STORY
 // ====================================
 async function publishProStory() {
     const btn = document.getElementById('publishStoryBtn');
@@ -321,17 +301,16 @@ async function publishProStory() {
         let textContent = ''; 
         let blobToUpload = null;
         
-        // ১. ডাটা প্রিপারেশন
+        // 1. Prepare Data
         if (storyEditorState.mode === 'text') {
             const element = document.getElementById('textCanvas');
-            // html2canvas দিয়ে ইমেজ তৈরি করা (Text Story)
+            // html2canvas দিয়ে ইমেজ তৈরি করা
             const canvas = await html2canvas(element, { scale: 2, useCORS: true });
             blobToUpload = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
             
             textContent = document.getElementById('storyTextInput').innerText;
             type = 'text_image';
         } else {
-            // Media Story
             if (storyEditorState.mediaBlob) { 
                 blobToUpload = storyEditorState.mediaBlob; 
                 type = 'video'; 
@@ -344,7 +323,7 @@ async function publishProStory() {
         
         if (!blobToUpload) throw new Error("কোনো কন্টেন্ট নেই।");
         
-        // ২. স্টোরেজে আপলোড
+        // 2. Upload to Storage
         const ext = type === 'video' ? 'webm' : 'jpg';
         const fileName = `story_${currentUser.id}_${Date.now()}.${ext}`;
         
@@ -356,21 +335,21 @@ async function publishProStory() {
         
         mediaUrl = supabaseClient.storage.from('post_images').getPublicUrl(data.path).data.publicUrl;
         
-        // ৩. ডাটাবেসে সেভ করা
+        // 3. Save to Database
         const { error: insertError } = await supabaseClient.from('stories').insert([{
             user_id: currentUser.id, 
             media_url: mediaUrl, 
             media_type: type, 
             text_content: textContent, 
             background_color: storyEditorState.bgColor, 
-            duration: type === 'video' ? 30000 : 5000 // ভিডিও ৩০ সেকেন্ড, ইমেজ ৫ সেকেন্ড
+            duration: type === 'video' ? 30000 : 5000
         }]);
         
         if (insertError) throw insertError;
         
         alert("স্টোরি আপলোড সফল হয়েছে!");
         closeStoryEditor();
-        fetchAndRenderStories(); // লিস্ট আপডেট
+        fetchAndRenderStories();
         
     } catch (error) { 
         console.error("Publish Error:", error); 
@@ -381,13 +360,13 @@ async function publishProStory() {
 }
 
 // ====================================
-// 5. FETCH & RENDER STORIES LIST
+// 5. FETCH & RENDER STORIES
 // ====================================
 async function fetchAndRenderStories() {
     const container = document.getElementById('storyContainer');
     if(!container) return;
     
-    // প্রথমে শুধু 'My Story' বাটন রেন্ডার
+    // প্রথমে শুধু 'My Story' বাটন রেন্ডার (Placeholder)
     renderStoriesList(container);
     
     try {
@@ -402,7 +381,7 @@ async function fetchAndRenderStories() {
             
         if (error) throw error;
         
-        // ইউজার অনুযায়ী গ্রুপ করা
+        // গ্রুপ করা (একই ইউজারের স্টোরি একসাথে)
         const groups = {};
         stories.forEach(story => {
             const uid = story.user_id;
@@ -431,7 +410,7 @@ function renderStoriesList(container) {
     if (!container) return;
     container.innerHTML = '';
     
-    // --- Add Story Button (My Story) ---
+    // --- Add Story Button ---
     const addItem = document.createElement('div');
     addItem.className = 'story-item my-story';
     addItem.onclick = openProStoryEditor; 
@@ -446,7 +425,7 @@ function renderStoriesList(container) {
     addItem.innerHTML = `<div class="story-preview" style="background:white; position:relative;">${myAvatar}<div class="my-story-add-icon"><i class="fas fa-plus"></i></div></div><span class="story-user-name">আপনার স্টোরি</span>`;
     container.appendChild(addItem);
     
-    // --- Other User Stories ---
+    // --- Other Stories ---
     storyGroups.forEach((group, index) => {
         const item = document.createElement('div');
         item.className = 'story-item';
@@ -470,7 +449,7 @@ function renderStoriesList(container) {
 }
 
 // ====================================
-// 6. FULLSCREEN STORY VIEWER
+// 6. STORY VIEWER (FULLSCREEN)
 // ====================================
 function openStoryViewer(groupIndex) {
     storyViewerState.currentUserIndex = groupIndex; 
@@ -488,27 +467,17 @@ function renderStoryInViewer() {
     const story = group.items[storyViewerState.currentStoryIndex];
     if (!story) { nextStoryUser(); return; }
     
-    // 1. Progress Bars (Top)
-    document.getElementById('storyProgressBars').innerHTML = group.items.map((_, idx) => `
-        <div class="progress-bar-container" style="flex:1; margin:0 2px; background:rgba(255,255,255,0.3); height:3px; border-radius:2px;">
-            <div class="progress-bar-fill-story" id="prog-${idx}" style="width:${idx < storyViewerState.currentStoryIndex ? '100%' : '0%'}; height:100%; background:white;"></div>
-        </div>
-    `).join('');
+    // 1. Progress Bars
+    document.getElementById('storyProgressBars').innerHTML = group.items.map((_, idx) => `<div class="progress-bar-container" style="flex:1; margin:0 2px; background:rgba(255,255,255,0.3); height:3px; border-radius:2px;"><div class="progress-bar-fill-story" id="prog-${idx}" style="width:${idx < storyViewerState.currentStoryIndex ? '100%' : '0%'}; height:100%; background:white;"></div></div>`).join('');
     
-    // 2. User Info Header
-    document.getElementById('storyUserInfo').innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;">
-            <img src="${group.user.photo_url || './images/default-avatar.png'}" style="width:32px;height:32px;border-radius:50%;">
-            <span style="font-weight:bold;">${group.user.display_name}</span>
-            <span style="opacity:0.7;font-size:12px;">${timeAgo(story.created_at)}</span>
-        </div>
-    `;
+    // 2. User Header
+    document.getElementById('storyUserInfo').innerHTML = `<div style="display:flex;align-items:center;gap:10px;"><img src="${group.user.photo_url || './images/default-avatar.png'}" style="width:32px;height:32px;border-radius:50%;"><span style="font-weight:bold;">${group.user.display_name}</span><span style="opacity:0.7;font-size:12px;">${timeAgo(story.created_at)}</span></div>`;
     
     // 3. Media Content
     const mediaContainer = document.querySelector('.story-viewer-media');
     mediaContainer.innerHTML = '';
     
-    // Caption Overlay
+    // Text Overlay (Caption or Text Story)
     const textOverlay = document.createElement('div');
     textOverlay.style.position = 'absolute'; 
     textOverlay.style.bottom = '100px'; 
@@ -529,6 +498,7 @@ function renderStoryInViewer() {
         mediaEl.autoplay = true; 
         mediaEl.playsInline = true; 
         mediaEl.style.width = '100%'; 
+        // ভিডিও শেষ হলে পরের স্টোরি
         mediaEl.onended = nextStoryItem; 
         mediaEl.onerror = () => { console.warn("Video failed to load, skipping."); nextStoryItem(); }; 
     } else { 
@@ -538,18 +508,19 @@ function renderStoryInViewer() {
         mediaEl.style.height = '100%'; 
         mediaEl.style.objectFit = 'contain'; 
         mediaEl.onerror = () => { console.warn("Image failed to load, skipping."); nextStoryItem(); }; 
-        startStoryTimer(5000); // 5 sec for images
+        // ইমেজের জন্য ৫ সেকেন্ড টাইমার
+        startStoryTimer(5000); 
     }
     
     mediaContainer.appendChild(mediaEl); 
     mediaContainer.appendChild(textOverlay);
     
-    // 4. Animate Progress Bar
+    // 4. Animate Current Progress Bar
     const currentProg = document.getElementById(`prog-${storyViewerState.currentStoryIndex}`);
     if (currentProg) {
         currentProg.style.width = '0%'; 
         currentProg.style.transition = 'none'; 
-        void currentProg.offsetWidth; // Force Reflow
+        void currentProg.offsetWidth; // Trigger Reflow
         
         if (story.media_type === 'video') { 
             mediaEl.onloadedmetadata = () => { 
@@ -574,9 +545,11 @@ function startStoryTimer(ms) {
 function nextStoryItem() { 
     const group = storyGroups[storyViewerState.currentUserIndex]; 
     if (group && storyViewerState.currentStoryIndex < group.items.length - 1) { 
+        // পরের স্টোরি আছে
         storyViewerState.currentStoryIndex++; 
         renderStoryInViewer(); 
     } else { 
+        // ইউজার শেষ, পরের ইউজারে যান
         nextStoryUser(); 
     } 
 }
@@ -587,6 +560,7 @@ function nextStoryUser() {
         storyViewerState.currentStoryIndex = 0; 
         renderStoryInViewer(); 
     } else { 
+        // সব শেষ, বন্ধ করুন
         closeStoryViewer(); 
     } 
 }
@@ -596,7 +570,7 @@ function prevStoryItem() {
         storyViewerState.currentStoryIndex--; 
         renderStoryInViewer(); 
     } else { 
-        // Replay current story
+        // আগের স্টোরি নেই, একই স্টোরি আবার শুরু করুন
         renderStoryInViewer(); 
     } 
 }
@@ -605,7 +579,7 @@ function closeStoryViewer() {
     document.getElementById('storyViewerModal').style.display = 'none'; 
     clearTimeout(storyViewerState.storyTimeout); 
     
-    // Stop video
+    // ভিডিও পজ করা
     const vid = document.querySelector('.story-viewer-media video'); 
     if(vid) vid.pause(); 
 }
