@@ -1,24 +1,31 @@
 // ====================================================================
 // FILE: healer.js
 // বিবরণ: AI এর মাধ্যমে ইউজারের মুড অনুযায়ী গল্প ও সমাধান জেনারেট করা
+// মডেল: Gemini Pro (Stable & Free)
 // ====================================================================
 
 console.log("Healer Module Loaded");
 
-// 🔑 Google Gemini API Key (Updated)
+// 🔑 আপনার Google Gemini API Key
 const GEMINI_API_KEY = "AIzaSyA4NIpHyyQnM0Z_E3YHfa_cndm9KeTS88U"; 
 
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// মডেল কনফিগারেশন (gemini-pro ব্যবহার করা হচ্ছে যা বেশি শক্তিশালী এবং স্টেবল)
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
 
-// 1. Check Mood on App Load
+// ====================================================================
+// 1. MOOD CHECKER (অ্যাপ চালু হলে চেক করবে)
+// ====================================================================
 function checkMoodStatus() {
+    // ইউজার লগইন না থাকলে চেক করবে না
     if (!currentUser) return;
 
     // শেষ কবে চেক করা হয়েছে তা লোকাল স্টোরেজ থেকে দেখা
     const lastCheck = localStorage.getItem('lastMoodCheck');
     const today = new Date().toDateString();
 
-    // দিনে একবার চেক করার লজিক (টেস্টিংয়ের জন্য এখন কমেন্ট করা আছে)
+    // আপনি টেস্টিং করছেন, তাই আমি তারিখের চেকটি কমেন্ট করে রাখলাম।
+    // অ্যাপ লাইভ করার সময় 'if' এর কমেন্ট তুলে দেবেন।
+    
     // if (lastCheck !== today) { 
         setTimeout(() => {
             const modal = document.getElementById('moodModal');
@@ -29,21 +36,23 @@ function checkMoodStatus() {
                 userNameSpan.innerText = currentUser.profile?.display_name || "বন্ধু";
             }
             
-            // মডাল ওপেন করা (Bottom Sheet Animation)
+            // মডাল ওপেন করা (এনিমেশন সহ)
             if (modal) {
                 modal.style.display = 'flex';
+                // এনিমেশনের জন্য সামান্য দেরি
                 setTimeout(() => modal.classList.add('active'), 10);
             }
-        }, 2500); // অ্যাপ খোলার ২.৫ সেকেন্ড পর আসবে
+        }, 2000); // অ্যাপ খোলার ২ সেকেন্ড পর পপ-আপ আসবে
     // }
 }
 
-// 2. Generate Healing Content (AI Call)
+// ====================================================================
+// 2. GENERATE CONTENT (AI API CALL)
+// ====================================================================
 async function generateHealing(mood) {
-    
     // ১. মডাল বন্ধ করা
     const modal = document.getElementById('moodModal');
-    if (modal) {
+    if(modal) {
         modal.classList.remove('active');
         setTimeout(() => modal.style.display = 'none', 300);
     }
@@ -55,18 +64,20 @@ async function generateHealing(mood) {
     if (homeView) homeView.style.display = 'none';
     if (healerView) {
         healerView.style.display = 'block';
-        window.scrollTo(0, 0);
+        window.scrollTo(0, 0); // পেজের শুরুতে নিয়ে যাওয়া
     }
 
     // ৩. লোডার দেখানো
     const loader = document.getElementById('aiLoader');
     const resultContainer = document.getElementById('aiResultContainer');
-    if (loader) loader.style.display = 'block';
-    if (resultContainer) resultContainer.style.display = 'none';
+    
+    if(loader) loader.style.display = 'block';
+    if(resultContainer) resultContainer.style.display = 'none';
 
     // ৪. ইউজারের তথ্য ও প্রম্পট তৈরি
     const userName = currentUser ? currentUser.profile.display_name : "মুমিন";
     
+    // AI কে বাংলায় নির্দেশনা দেওয়া (Prompt Engineering)
     const prompt = `
         User Name: ${userName}
         Current Mood: ${mood}
@@ -74,12 +85,13 @@ async function generateHealing(mood) {
 
         Task:
         You are an Islamic spiritual healer AI. Based on the user's mood ("${mood}"), generate a comforting response.
+        
         1. Select one powerful Quranic verse (Arabic text & Bangla translation) that comforts this specific mood.
-        2. Provide the reference (Surah: Verse).
-        3. Write a SHORT, engaging, and emotional Islamic story (from Seerah of Prophet PBUH or Sahaba) that matches this mood and teaches a lesson. Max 150 words.
+        2. Provide the reference (Surah Name: Verse Number).
+        3. Write a SHORT, engaging, and emotional Islamic story (from Seerah of Prophet PBUH or Sahaba) that matches this mood and teaches a lesson. (Max 150 words).
         4. Suggest one small, easy action (Amal/Dua) to do right now.
 
-        Output Format (Return ONLY JSON, no markdown):
+        Output Format (Return ONLY JSON, no markdown, no code blocks):
         {
             "greeting": "A warm greeting addressing ${userName}",
             "quran_arabic": "Arabic Verse",
@@ -100,55 +112,67 @@ async function generateHealing(mood) {
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+
         const data = await response.json();
         
         // রেসপন্স পার্সিং
         if (data.candidates && data.candidates[0].content) {
             const rawText = data.candidates[0].content.parts[0].text;
-            // ক্লিন JSON (Markdown রিমুভ করা)
-            const jsonString = rawText.replace(/```json|```/g, "").trim();
+            
+            // ক্লিন JSON (Markdown এবং ```json রিমুভ করা)
+            let jsonString = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+            
             const result = JSON.parse(jsonString);
 
+            // ফলাফল রেন্ডার করা
             renderHealingResult(result, mood);
             
             // আজকের জন্য চেক কমপ্লিট হিসেবে সেভ করা
             localStorage.setItem('lastMoodCheck', new Date().toDateString());
         } else {
-            console.error("AI Response Error:", data);
             throw new Error("AI gave no response");
         }
 
     } catch (error) {
         console.error("AI Error:", error);
-        alert("ইন্টারনেট সংযোগে সমস্যা বা API কোটায় সমস্যা হয়েছে।");
+        alert("সমস্যা হয়েছে: " + error.message + "\nদয়া করে ইন্টারনেট সংযোগ চেক করুন।");
         closeHealerView();
     }
 }
 
-// 3. Render Result on Screen
+// ====================================================================
+// 3. RENDER RESULT (UI আপডেট)
+// ====================================================================
 function renderHealingResult(data, mood) {
     const loader = document.getElementById('aiLoader');
     const resultContainer = document.getElementById('aiResultContainer');
-    
-    if (loader) loader.style.display = 'none';
-    if (resultContainer) resultContainer.style.display = 'block';
+
+    if(loader) loader.style.display = 'none';
+    if(resultContainer) resultContainer.style.display = 'block';
 
     // ডাটা সেট করা
-    document.getElementById('aiGreeting').innerText = data.greeting;
+    document.getElementById('aiGreeting').innerText = data.greeting || "আসসালামু আলাইকুম";
     document.getElementById('aiMoodText').innerText = `আপনার বর্তমান অবস্থা: ${getMoodBangla(mood)}`;
     
-    document.getElementById('aiQuranArabic').innerText = data.quran_arabic;
-    document.getElementById('aiQuranBangla').innerText = data.quran_bangla;
-    document.getElementById('aiQuranRef').innerText = data.quran_ref;
+    document.getElementById('aiQuranArabic').innerText = data.quran_arabic || "";
+    document.getElementById('aiQuranBangla').innerText = data.quran_bangla || "";
+    document.getElementById('aiQuranRef').innerText = data.quran_ref || "";
 
-    // গল্প রেন্ডার
-    const storyHtml = `<strong style="font-size:18px; display:block; margin-bottom:10px;">${data.story_title}</strong>${data.story_body}`;
+    // গল্প রেন্ডার (টাইটেল বোল্ড করে)
+    const storyHtml = `<strong style="font-size:18px; display:block; margin-bottom:10px; color:#d35400;">${data.story_title}</strong>${data.story_body}`;
     document.getElementById('aiStory').innerHTML = storyHtml;
 
-    document.getElementById('aiAction').innerText = data.action_text;
+    document.getElementById('aiAction').innerText = data.action_text || "";
 }
 
-// 4. Helpers
+// ====================================================================
+// 4. HELPER FUNCTIONS
+// ====================================================================
+
+// মুড এর বাংলা নাম ও ইমোজি
 function getMoodBangla(mood) {
     const moods = {
         'happy': 'খুশি 😊', 
@@ -161,16 +185,21 @@ function getMoodBangla(mood) {
     return moods[mood] || mood;
 }
 
+// হিলার ভিউ বন্ধ করে হোমে ফেরত যাওয়া
 function closeHealerView() {
     const healerView = document.getElementById('healer-view');
     const appContainer = document.getElementById('appContainer');
-    const loader = document.getElementById('aiLoader');
-    const resultContainer = document.getElementById('aiResultContainer');
-
+    
     if (healerView) healerView.style.display = 'none';
     if (appContainer) appContainer.style.display = 'block';
     
-    // রিসেট
-    if (loader) loader.style.display = 'block';
-    if (resultContainer) resultContainer.style.display = 'none';
+    // রিসেট (যাতে পরের বার আবার লোডার দেখায়)
+    const loader = document.getElementById('aiLoader');
+    const resultContainer = document.getElementById('aiResultContainer');
+    
+    if(loader) loader.style.display = 'block';
+    if(resultContainer) resultContainer.style.display = 'none';
+    
+    // স্ক্রল টপ
+    window.scrollTo(0, 0);
 }
