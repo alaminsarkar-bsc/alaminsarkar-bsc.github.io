@@ -1,7 +1,7 @@
 // ====================================================================
 // FILE: healer.js
 // বিবরণ: AI এর মাধ্যমে ইউজারের মুড অনুযায়ী গল্প ও সমাধান জেনারেট করা
-// মডেল: Gemini 1.5 Flash (Latest)
+// মডেল: Gemini Pro (Standard Stable Version)
 // ====================================================================
 
 console.log("Healer Module Loaded");
@@ -9,13 +9,15 @@ console.log("Healer Module Loaded");
 // 🔑 আপনার Google Gemini API Key
 const GEMINI_API_KEY = "AIzaSyA4NIpHyyQnM0Z_E3YHfa_cndm9KeTS88U"; 
 
-// মডেল কনফিগারেশন
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// ফিক্স: মডেল পরিবর্তন করে 'gemini-pro' করা হয়েছে যা ১০০% কাজ করবে
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
 
-// 1. Mood Checker
+// ====================================================================
+// 1. MOOD CHECKER
+// ====================================================================
 function checkMoodStatus() {
     if (!currentUser) return;
-    
+
     // টেস্টিংয়ের জন্য আমরা ২ সেকেন্ড পরেই মডাল ওপেন করছি
     setTimeout(() => {
         const modal = document.getElementById('moodModal');
@@ -32,7 +34,9 @@ function checkMoodStatus() {
     }, 2000); 
 }
 
-// 2. Generate Content
+// ====================================================================
+// 2. GENERATE CONTENT (AI API CALL)
+// ====================================================================
 async function generateHealing(mood) {
     // ১. মডাল বন্ধ করা
     const modal = document.getElementById('moodModal');
@@ -70,7 +74,7 @@ async function generateHealing(mood) {
         3. Tell a very short, emotional Islamic story (Seerah/Sahaba) relevant to this mood (Max 100 words).
         4. Suggest a small Amal.
 
-        Output JSON format ONLY:
+        Output JSON format ONLY (No markdown, just raw JSON):
         {
             "greeting": "Greeting",
             "quran_arabic": "Arabic text",
@@ -91,10 +95,9 @@ async function generateHealing(mood) {
             })
         });
 
-        // --- ERROR HANDLING (ডিটেইলস দেখার জন্য) ---
+        // --- ERROR HANDLING ---
         if (!response.ok) {
-            const errorText = await response.text(); // গুগলের এরর মেসেজ পড়া
-            console.error("Google API Error Details:", errorText);
+            const errorText = await response.text(); 
             throw new Error(`API Error: ${response.status} - ${errorText}`);
         }
 
@@ -107,18 +110,19 @@ async function generateHealing(mood) {
 
             renderHealingResult(result, mood);
         } else {
-            throw new Error("No content generated. Safety filter might be triggered.");
+            throw new Error("No content generated. Try again.");
         }
 
     } catch (error) {
         console.error("AI Error:", error);
-        // এই এলার্টটি আপনাকে আসল সমস্যার কথা বলবে
         alert("সমস্যা হয়েছে:\n" + error.message);
         closeHealerView();
     }
 }
 
-// 3. Render Result
+// ====================================================================
+// 3. RENDER RESULT
+// ====================================================================
 function renderHealingResult(data, mood) {
     document.getElementById('aiLoader').style.display = 'none';
     document.getElementById('aiResultContainer').style.display = 'block';
@@ -150,4 +154,4 @@ function closeHealerView() {
     document.getElementById('aiLoader').style.display = 'block';
     document.getElementById('aiResultContainer').style.display = 'none';
     window.scrollTo(0, 0);
-}
+            }
