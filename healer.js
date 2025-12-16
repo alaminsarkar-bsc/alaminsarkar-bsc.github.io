@@ -5,9 +5,8 @@
 
 console.log("Healer Module Loaded");
 
-// 🔑 আপনার Google Gemini API Key এখানে বসান
-// এটি ফ্রি-তে পেতে পারেন: https://aistudio.google.com/app/apikey
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; 
+// 🔑 Google Gemini API Key (Updated)
+const GEMINI_API_KEY = "AIzaSyA4NIpHyyQnM0Z_E3YHfa_cndm9KeTS88U"; 
 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -19,7 +18,7 @@ function checkMoodStatus() {
     const lastCheck = localStorage.getItem('lastMoodCheck');
     const today = new Date().toDateString();
 
-    // টেস্টিংয়ের জন্য আমরা এখন সব সময় দেখাবো (পরে if কন্ডিশনটি আনকমেন্ট করতে পারেন)
+    // দিনে একবার চেক করার লজিক (টেস্টিংয়ের জন্য এখন কমেন্ট করা আছে)
     // if (lastCheck !== today) { 
         setTimeout(() => {
             const modal = document.getElementById('moodModal');
@@ -35,22 +34,19 @@ function checkMoodStatus() {
                 modal.style.display = 'flex';
                 setTimeout(() => modal.classList.add('active'), 10);
             }
-        }, 2000); // অ্যাপ খোলার ২ সেকেন্ড পর আসবে
+        }, 2500); // অ্যাপ খোলার ২.৫ সেকেন্ড পর আসবে
     // }
 }
 
 // 2. Generate Healing Content (AI Call)
 async function generateHealing(mood) {
-    // API Key চেক
-    if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-        alert("দয়া করে healer.js ফাইলে আপনার Gemini API Key বসান।");
-        return;
-    }
-
+    
     // ১. মডাল বন্ধ করা
     const modal = document.getElementById('moodModal');
-    modal.classList.remove('active');
-    setTimeout(() => modal.style.display = 'none', 300);
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
 
     // ২. হিলার ভিউ ওপেন করা
     const healerView = document.getElementById('healer-view');
@@ -63,8 +59,10 @@ async function generateHealing(mood) {
     }
 
     // ৩. লোডার দেখানো
-    document.getElementById('aiLoader').style.display = 'block';
-    document.getElementById('aiResultContainer').style.display = 'none';
+    const loader = document.getElementById('aiLoader');
+    const resultContainer = document.getElementById('aiResultContainer');
+    if (loader) loader.style.display = 'block';
+    if (resultContainer) resultContainer.style.display = 'none';
 
     // ৪. ইউজারের তথ্য ও প্রম্পট তৈরি
     const userName = currentUser ? currentUser.profile.display_name : "মুমিন";
@@ -116,6 +114,7 @@ async function generateHealing(mood) {
             // আজকের জন্য চেক কমপ্লিট হিসেবে সেভ করা
             localStorage.setItem('lastMoodCheck', new Date().toDateString());
         } else {
+            console.error("AI Response Error:", data);
             throw new Error("AI gave no response");
         }
 
@@ -128,8 +127,11 @@ async function generateHealing(mood) {
 
 // 3. Render Result on Screen
 function renderHealingResult(data, mood) {
-    document.getElementById('aiLoader').style.display = 'none';
-    document.getElementById('aiResultContainer').style.display = 'block';
+    const loader = document.getElementById('aiLoader');
+    const resultContainer = document.getElementById('aiResultContainer');
+    
+    if (loader) loader.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'block';
 
     // ডাটা সেট করা
     document.getElementById('aiGreeting').innerText = data.greeting;
@@ -160,11 +162,15 @@ function getMoodBangla(mood) {
 }
 
 function closeHealerView() {
-    document.getElementById('healer-view').style.display = 'none';
+    const healerView = document.getElementById('healer-view');
     const appContainer = document.getElementById('appContainer');
+    const loader = document.getElementById('aiLoader');
+    const resultContainer = document.getElementById('aiResultContainer');
+
+    if (healerView) healerView.style.display = 'none';
     if (appContainer) appContainer.style.display = 'block';
     
     // রিসেট
-    document.getElementById('aiLoader').style.display = 'block';
-    document.getElementById('aiResultContainer').style.display = 'none';
+    if (loader) loader.style.display = 'block';
+    if (resultContainer) resultContainer.style.display = 'none';
 }
