@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPray - বিশ্বাসের উঠোন</title>
+    <title>MirjaVerse - বিশ্বাসের উঠোন</title>
     
-    <!-- Meta Tags -->
-    <meta property="og:title" content="iPray - বিশ্বাসের উঠোন">
+    <!-- Meta Tags for SEO & Sharing -->
+    <meta property="og:title" content="MirjaVerse - বিশ্বাসের উঠোন">
     <meta property="og:description" content="আপনার মনের দোয়া শেয়ার করুন এবং অন্যদের জন্য দোয়া করুন।">
     <meta property="og:image" content="https://pnsvptaanvtdaspqjwbk.supabase.co/storage/v1/object/public/post_images/default_banner.jpg">
     <meta property="og:url" content="https://doa-angina.vercel.app/">
@@ -21,10 +21,14 @@
     
     <!-- CSS Links -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts (For Premium Typography) -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Main Style File -->
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
 
-    <!-- OneSignal SDK (Push Notification) -->
+    <!-- OneSignal SDK (Push Notification Setup) -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -61,7 +65,7 @@
     <!-- ========================================= -->
     <div id="loginPage" style="display: none;">
         <div class="login-box">
-            <h1>iPray</h1>
+            <h1>MirjaVerse</h1>
             <p>বিশ্বাস ও দোয়ার এক অনন্য মেলবন্ধন। এগিয়ে যেতে লগইন করুন।</p>
             
             <button id="googleSignInBtn">
@@ -101,7 +105,7 @@
             
             <!-- Top Row: Logo & Search & Actions -->
             <div class="header-top-row">
-                <a href="/index.html" class="logo-link">iPray</a>
+                <a href="/index.html" class="logo-link">MirjaVerse</a>
                 
                 <!-- Floating Search Box (Hidden by default) -->
                 <input type="search" id="searchInput" class="floating-search-box" placeholder="খুঁজুন...">
@@ -115,7 +119,6 @@
                     <!-- Messenger Link (With Badge) -->
                     <a href="messages.html" class="top-icon-btn" title="মেসেঞ্জার" style="position: relative;">
                         <i class="fab fa-facebook-messenger" style="color: #0084ff;"></i>
-                        <!-- Unread Message Badge -->
                         <span id="msg-badge-count" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:50%; min-width: 10px; text-align: center;">0</span>
                     </a>
                     
@@ -344,7 +347,40 @@
         </div>
     </div>
 
-    <!-- 3. Report Modal -->
+    <!-- 3. Edit Profile Modal (সম্পূর্ণ) -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <form id="editProfileForm">
+                <div class="modal-header">
+                    <h2 class="modal-title">প্রোফাইল সম্পাদনা</h2>
+                    <span class="close-btn" onclick="document.getElementById('editProfileModal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>আপনার নাম</label>
+                        <input type="text" id="editNameInput" required placeholder="সম্পূর্ণ নাম">
+                    </div>
+                    <div class="form-group">
+                        <label>ঠিকানা / বায়ো</label>
+                        <textarea id="editAddressInput" rows="3" placeholder="আপনার সম্পর্কে..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveProfileBtn" type="submit">আপডেট করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Upload Progress Modal -->
+    <div id="uploadProgressModal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <div class="loader" style="margin: 0 auto 10px; border-color: #666; border-bottom-color: transparent;"></div>
+            <p>আপলোড হচ্ছে...</p>
+        </div>
+    </div>
+
+    <!-- 5. Report Modal -->
     <div id="reportModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -377,7 +413,7 @@
         </div>
     </div>
 
-    <!-- 4. General Donation Modal -->
+    <!-- 6. General Donation Modal -->
     <div id="generalDonationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -425,7 +461,7 @@
         </div>
     </div>
 
-    <!-- 5. Campaign Donation Details Modal -->
+    <!-- 7. Campaign Donation Details Modal -->
     <div id="donationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -438,7 +474,7 @@
         </div>
     </div>
 
-    <!-- 6. Notification Modal -->
+    <!-- 8. Notification Modal -->
     <div id="notificationModal" class="notification-modal">
         <div class="notification-modal-content">
             <div class="notification-modal-header">
@@ -455,7 +491,7 @@
         </div>
     </div>
 
-    <!-- 7. Fullscreen Story Viewer -->
+    <!-- 9. Fullscreen Story Viewer -->
     <div id="storyViewerModal" style="display: none;">
         <div id="storyProgressBars"></div>
         <div id="storyUserInfo"></div>
@@ -472,13 +508,13 @@
         </div>
     </div>
 
-    <!-- 8. Image Viewer Modal -->
+    <!-- 10. Image Viewer Modal -->
     <div id="image-view-modal" class="image-modal">
         <span class="close-image-modal">&times;</span>
         <img class="image-modal-content" id="modal-image">
     </div>
 
-    <!-- 9. SHORTS COMMENT MODAL (Bottom Sheet) -->
+    <!-- 11. SHORTS COMMENT MODAL (New Bottom Sheet) -->
     <div id="shortsCommentModal" class="bottom-sheet-modal" style="display: none;">
         <div class="bottom-sheet-overlay" id="closeShortsModalOverlay"></div>
         <div class="bottom-sheet-content">
@@ -513,6 +549,37 @@
         </div>
     </div>
 
+    <!-- 12. CREATE HIGHLIGHT MODAL (New Feature) -->
+    <div id="createHighlightModal" class="bottom-sheet-modal" style="display: none; z-index: 6000;">
+        <div class="bottom-sheet-overlay" id="closeHighlightModalOverlay"></div>
+        <div class="bottom-sheet-content" style="height: 85vh;">
+            <div class="sheet-handle-bar"></div>
+            <div class="sheet-header">
+                <button class="text-btn" style="color:#666; font-weight:normal;" id="cancelHighlightBtn">বাতিল</button>
+                <h3 class="sheet-title">নিউ হাইলাইট</h3>
+                <button class="text-btn" style="color:var(--primary-color); font-weight:bold;" id="saveHighlightBtn">সেভ</button>
+            </div>
+            
+            <!-- Step 1: Select Stories -->
+            <div id="highlightStorySelection" class="highlight-selection-area" style="padding: 10px; height: 100%; overflow-y: auto;">
+                <p style="padding: 0 5px 10px; color: #666; font-size: 13px;">আপনার আর্কাইভ থেকে স্টোরি সিলেক্ট করুন</p>
+                <div class="story-grid-selector" id="archiveStoriesGrid">
+                    <!-- JS will populate this -->
+                    <div class="loader-container" style="display:flex; justify-content:center;"><div class="loader"></div></div>
+                </div>
+            </div>
+
+            <!-- Step 2: Name & Cover -->
+            <div id="highlightNameSection" class="highlight-name-section" style="display: none; padding: 20px; text-align: center;">
+                <div class="highlight-cover-preview-container">
+                    <img id="highlightCoverPreview" src="./images/default-avatar.png" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-color); padding: 3px;">
+                    <p style="margin-top: 10px; font-size: 13px; color: var(--primary-color);">কভার এডিট করুন</p>
+                </div>
+                <input type="text" id="highlightTitleInput" class="highlight-input" placeholder="হাইলাইটস এর নাম দিন (যেমন: Travel)" maxlength="15" style="width: 100%; padding: 12px; margin-top: 20px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 16px;">
+            </div>
+        </div>
+    </div>
+
     <!-- Scroll To Top Button -->
     <button id="scrollToTopBtn" class="scroll-to-top-btn" title="উপরে যান">
         <i class="fas fa-arrow-up"></i>
@@ -532,7 +599,6 @@
     <script src="auth.js"></script>
     <script src="stories.js"></script>
     <script src="feed.js"></script>
-    <!-- interactions.js এর ভিতরেই ব্যাজ আপডেটের লজিক আছে -->
     <script src="interactions.js"></script>
     
     <!-- 3. MAIN ENTRY POINT (App Starts Here) -->
