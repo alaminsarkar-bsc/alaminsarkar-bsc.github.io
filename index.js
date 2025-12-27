@@ -11,7 +11,7 @@ let currentUser = null;
 let prayersSubscription = null;
 let allFetchedPrayers = new Map();
 let isVideoFeedActive = false;
-const ADMIN_USERS = ['bm15.telecom@gmail.com', 'alaminsarkar.bsc@gmail.com'];
+const ADMIN_USERS = ['bm15.telecom@gmail.com', 'alaminsarkar.bsc@gmail.com','mirjaverse1991@gmail.com'];
 
 // Feed & Pagination State
 let currentPage = 0;
